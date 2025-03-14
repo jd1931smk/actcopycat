@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CopyCats Original Question Selector</title>
+    <!-- Optional: Load MathJax for LaTeX rendering if your content includes math -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <select id="copyCatsDropdown">
+        <option value="">Select an Original Question</option>
+    </select>
+    <button id="fetchButton">Display Record</button>
+    <div id="resultContainer"></div>
+
+    <script>
+        // Replace these with your actual Airtable details
+        const API_KEY = 'patDNUNjtKKtTxkdz.6b099e3d2f6b521936fb7989c26599df8d2f25a5f8f8dd3e1b404a6addc693c6';      // Your Airtable Personal Access Token (PAT)
+        const BASE_ID = 'apph1PxO7uc4r7U6j';      // Your Airtable Base ID
+        const COPYCATS_TABLE_ID = 'tblpE46FDmB0LmeTU';  // CopyCats table ID
+        const ORIGINAL_FIELD_NAME = 'Original Question';  // Field for dropdown options
+        const CONTENT_FIELD_NAME = 'Clone Question LM';   // Field to display
+
+        let copyCatsRecords = [];
+
+        async function init() {
+            try {
+                // Fetch CopyCats records with specified fields
+                const url = `https://api.airtable.com/v0/${BASE_ID}/${COPYCATS_TABLE_ID}?fields%5B%5D=${encodeURIComponent(ORIGINAL_FIELD_NAME)}&fields%5B%5D=${encodeURIComponent(CONTENT_FIELD_NAME)}`;
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${API_KEY}` }
+                });
+                if (!response.ok) throw new Error('Failed to fetch CopyCats records');
+                const data = await response.json();
+                copyCatsRecords = data.records;
+
+                // Populate dropdown with Original Question values
+                const dropdown = document.getElementById('copyCatsDropdown');
+                copyCatsRecords.forEach((record, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    // Use the field value or 'Unknown' if missing
+                    option.textContent = record.fields[ORIGINAL_FIELD_NAME] || 'Unknown';
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error initializing:', error);
+                alert('Failed to load records. Check console for details.');
+            }
+        }
+
+        function displayRecord() {
+            const selectedIndex = document.getElementById('copyCatsDropdown').value;
+            if (selectedIndex === '') {
+                alert('Please select a record');
+                return;
+            }
+            const record = copyCatsRecords[selectedIndex];
+            const content = record.fields[CONTENT_FIELD_NAME] || 'No content available';
+            const container = document.getElementById('resultContainer');
+            container.innerHTML = content;
+            // Render LaTeX if present (remove if not needed)
+            MathJax.typesetPromise().catch(err => console.error('MathJax error:', err));
+        }
+
+        // Initialize dropdown on page load
+        init().catch(error => console.error('Initialization error:', error));
+
+        // Add event listener to button
+        document.getElementById('fetchButton').addEventListener('click', displayRecord);
+    </script>
+</body>
+</html>

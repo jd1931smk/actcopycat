@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathJax Renderer for Airtable</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <h1>Clone Question LM Renderer</h1>
+    <label for="testNumber">Test Number:</label>
+    <input type="text" id="testNumber" placeholder="Enter Test Number">
+    <button onclick="fetchAndRender()">Fetch and Render</button>
+    <div id="questionsContainer"></div>
+
+    <script>
+        async function fetchConfig() {
+            const response = await fetch('/config');
+            if (!response.ok) throw new Error('Failed to fetch config');
+            const config = await response.json();
+            return config;
+        }
+
+        async function fetchAndRender() {
+            try {
+                const config = await fetchConfig();
+                const API_KEY = config.API_KEY;
+                const BASE_ID = config.BASE_ID;
+                const testNumber = document.getElementById('testNumber').value;
+                if (!testNumber) {
+                    alert('Please enter a Test Number');
+                    return;
+                }
+
+                // Fetch Questions records matching Test Number and AI Check
+                const questionsFormula = `AND({Test Number} = '${testNumber}', {AI Check} = '✅ Match')`;
+                const questionsUrl = `https://api.airtable.com/v0/${BASE_ID}/tbllwZpPeh9yHJ3fM?filterByFormula=${encodeURIComponent(questionsFormula)}`;
+
+                const questionsResponse = await fetch(questionsUrl, {
+                    headers: { Authorization: `Bearer ${API_KEY}` }
+                });
+                if (!questionsResponse.ok) throw new Error('Failed to fetch Questions');
+                const questionsData = await questionsResponse.json();
+                const questionsIds = questionsData.records.map(record => record.id);
+
+                if (questionsIds.length === 0) {
+                    alert('No matching Questions records found');
+                    return;
+                }
+
+                // Fetch CopyCats records linked to these Questions records
+                const orConditions = questionsIds.map(id => `FIND('${id}', ARRAYJOIN({Original Question})) > 0`).join(',');
+                const copycatsFormula = `OR(${orConditions})`;
+                const copycatsUrl = `https://api.airtable.com/v0/${BASE_ID}/tblpE46FDmB0LmeTU?filterByFormula=${encodeURIComponent(copycatsFormula)}`;
+
+                const copycatsResponse = await fetch(copycatsUrl, {
+                    headers: { Authorization: `Bearer ${API_KEY}` }
+                });
+                if (!copycatsResponse.ok) throw new Error('Failed to fetch CopyCats');
+                const copycatsData = await copycatsResponse.json();
+                const copycatsRecords = copycatsData.records;
+
+                // Render "Clone Question LM" with Markdown and MathJax
+                const container = document.getElementById('questionsContainer');
+                container.innerHTML = '';
+                copycatsRecords.forEach(record => {
+                    const cloneQuestionLM = record.fields['Clone Question LM'] || 'No content';
+                    const htmlContent = marked.parse(cloneQuestionLM); // Parse Markdown
+                    const div = document.createElement('div');
+                    div.innerHTML = htmlContent;
+                    container.appendChild(div);
+                });
+                MathJax.typesetPromise(); // Render LaTeX
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to fetch data. Check console for details.');
+            }
+        }
+    </script>
+</body>
+</html>
