@@ -32,17 +32,26 @@ exports.handler = async (event) => {
                     .all()
                     .then(records => {
                         console.log("Raw Records:", records.map(r => r.fields));
-                        return [...new Set(records.map(r => r.get('Test Number')).filter(Boolean))];
+                        return [...new Set(records.map(r => r.get('Test Number')).filter(Boolean))]
+                            .sort((a, b) => a.localeCompare(b));
                     });
                 return formatResponse(200, testNumbers);
 
             case 'getQuestionNumbers':
                 if (!testNumber) return formatResponse(400, 'Missing testNumber');
                 console.log(`Fetching Question Numbers for Test: ${testNumber}`);
+                
                 const questionNumbers = await base('Questions')
-                    .select({ filterByFormula: `{Test Number} = '${testNumber}'`, fields: ['Question Number'] })
+                    .select({ filterByFormula: `({Test Number} = '${testNumber}')`, fields: ['Question Number'] })
                     .all()
-                    .then(records => records.map(r => r.get('Question Number')).filter(Boolean));
+                    .then(records => 
+                        records
+                            .map(r => r.get('Question Number'))
+                            .filter(Boolean)
+                            .map(num => Number(num)) // Convert to numbers for sorting
+                            .sort((a, b) => a - b)   // Sort numerically
+                    );
+
                 return formatResponse(200, questionNumbers);
 
             case 'getQuestionDetails':
@@ -62,16 +71,54 @@ exports.handler = async (event) => {
                 return formatResponse(200, question);
 
             case 'getCloneQuestions':
-                if (!questionId) return formatResponse(400, 'Missing questionId');
-                console.log(`Fetching Clone Questions for Question ID: ${questionId}`);
+                if (!testNumber || !questionNumber) {
+                    console.error("❌ Missing testNumber or questionNumber in request:", event.queryStringParameters);
+                    return formatResponse(400, { error: "Missing testNumber or questionNumber" });
+                }
+
+                console.log(`✅ Fetching Record ID for Test: ${testNumber}, Question: ${questionNumber}`);
+                
+                // Step 1: Retrieve the Record ID from the Questions table
+                const questionRecord = await base('Questions')
+                    .select({
+                        filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
+                        fields: ['Record ID']
+                    })
+                    .firstPage()
+                    .then(records => records[0] ? records[0].get('Record ID') : null);
+
+                if (!questionRecord) {
+                    console.log("No matching record found in Questions table.");
+                    return formatResponse(404, 'Question not found');
+                }
+
+                console.log(`Found Record ID: ${questionRecord}`);
+
+                // Step 2: Fetch Clone Questions from the CopyCats table using the Record ID
+                console.log(`🔍 Searching for clones with Record ID: ${questionRecord}`);
+                console.log(`🔍 Querying CopyCats for Linked Record ID: ${questionRecord}`);
+
                 const clones = await base('CopyCats')
                     .select({
-                        filterByFormula: `FIND('${questionId}', ARRAYJOIN({Original Question}, ','))`,
+                        filterByFormula: `{Original Question} = '${testNumber} - ${questionNumber}'`,
                         fields: ['Clone Question LM']
                     })
                     .all()
-                    .then(records => records.map(r => r.get('Clone Question LM')).filter(Boolean));
-                return formatResponse(200, clones);
+                    .then(records => {
+                        console.log(`📌 Found ${records.length} clone questions`);
+                        console.log("Clone Question Records:", records.map(r => r.fields));
+                        return records.map(r => r.get('Clone Question LM')).filter(Boolean);
+                    });
+
+                console.log(`✅ Clone Questions Retrieved:`, clones);
+                console.log("Raw clone records:", clones);
+
+                // Trigger MathJax to re-render after inserting the content
+                if (typeof window !== "undefined" && window.MathJax) {
+                    window.MathJax.typesetPromise();
+                }
+
+                return formatResponse(200, clones.map(q => `$$${q}$$`));
 
             default:
                 console.log("Invalid action:", action);
