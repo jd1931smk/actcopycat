@@ -11,6 +11,12 @@
         h2 { color: #333; }
         select, button { margin: 10px 0; padding: 5px; }
         #resultContainer img { max-width: 100%; }
+        .cloneQuestion {
+            width: 45ch;
+            white-space: pre-wrap;  /* Preserve line breaks */
+            word-wrap: break-word;  /* Wrap long words */
+            margin-bottom: 1em;     /* Spacing after each question */
+        }
     </style>
 </head>
 <body>
@@ -106,9 +112,16 @@
                 }
 
                 if (clones.length > 0) {
-                    clones.forEach(clone => {
+                    clones.forEach(item => {
+                        // Create a header for the AI Model
+                        const modelHeader = document.createElement('h3');
+                        modelHeader.textContent = item.model || 'No Model';
+                        container.appendChild(modelHeader);
+
+                        // Create a div for the clone question text with restricted width
                         const div = document.createElement('div');
-                        div.innerHTML = clone.replace(/(\r\n|\n|\r)/g, '<br>');  // Use the text with <br> for newlines
+                        div.classList.add('cloneQuestion');
+                        div.innerHTML = item.clone.replace(/(\r\n|\n|\r)/g, '<br>');
                         container.appendChild(div);
                     });
                     MathJax.typesetPromise([container]).catch(err => console.error("MathJax Error:", err));
