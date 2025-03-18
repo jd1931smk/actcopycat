@@ -108,10 +108,10 @@
                 if (clones.length > 0) {
                     clones.forEach(clone => {
                         const div = document.createElement('div');
-                        div.innerHTML = `\\(${clone}\\)`;  // Wrap in MathJax delimiters
+                        div.innerHTML = clone;  // Use the text as-is
                         container.appendChild(div);
                     });
-                    MathJax.typesetPromise().catch(err => console.log("MathJax Error:", err));
+                    MathJax.typesetPromise([container]).catch(err => console.error("MathJax Error:", err));
                 } else {
                     container.innerHTML += '<p>No clone questions found.</p>';
                 }
