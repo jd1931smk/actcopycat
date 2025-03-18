@@ -5,14 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Corrected Clone Question LM Renderer</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script>
-    window.MathJax = {
-        tex: {
-            inlineMath: [['$', '$'], ['\\(', '\\)']],
-            displayMath: [['$$', '$$'], ['\\[', '\\]']]
-        }
-    };
-    </script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; padding: 20px; }
@@ -95,7 +87,6 @@
                 if (!questionResponse.ok) throw new Error(`HTTP ${questionResponse.status}`);
                 const questionData = await questionResponse.json();
                 if (!questionData) throw new Error('Question not found');
-                const questionId = questionData.id;
                 const photoUrl = questionData.photo ? questionData.photo[0].url : null;
 
                 // Get clone questions
@@ -120,11 +111,7 @@
                         div.innerHTML = `\\(${clone}\\)`;  // Wrap in MathJax delimiters
                         container.appendChild(div);
                     });
-                    if (window.MathJax) {
-                        MathJax.typesetPromise([container]).catch(err => console.log("MathJax Error:", err));
-                    } else {
-                        console.error("MathJax not loaded.");
-                    }
+                    MathJax.typesetPromise().catch(err => console.log("MathJax Error:", err));
                 } else {
                     container.innerHTML += '<p>No clone questions found.</p>';
                 }
