@@ -101,13 +101,13 @@ exports.handler = async (event) => {
                 const clones = await base('CopyCats')
                     .select({
                         filterByFormula: `{Original Question} = '${testNumber} - ${questionNumber}'`,
-                        fields: ['Clone Question LM']
+                        fields: ['Corrected Clone Question LM']
                     })
                     .all()
                     .then(records => {
                         console.log(`📌 Found ${records.length} clone questions`);
                         console.log("Clone Question Records:", records.map(r => r.fields));
-                        return records.map(r => r.get('Clone Question LM')).filter(Boolean);
+                        return records.map(r => r.get('Corrected Clone Question LM')).filter(Boolean);
                     });
 
                 console.log(`✅ Clone Questions Retrieved:`, clones);
@@ -118,7 +118,7 @@ exports.handler = async (event) => {
                     window.MathJax.typesetPromise();
                 }
 
-                return formatResponse(200, clones.map(q => `$$${q}$$`));
+                return formatResponse(200, clones);
 
             default:
                 console.log("Invalid action:", action);
