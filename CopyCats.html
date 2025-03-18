@@ -108,7 +108,7 @@
                 if (clones.length > 0) {
                     clones.forEach(clone => {
                         const div = document.createElement('div');
-                        div.innerHTML = clone;  // Use the text as-is
+                        div.innerHTML = clone.replace(/(\r\n|\n|\r)/g, '<br>');  // Use the text with <br> for newlines
                         container.appendChild(div);
                     });
                     MathJax.typesetPromise([container]).catch(err => console.error("MathJax Error:", err));
