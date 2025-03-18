@@ -3,8 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clone Question LM Renderer</title>
+    <title>Corrected Clone Question LM Renderer</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        }
+    };
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; padding: 20px; }
@@ -14,7 +22,7 @@
     </style>
 </head>
 <body>
-    <h1>Clone Question LM Renderer</h1>
+    <h1>Corrected Clone Question LM Renderer</h1>
     <label for="testNumberDropdown">Test Number:</label>
     <select id="testNumberDropdown">
         <option value="">Select a test number</option>
@@ -91,7 +99,7 @@
                 const photoUrl = questionData.photo ? questionData.photo[0].url : null;
 
                 // Get clone questions
-                const clonesResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                const clonesResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}&field=Corrected Clone Question LM`);
                 if (!clonesResponse.ok) throw new Error(`HTTP ${clonesResponse.status}`);
                 const clones = await clonesResponse.json();
 
@@ -109,10 +117,14 @@
                 if (clones.length > 0) {
                     clones.forEach(clone => {
                         const div = document.createElement('div');
-                        div.textContent = clone;
+                        div.innerHTML = `\\(${clone}\\)`;  // Wrap in MathJax delimiters
                         container.appendChild(div);
                     });
-                    await MathJax.typesetPromise([container]);
+                    if (window.MathJax) {
+                        MathJax.typesetPromise([container]).catch(err => console.log("MathJax Error:", err));
+                    } else {
+                        console.error("MathJax not loaded.");
+                    }
                 } else {
                     container.innerHTML += '<p>No clone questions found.</p>';
                 }
