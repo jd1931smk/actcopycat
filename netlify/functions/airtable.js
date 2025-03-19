@@ -9,19 +9,32 @@ console.log("API_KEY:", process.env.API_KEY ? "✅ Loaded" : "❌ MISSING");
 const base = new Airtable({ apiKey: process.env.API_KEY }).base(process.env.BASE_ID);
 
 exports.handler = async (event) => {
-    console.log("Received request with query parameters:", event.queryStringParameters);
+    console.log("Received request:", {
+        method: event.httpMethod,
+        path: event.path,
+        queryParams: event.queryStringParameters,
+        headers: event.headers
+    });
 
     const { action, testNumber, questionNumber, questionId } = event.queryStringParameters || {};
 
+    // Log the action being requested
+    console.log("Action requested:", action);
+
     // Helper function to format response
-    const formatResponse = (statusCode, body) => ({
-        statusCode,
-        body: JSON.stringify(body),
-        headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        }
-    });
+    const formatResponse = (statusCode, body) => {
+        console.log("Sending response:", { statusCode, body });
+        return {
+            statusCode,
+            body: JSON.stringify(body),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            }
+        };
+    };
 
     try {
         switch (action) {
@@ -42,15 +55,21 @@ exports.handler = async (event) => {
                 console.log(`Fetching Question Numbers for Test: ${testNumber}`);
                 
                 const questionNumbers = await base('Questions')
-                    .select({ filterByFormula: `({Test Number} = '${testNumber}')`, fields: ['Question Number'] })
+                    .select({ 
+                        filterByFormula: `{Test Number} = '${testNumber}'`,
+                        fields: ['Question Number']
+                    })
                     .all()
-                    .then(records => 
-                        records
-                            .map(r => r.get('Question Number'))
-                            .filter(Boolean)
-                            .map(num => Number(num)) // Convert to numbers for sorting
-                            .sort((a, b) => a - b)   // Sort numerically
-                    );
+                    .then(records => {
+                        return records
+                            .map(r => {
+                                const num = r.get('Question Number');
+                                if (!num) return null;
+                                return parseInt(num, 10);
+                            })
+                            .filter(num => num !== null && !isNaN(num))
+                            .sort((a, b) => a - b);
+                    });
 
                 return formatResponse(200, questionNumbers);
 
@@ -70,55 +89,150 @@ exports.handler = async (event) => {
                 if (!question) return formatResponse(404, 'Question not found');
                 return formatResponse(200, question);
 
+            case 'getCorrectAnswer':
+                if (!testNumber || !questionNumber) {
+                    console.log('Missing parameters:', { testNumber, questionNumber });
+                    return formatResponse(400, { error: 'Test number and question number are required' });
+                }
+
+                console.log(`Fetching correct answer for Test: ${testNumber}, Question: ${questionNumber}`);
+                
+                try {
+                    const records = await base('Questions')
+                        .select({
+                            filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
+                            fields: ['Test Number', 'Question Number', 'Answer']
+                        })
+                        .firstPage();
+
+                    console.log('Found records:', records.map(r => ({
+                        testNum: r.get('Test Number'),
+                        questionNum: r.get('Question Number'),
+                        answer: r.get('Answer')
+                    })));
+
+                    if (!records || records.length === 0) {
+                        console.log('No records found');
+                        return formatResponse(404, { error: 'Question not found' });
+                    }
+
+                    const correctAnswer = records[0].get('Answer');
+                    console.log(`Found correct answer: ${correctAnswer}`);
+
+                    return formatResponse(200, { correctAnswer });
+                } catch (error) {
+                    console.error('Error in getCorrectAnswer:', error);
+                    return formatResponse(500, { error: 'Failed to fetch correct answer' });
+                }
+
+            case 'getExplanation':
+                if (!testNumber || !questionNumber) {
+                    console.log('Missing parameters:', { testNumber, questionNumber });
+                    return formatResponse(400, { error: 'Test number and question number are required' });
+                }
+
+                console.log(`Fetching explanation for Test: ${testNumber}, Question: ${questionNumber}`);
+                
+                try {
+                    console.log('Querying Airtable with filter:', `AND({Test Number} = '${testNumber}', {Question Number} = '${questionNumber}')`);
+                    
+                    const records = await base('Questions')
+                        .select({
+                            filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = '${questionNumber}')`,
+                            fields: ['Test Number', 'Question Number', 'Explanation 4o']
+                        })
+                        .firstPage();
+
+                    console.log('Raw records:', records);
+                    console.log('Records length:', records ? records.length : 0);
+
+                    if (!records || records.length === 0) {
+                        console.log('No records found');
+                        return formatResponse(404, { error: 'Question not found' });
+                    }
+
+                    const record = records[0];
+                    console.log('First record fields:', record.fields);
+                    
+                    let explanation = record.get('Explanation 4o');
+                    console.log('Raw explanation:', explanation);
+                    console.log(`Found explanation: ${explanation ? 'Yes' : 'No'}`);
+
+                    if (!explanation) {
+                        console.log('No explanation found in record');
+                        return formatResponse(404, { error: 'No explanation found' });
+                    }
+
+                    // Fix LaTeX escaping issues
+                    explanation = explanation
+                        .replace(/\\\\([^\\])/g, '\\$1')  // Fix double escaped backslashes
+                        .replace(/\\{2,}/g, '\\')         // Fix multiple backslashes
+                        .replace(/\\([^a-zA-Z{}\[\]])/g, '\\$1')  // Ensure proper escaping of special characters
+                        .trim();
+
+                    console.log('Processed explanation:', explanation);
+
+                    return formatResponse(200, { explanation });
+                } catch (error) {
+                    console.error('Error in getExplanation:', error);
+                    console.error('Error details:', error.message);
+                    if (error.stack) console.error('Stack trace:', error.stack);
+                    return formatResponse(500, { error: 'Failed to fetch explanation' });
+                }
+
             case 'getCloneQuestions':
                 if (!testNumber || !questionNumber) {
                     console.error("❌ Missing testNumber or questionNumber in request:", event.queryStringParameters);
                     return formatResponse(400, { error: "Missing testNumber or questionNumber" });
                 }
 
-                console.log(`✅ Fetching Record ID for Test: ${testNumber}, Question: ${questionNumber}`);
+                console.log(`✅ Fetching clones for Test: ${testNumber}, Question: ${questionNumber}`);
                 
-                // Step 1: Retrieve the Record ID from the Questions table
-                const questionRecord = await base('Questions')
-                    .select({
-                        filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
-                        fields: ['Record ID']
-                    })
-                    .firstPage()
-                    .then(records => records[0] ? records[0].get('Record ID') : null);
+                // More flexible matching - try both exact and flexible formats
+                const filterFormula = `OR(
+                    {Original Question} = '${testNumber} - ${questionNumber}',
+                    {Original Question} = '${testNumber}-${questionNumber}',
+                    {Original Question} = '${testNumber} ${questionNumber}'
+                )`;
 
-                if (!questionRecord) {
-                    console.log("No matching record found in Questions table.");
-                    return formatResponse(404, 'Question not found');
-                }
+                try {
+                    const records = await base('CopyCats')
+                        .select({
+                            filterByFormula: filterFormula,
+                            fields: ['Corrected Clone Question LM', 'AI Model', 'Original Question']
+                        })
+                        .all();
 
-                console.log(`Found Record ID: ${questionRecord}`);
-
-                // Step 2: Fetch Clone Questions from the CopyCats table using the Record ID
-                console.log(`🔍 Searching for clones with Record ID: ${questionRecord}`);
-                console.log(`🔍 Querying CopyCats for Linked Record ID: ${questionRecord}`);
-
-                const clones = await base('CopyCats')
-                    .select({
-                        filterByFormula: `{Original Question} = '${testNumber} - ${questionNumber}'`,
-                        fields: ['Corrected Clone Question LM']
-                    })
-                    .all()
-                    .then(records => {
-                        console.log(`📌 Found ${records.length} clone questions`);
-                        console.log("Clone Question Records:", records.map(r => r.fields));
-                        return records.map(r => r.get('Corrected Clone Question LM')).filter(Boolean);
+                    console.log(`📌 Found ${records.length} total records`);
+                    
+                    // Log details about each record
+                    records.forEach(r => {
+                        const fields = r.fields;
+                        console.log(`Record details:
+                            Original Question: ${fields['Original Question']}
+                            Has Clone Question: ${Boolean(fields['Corrected Clone Question LM'])}
+                            AI Model: ${fields['AI Model'] || 'No Model'}
+                        `);
                     });
 
-                console.log(`✅ Clone Questions Retrieved:`, clones);
-                console.log("Raw clone records:", clones);
+                    const clones = records.map(r => ({
+                        clone: r.get('Corrected Clone Question LM') || '',
+                        model: r.get('AI Model') || 'No Model',
+                        originalQuestion: r.get('Original Question') || ''
+                    }));
 
-                // Trigger MathJax to re-render after inserting the content
-                if (typeof window !== "undefined" && window.MathJax) {
-                    window.MathJax.typesetPromise();
+                    // Log any skipped questions
+                    const emptyClones = clones.filter(item => !item.clone);
+                    if (emptyClones.length > 0) {
+                        console.log(`⚠️ Found ${emptyClones.length} empty clone questions:`, emptyClones);
+                    }
+
+                    console.log(`✅ Returning ${clones.length} clones`);
+                    return formatResponse(200, clones);
+                } catch (error) {
+                    console.error('Error fetching clones:', error);
+                    return formatResponse(500, { error: error.message });
                 }
-
-                return formatResponse(200, clones);
 
             default:
                 console.log("Invalid action:", action);
