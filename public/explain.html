@@ -172,7 +172,7 @@
     </div>
 
     <script>
-        // Static test numbers - update this list as needed
+        // Static test numbers - already sorted in correct order
         const staticTestNumbers = [
             'SATX',
             '1MC', '2MC', '3MC', '4MC', '5MC',
@@ -196,51 +196,7 @@
             const dropdown = document.getElementById('testNumberDropdown');
             dropdown.innerHTML = '<option value="">Select Test</option>';
             
-            // Sort test numbers
-            staticTestNumbers.sort((a, b) => {
-                // Define order of special prefixes
-                const prefixOrder = {
-                    'SATX': 0,
-                    'MC': 1,
-                    'C': 2,
-                    'Red Book': 3,
-                    'SHMM': 4,
-                    'B': 5,
-                    'D': 6,
-                    'Z': 7,
-                    'A': 8
-                };
-                
-                // Function to get prefix and number
-                const getPrefixAndNum = (str) => {
-                    // Special case for MC tests
-                    if (str.endsWith('MC')) {
-                        const num = parseInt(str) || 0;
-                        return { prefix: 'MC', num, order: prefixOrder['MC'] };
-                    }
-                    
-                    // Check other prefixes
-                    for (let prefix in prefixOrder) {
-                        if (str.startsWith(prefix)) {
-                            const num = parseInt(str.replace(prefix, '')) || 0;
-                            return { prefix, num, order: prefixOrder[prefix] };
-                        }
-                    }
-                    return { prefix: '', num: 0, order: 999 };
-                };
-                
-                const infoA = getPrefixAndNum(a);
-                const infoB = getPrefixAndNum(b);
-                
-                // First compare by prefix order
-                if (infoA.order !== infoB.order) {
-                    return infoA.order - infoB.order;
-                }
-                
-                // Then compare by number
-                return infoA.num - infoB.num;
-            });
-
+            // Just add the pre-sorted test numbers
             staticTestNumbers.forEach(testNumber => {
                 const option = document.createElement('option');
                 option.value = testNumber;
