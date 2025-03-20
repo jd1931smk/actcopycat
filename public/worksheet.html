@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="theme-color" content="#007bff">
     <meta name="apple-mobile-web-app-title" content="ACT Math">
     <meta name="mobile-web-app-capable" content="yes">
@@ -19,6 +19,8 @@
         }
         html {
             background-color: var(--app-bg-color);
+            height: 100%;
+            width: 100%;
         }
         body {
             font-family: Arial, sans-serif;
@@ -32,24 +34,27 @@
             padding-right: max(20px, env(safe-area-inset-right));
             background-color: #f5f5f5;
             position: relative;
+            -webkit-box-sizing: border-box;
+            box-sizing: border-box;
         }
-        /* Add a pseudo-element for the status bar background */
+        /* Full-width background for status bar */
         body::before {
             content: '';
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            height: env(safe-area-inset-top);
+            width: 100vw;
+            height: max(env(safe-area-inset-top), 50px);
             background-color: var(--app-bg-color);
             z-index: 9999;
         }
         @supports (padding: max(0px)) {
             body {
-                --safe-area-inset-top: env(safe-area-inset-top);
-                --safe-area-inset-bottom: env(safe-area-inset-bottom);
-                --safe-area-inset-left: env(safe-area-inset-left);
-                --safe-area-inset-right: env(safe-area-inset-right);
+                --safe-area-inset-top: env(safe-area-inset-top, 50px);
+                --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+                --safe-area-inset-left: env(safe-area-inset-left, 0px);
+                --safe-area-inset-right: env(safe-area-inset-right, 0px);
             }
         }
         .controls {
