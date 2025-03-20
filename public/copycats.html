@@ -244,10 +244,40 @@
                 
                 // Sort test numbers
                 testNumbers.sort((a, b) => {
-                    // Extract numeric parts
-                    const numA = parseInt(a.replace(/[^\d]/g, ''));
-                    const numB = parseInt(b.replace(/[^\d]/g, ''));
-                    return numA - numB;
+                    // Define order of special prefixes
+                    const prefixOrder = {
+                        'SATX': 0,
+                        'MC': 1,
+                        'C': 2,
+                        'Red Book': 3,
+                        'SHMM': 4,
+                        'B': 5,
+                        'D': 6,
+                        'Z': 7,
+                        'A': 8
+                    };
+                    
+                    // Function to get prefix and number
+                    const getPrefixAndNum = (str) => {
+                        for (let prefix in prefixOrder) {
+                            if (str.startsWith(prefix)) {
+                                const num = parseInt(str.replace(prefix, '')) || 0;
+                                return { prefix, num, order: prefixOrder[prefix] };
+                            }
+                        }
+                        return { prefix: '', num: 0, order: 999 };
+                    };
+                    
+                    const infoA = getPrefixAndNum(a);
+                    const infoB = getPrefixAndNum(b);
+                    
+                    // First compare by prefix order
+                    if (infoA.order !== infoB.order) {
+                        return infoA.order - infoB.order;
+                    }
+                    
+                    // Then compare by number
+                    return infoA.num - infoB.num;
                 });
                 
                 // Add new options
