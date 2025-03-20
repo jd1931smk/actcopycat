@@ -184,6 +184,51 @@
                 if (!response.ok) throw new Error('Failed to fetch test numbers');
                 const testNumbers = await response.json();
                 
+                // Sort test numbers
+                testNumbers.sort((a, b) => {
+                    // Define order of special prefixes
+                    const prefixOrder = {
+                        'SATX': 0,
+                        'MC': 1,
+                        'C': 2,
+                        'Red Book': 3,
+                        'SHMM': 4,
+                        'B': 5,
+                        'D': 6,
+                        'Z': 7,
+                        'A': 8
+                    };
+                    
+                    // Function to get prefix and number
+                    const getPrefixAndNum = (str) => {
+                        // Special case for MC tests
+                        if (str.endsWith('MC')) {
+                            const num = parseInt(str) || 0;
+                            return { prefix: 'MC', num, order: prefixOrder['MC'] };
+                        }
+                        
+                        // Check other prefixes
+                        for (let prefix in prefixOrder) {
+                            if (str.startsWith(prefix)) {
+                                const num = parseInt(str.replace(prefix, '')) || 0;
+                                return { prefix, num, order: prefixOrder[prefix] };
+                            }
+                        }
+                        return { prefix: '', num: 0, order: 999 };
+                    };
+                    
+                    const infoA = getPrefixAndNum(a);
+                    const infoB = getPrefixAndNum(b);
+                    
+                    // First compare by prefix order
+                    if (infoA.order !== infoB.order) {
+                        return infoA.order - infoB.order;
+                    }
+                    
+                    // Then compare by number
+                    return infoA.num - infoB.num;
+                });
+                
                 const dropdown = document.getElementById('testNumberDropdown');
                 testNumbers.forEach(testNumber => {
                     const option = document.createElement('option');
@@ -296,10 +341,15 @@
 
         // Get hint function
         async function getHint() {
+            const hintBox = document.getElementById('hintBox');
+            const loading = document.getElementById('loading');
             const testNumber = document.getElementById('testNumberDropdown').value;
             const questionNumber = document.getElementById('questionNumberDropdown').value;
-            const loading = document.getElementById('loading');
-            const hintBox = document.getElementById('hintBox');
+
+            if (!testNumber || !questionNumber) {
+                alert('Please select both test and question numbers');
+                return;
+            }
 
             loading.style.display = 'block';
             hintBox.style.display = 'none';
@@ -307,19 +357,26 @@
             try {
                 const response = await fetch('/.netlify/functions/get-hint', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ testNumber, questionNumber })
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        testNumber,
+                        questionNumber,
+                        question: document.getElementById('questionDisplay').innerHTML
+                    })
                 });
 
                 if (!response.ok) throw new Error('Failed to get hint');
                 const data = await response.json();
-                
+
                 hintBox.innerHTML = data.hint;
-                MathJax.typesetPromise([hintBox]).catch(err => console.error('MathJax Error:', err));
                 hintBox.style.display = 'block';
+                // Rerun MathJax on the hint box
+                MathJax.typesetPromise([hintBox]).catch(err => console.error('MathJax Error:', err));
             } catch (error) {
                 console.error('Error getting hint:', error);
-                hintBox.textContent = 'Error getting hint. Please try again.';
+                hintBox.innerHTML = 'Failed to get hint. Please try again.';
                 hintBox.style.display = 'block';
             } finally {
                 loading.style.display = 'none';
@@ -328,41 +385,42 @@
 
         // Get explanation function
         async function getExplanation() {
-            const testNumber = document.getElementById('testNumberDropdown').value;
-            const questionNumber = document.getElementById('questionNumberDropdown').value;
             const explanationBox = document.getElementById('explanationBox');
             const loading = document.getElementById('loading');
+            const testNumber = document.getElementById('testNumberDropdown').value;
+            const questionNumber = document.getElementById('questionNumberDropdown').value;
+
+            if (!testNumber || !questionNumber) {
+                alert('Please select both test and question numbers');
+                return;
+            }
 
             loading.style.display = 'block';
             explanationBox.style.display = 'none';
 
             try {
-                const response = await fetch(`/.netlify/functions/airtable?action=getExplanation&testNumber=${testNumber}&questionNumber=${questionNumber}`);
+                const response = await fetch('/.netlify/functions/get-explanation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        testNumber,
+                        questionNumber,
+                        question: document.getElementById('questionDisplay').innerHTML
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to get explanation');
                 const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Failed to get explanation');
-                }
-                
-                if (data.explanation) {
-                    // Just set the raw content - let MathJax handle the formatting
-                    explanationBox.innerHTML = data.explanation;
-                    
-                    try {
-                        await MathJax.typesetPromise([explanationBox]);
-                        explanationBox.style.display = 'block';
-                    } catch (err) {
-                        console.error('MathJax Error:', err);
-                        explanationBox.innerHTML = 'Error rendering math. Please try again.';
-                        explanationBox.style.display = 'block';
-                    }
-                } else {
-                    explanationBox.innerHTML = 'No explanation available for this question.';
-                    explanationBox.style.display = 'block';
-                }
+
+                explanationBox.innerHTML = data.explanation;
+                explanationBox.style.display = 'block';
+                // Rerun MathJax on the explanation box
+                MathJax.typesetPromise([explanationBox]).catch(err => console.error('MathJax Error:', err));
             } catch (error) {
                 console.error('Error getting explanation:', error);
-                explanationBox.innerHTML = `Error getting explanation: ${error.message}. Please try again.`;
+                explanationBox.innerHTML = 'Failed to get explanation. Please try again.';
                 explanationBox.style.display = 'block';
             } finally {
                 loading.style.display = 'none';
