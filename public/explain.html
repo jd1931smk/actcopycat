@@ -264,6 +264,9 @@
             }
         });
 
+        // Add a variable to store the current question details
+        let currentQuestionDetails = null;
+
         // Event listener for question number selection
         document.getElementById('questionNumberDropdown').addEventListener('change', async function() {
             const testNumber = document.getElementById('testNumberDropdown').value;
@@ -274,6 +277,9 @@
                 const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
                 if (!response.ok) throw new Error('Failed to fetch question details');
                 const data = await response.json();
+
+                // Store the full question details
+                currentQuestionDetails = data;
 
                 const questionDisplay = document.getElementById('questionDisplay');
                 if (data.photo && data.photo.length > 0) {
@@ -346,7 +352,7 @@
             const testNumber = document.getElementById('testNumberDropdown').value;
             const questionNumber = document.getElementById('questionNumberDropdown').value;
 
-            if (!testNumber || !questionNumber) {
+            if (!testNumber || !questionNumber || !currentQuestionDetails) {
                 alert('Please select both test and question numbers');
                 return;
             }
@@ -363,7 +369,7 @@
                     body: JSON.stringify({
                         testNumber,
                         questionNumber,
-                        question: document.getElementById('questionDisplay').innerHTML
+                        question: currentQuestionDetails
                     })
                 });
 
@@ -390,7 +396,7 @@
             const testNumber = document.getElementById('testNumberDropdown').value;
             const questionNumber = document.getElementById('questionNumberDropdown').value;
 
-            if (!testNumber || !questionNumber) {
+            if (!testNumber || !questionNumber || !currentQuestionDetails) {
                 alert('Please select both test and question numbers');
                 return;
             }
@@ -407,7 +413,7 @@
                     body: JSON.stringify({
                         testNumber,
                         questionNumber,
-                        question: document.getElementById('questionDisplay').innerHTML
+                        question: currentQuestionDetails
                     })
                 });
 
