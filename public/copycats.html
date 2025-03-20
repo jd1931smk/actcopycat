@@ -348,36 +348,48 @@
                 currentTestNumber = testNumber;
                 currentQuestionNumber = questionNumber;
                 
-                // Create HTML for the original question
-                let html = '<div class="questions-container">';
-                html += '<div class="original-question">';
-                html += `<h3>Original Question (Test ${testNumber}, Question ${questionNumber})</h3>`;
+                // Create container elements
+                const questionsContainer = document.createElement('div');
+                questionsContainer.className = 'questions-container';
+                
+                const originalQuestion = document.createElement('div');
+                originalQuestion.className = 'original-question';
+                
+                const originalHeader = document.createElement('h3');
+                originalHeader.textContent = `Original Question (Test ${testNumber}, Question ${questionNumber})`;
+                originalQuestion.appendChild(originalHeader);
                 
                 if (questionData.photo && questionData.photo.length > 0) {
                     questionData.photo.forEach(photo => {
-                        html += `<img src="${photo.url}" alt="Question image">`;
+                        const img = document.createElement('img');
+                        img.src = photo.url;
+                        img.alt = 'Question image';
+                        originalQuestion.appendChild(img);
                     });
                 }
                 
-                html += '</div>';
+                questionsContainer.appendChild(originalQuestion);
                 
                 // Add clone questions if available
                 if (cloneData && cloneData.length > 0) {
-                    html += '<div class="clone-questions">';
-                    html += '<h3>Clone Questions</h3>';
+                    const cloneQuestionsDiv = document.createElement('div');
+                    cloneQuestionsDiv.className = 'clone-questions';
+                    
+                    const cloneHeader = document.createElement('h3');
+                    cloneHeader.textContent = 'Clone Questions';
+                    cloneQuestionsDiv.appendChild(cloneHeader);
                     
                     cloneData.forEach((clone, index) => {
                         if (clone.clone) {
                             const cloneCard = document.createElement('div');
                             cloneCard.className = 'question-card clone-card';
-                            cloneCard.style.cursor = 'pointer';  // Add pointer cursor
                             
                             const modelHeader = document.createElement('h3');
                             modelHeader.textContent = clone.model || 'No Model';
                             cloneCard.appendChild(modelHeader);
 
                             const questionText = document.createElement('div');
-                            questionText.innerHTML = clone.clone.replace(/(\r\n|\n|\r)/g, '<br>') || 'No clone available';
+                            questionText.innerHTML = clone.clone.replace(/(\r\n|\n|\r)/g, '<br>');
                             cloneCard.appendChild(questionText);
 
                             // Add click handler to open practice page
@@ -386,22 +398,21 @@
                                     test: testNumber,
                                     question: questionNumber,
                                     model: clone.model || 'No Model',
-                                    clone: encodeURIComponent(clone.clone || '')
+                                    clone: encodeURIComponent(clone.clone)
                                 });
                                 window.open(`practice.html?${params.toString()}`, '_blank');
                             });
 
-                            html += cloneCard.outerHTML;
+                            cloneQuestionsDiv.appendChild(cloneCard);
                         }
                     });
                     
-                    html += '</div>';
+                    questionsContainer.appendChild(cloneQuestionsDiv);
                 }
                 
-                html += '</div>';
-                
                 // Update the container
-                resultContainer.innerHTML = html;
+                resultContainer.innerHTML = '';
+                resultContainer.appendChild(questionsContainer);
                 
                 // Render LaTeX
                 if (window.MathJax) {
