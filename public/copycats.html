@@ -244,13 +244,9 @@
                 
                 // Sort test numbers
                 testNumbers.sort((a, b) => {
-                    // Extract numeric parts if they exist
-                    const numA = parseInt(a.match(/\d+/)?.[0] || '0');
-                    const numB = parseInt(b.match(/\d+/)?.[0] || '0');
-                    
-                    if (numA === numB) {
-                        return a.localeCompare(b);
-                    }
+                    // Extract numeric parts
+                    const numA = parseInt(a.replace(/[^\d]/g, ''));
+                    const numB = parseInt(b.replace(/[^\d]/g, ''));
                     return numA - numB;
                 });
                 
