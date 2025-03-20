@@ -323,28 +323,10 @@
                 currentQuestionDetails = data;
 
                 const questionDisplay = document.getElementById('questionDisplay');
-                let questionHtml = '';
-                
-                // Add the image if available - fix the photo URL access
-                if (data.photo && data.photo.length > 0 && data.photo[0].url) {
-                    questionHtml += `<img src="${data.photo[0].url}" alt="Question ${questionNumber}">`;
-                } else if (data.photo && typeof data.photo === 'string') {
-                    questionHtml += `<img src="${data.photo}" alt="Question ${questionNumber}">`;
-                }
-                
-                // Add the question text/latex if available
-                if (data.latex) {
-                    questionHtml += `<div class="question-text">${data.latex}</div>`;
-                } else if (data.questionText) {
-                    questionHtml += `<div class="question-text">${data.questionText}</div>`;
-                }
-
-                if (questionHtml) {
-                    questionDisplay.innerHTML = questionHtml;
-                    // Render any LaTeX in the question
-                    MathJax.typesetPromise([questionDisplay]).catch(err => console.error('MathJax Error:', err));
+                if (data.photo && data.photo.length > 0) {
+                    questionDisplay.innerHTML = `<img src="${data.photo[0].url}" alt="Question ${questionNumber}">`;
                 } else {
-                    questionDisplay.innerHTML = 'Question content not found';
+                    questionDisplay.innerHTML = 'Question image not found';
                 }
 
                 // Reset UI elements
