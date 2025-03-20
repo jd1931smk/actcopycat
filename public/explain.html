@@ -325,9 +325,11 @@
                 const questionDisplay = document.getElementById('questionDisplay');
                 let questionHtml = '';
                 
-                // Add the image if available
-                if (data.photo && data.photo.length > 0) {
+                // Add the image if available - fix the photo URL access
+                if (data.photo && data.photo.length > 0 && data.photo[0].url) {
                     questionHtml += `<img src="${data.photo[0].url}" alt="Question ${questionNumber}">`;
+                } else if (data.photo && typeof data.photo === 'string') {
+                    questionHtml += `<img src="${data.photo}" alt="Question ${questionNumber}">`;
                 }
                 
                 // Add the question text/latex if available
