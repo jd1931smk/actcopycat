@@ -1,3 +1,4 @@
+require('dotenv').config();
 const OpenAI = require('openai');
 const { DeepSeekAPI } = require('./deepseek-api');
 const { AnthropicAPI } = require('./anthropic-api');
@@ -17,12 +18,30 @@ exports.handler = async function(event, context) {
             };
         }
 
+        // Debug log for API keys (will be visible in Netlify function logs)
+        console.log('API Keys present:', {
+            openai: !!process.env.OPENAI_API_KEY,
+            deepseek: !!process.env.DEEPSEEK_API_KEY,
+            anthropic: !!process.env.ANTHROPIC_API_KEY
+        });
+
         // Check for required API keys
         if (!process.env.OPENAI_API_KEY || !process.env.DEEPSEEK_API_KEY || !process.env.ANTHROPIC_API_KEY) {
-            console.error('Missing required API keys');
+            console.error('Missing API keys:', {
+                openai: !process.env.OPENAI_API_KEY,
+                deepseek: !process.env.DEEPSEEK_API_KEY,
+                anthropic: !process.env.ANTHROPIC_API_KEY
+            });
             return {
                 statusCode: 500,
-                body: JSON.stringify({ error: 'Server configuration error' })
+                body: JSON.stringify({ 
+                    error: 'Server configuration error - Missing API keys',
+                    details: {
+                        openai: !process.env.OPENAI_API_KEY ? 'missing' : 'present',
+                        deepseek: !process.env.DEEPSEEK_API_KEY ? 'missing' : 'present',
+                        anthropic: !process.env.ANTHROPIC_API_KEY ? 'missing' : 'present'
+                    }
+                })
             };
         }
 
