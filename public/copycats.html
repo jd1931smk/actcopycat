@@ -228,83 +228,40 @@
         let currentTestNumber = '';
         let currentQuestionNumber = '';
         
+        // Static test numbers - strictly alphabetized
+        const staticTestNumbers = [
+            '52C', '52D', '52F', '52G',
+            '67A', '67B', '67C', '67D', '67E', '67F',
+            '71C', '71E', '71H',
+            '72C', '72E', '72F', '72G', '72H',
+            '73C', '73E', '73G', '73H',
+            '74C', '74D', '74E', '74F', '74G', '74H',
+            '75A', '75D', '75E', '75F',
+            'A9', 'A10', 'A11',
+            'B02', 'B04', 'B05',
+            'C01', 'C02', 'C03-2',
+            'D03', 'D06',
+            'F12',
+            'MC1', 'MC2', 'MC3', 'MC4', 'MC5',
+            'Red Book 1', 'Red Book 2', 'Red Book 3',
+            'SATX',
+            'Z04', 'Z15'
+        ];
+        
         // Function to populate test numbers dropdown
-        async function populateTestNumbers() {
-            try {
-                document.getElementById('testLoadingSpinner').style.display = 'inline-block';
-                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const testNumbers = await response.json();
-                const dropdown = document.getElementById('testNumberDropdown');
-                
-                // Clear existing options except the first one
-                dropdown.innerHTML = '<option value="">Select a test number</option>';
-                
-                // Sort test numbers
-                testNumbers.sort((a, b) => {
-                    // Define order of special prefixes
-                    const prefixOrder = {
-                        'SATX': 0,
-                        'MC': 1,
-                        'C': 2,
-                        'Red Book': 3,
-                        'SHMM': 4,
-                        'B': 5,
-                        'D': 6,
-                        'Z': 7,
-                        'A': 8
-                    };
-                    
-                    // Function to get prefix and number
-                    const getPrefixAndNum = (str) => {
-                        // Special case for MC tests
-                        if (str.endsWith('MC')) {
-                            const num = parseInt(str) || 0;
-                            return { prefix: 'MC', num, order: prefixOrder['MC'] };
-                        }
-                        
-                        // Check other prefixes
-                        for (let prefix in prefixOrder) {
-                            if (str.startsWith(prefix)) {
-                                const num = parseInt(str.replace(prefix, '')) || 0;
-                                return { prefix, num, order: prefixOrder[prefix] };
-                            }
-                        }
-                        return { prefix: '', num: 0, order: 999 };
-                    };
-                    
-                    const infoA = getPrefixAndNum(a);
-                    const infoB = getPrefixAndNum(b);
-                    
-                    // First compare by prefix order
-                    if (infoA.order !== infoB.order) {
-                        return infoA.order - infoB.order;
-                    }
-                    
-                    // Then compare by number
-                    return infoA.num - infoB.num;
-                });
-                
-                // Add new options
-                testNumbers.forEach(testNumber => {
-                    const option = document.createElement('option');
-                    option.value = testNumber;
-                    option.textContent = testNumber;
-                    dropdown.appendChild(option);
-                });
-                
-                // If there was a previously selected test number, try to restore it
-                if (currentTestNumber) {
-                    dropdown.value = currentTestNumber;
-                }
-            } catch (error) {
-                console.error('Error fetching test numbers:', error);
-                alert('Error loading test numbers. Please try refreshing the page.');
-            } finally {
-                document.getElementById('testLoadingSpinner').style.display = 'none';
-            }
+        function populateTestNumbers() {
+            const dropdown = document.getElementById('testNumberDropdown');
+            dropdown.innerHTML = '<option value="">Select a test number</option>';
+            
+            // Add the pre-sorted test numbers
+            staticTestNumbers.forEach(testNumber => {
+                const option = document.createElement('option');
+                option.value = testNumber;
+                option.textContent = testNumber;
+                dropdown.appendChild(option);
+            });
+            
+            document.getElementById('testLoadingSpinner').style.display = 'none';
         }
         
         // Function to populate question numbers dropdown
