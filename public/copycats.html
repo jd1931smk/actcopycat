@@ -223,7 +223,11 @@
         // Function to populate test numbers dropdown
         async function populateTestNumbers() {
             try {
+                document.getElementById('testLoadingSpinner').style.display = 'inline-block';
                 const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const testNumbers = await response.json();
                 const dropdown = document.getElementById('testNumberDropdown');
                 
@@ -256,13 +260,22 @@
                 }
             } catch (error) {
                 console.error('Error fetching test numbers:', error);
+                alert('Error loading test numbers. Please try refreshing the page.');
+            } finally {
+                document.getElementById('testLoadingSpinner').style.display = 'none';
             }
         }
         
         // Function to populate question numbers dropdown
         async function populateQuestionNumbers(testNumber) {
+            if (!testNumber) return;
+            
             try {
+                document.getElementById('questionLoadingSpinner').style.display = 'inline-block';
                 const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const questionNumbers = await response.json();
                 const dropdown = document.getElementById('questionNumberDropdown');
                 
@@ -289,6 +302,9 @@
                 updateNavigationButtons();
             } catch (error) {
                 console.error('Error fetching question numbers:', error);
+                alert('Error loading question numbers. Please try selecting a different test number.');
+            } finally {
+                document.getElementById('questionLoadingSpinner').style.display = 'none';
             }
         }
         
@@ -303,32 +319,55 @@
             }
             
             try {
-                const response = await fetch(`/.netlify/functions/airtable?action=getQuestion&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
-                const data = await response.json();
+                const resultContainer = document.getElementById('resultContainer');
+                resultContainer.innerHTML = '<div class="spinner" style="display: inline-block;"></div>';
+                
+                // First get the original question
+                const questionResponse = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                if (!questionResponse.ok) {
+                    throw new Error(`HTTP error! status: ${questionResponse.status}`);
+                }
+                const questionData = await questionResponse.json();
+                
+                // Then get the clones
+                const clonesResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                if (!clonesResponse.ok) {
+                    throw new Error(`HTTP error! status: ${clonesResponse.status}`);
+                }
+                const cloneData = await clonesResponse.json();
                 
                 // Update current selections
                 currentTestNumber = testNumber;
                 currentQuestionNumber = questionNumber;
                 
-                // Display the question
-                const resultContainer = document.getElementById('resultContainer');
+                // Create HTML for the original question
+                let html = '<div class="questions-container">';
+                html += '<div class="original-question">';
+                html += `<h3>Original Question (Test ${testNumber}, Question ${questionNumber})</h3>`;
                 
-                // Create HTML for the question
-                let html = '<div class="question-card">';
-                
-                // Add test and question number
-                html += `<h3>Test ${testNumber}, Question ${questionNumber}</h3>`;
-                
-                // Add photo if available
-                if (data.photo && data.photo.length > 0) {
-                    data.photo.forEach(photo => {
+                if (questionData.photo && questionData.photo.length > 0) {
+                    questionData.photo.forEach(photo => {
                         html += `<img src="${photo.url}" alt="Question image">`;
                     });
                 }
                 
-                // Add LaTeX content if available
-                if (data.latexMarkdown) {
-                    html += `<div class="latex-content">${data.latexMarkdown}</div>`;
+                html += '</div>';
+                
+                // Add clone questions if available
+                if (cloneData && cloneData.length > 0) {
+                    html += '<div class="clone-questions">';
+                    html += '<h3>Clone Questions</h3>';
+                    
+                    cloneData.forEach((clone, index) => {
+                        if (clone.clone) {
+                            html += `<div class="question-card clone-card">`;
+                            html += `<strong>Clone ${index + 1}</strong> (${clone.model})<br>`;
+                            html += `<div class="latex-content">${clone.clone}</div>`;
+                            html += '</div>';
+                        }
+                    });
+                    
+                    html += '</div>';
                 }
                 
                 html += '</div>';
@@ -345,25 +384,29 @@
                 updateNavigationButtons();
             } catch (error) {
                 console.error('Error fetching question:', error);
-                alert('Error fetching question. Please try again.');
+                document.getElementById('resultContainer').innerHTML = `
+                    <div class="error-message">
+                        Error loading question. Please try again or select a different question.
+                        <br>
+                        Error details: ${error.message}
+                    </div>
+                `;
             }
         }
         
         // Function to update navigation buttons
         function updateNavigationButtons() {
-            const testDropdown = document.getElementById('testNumberDropdown');
             const questionDropdown = document.getElementById('questionNumberDropdown');
             const prevButton = document.getElementById('prevButton');
             const nextButton = document.getElementById('nextButton');
             
-            const currentTestIndex = testDropdown.selectedIndex;
-            const currentQuestionIndex = questionDropdown.selectedIndex;
+            const currentIndex = questionDropdown.selectedIndex;
             
             // Enable/disable previous button
-            prevButton.disabled = currentQuestionIndex <= 1;
+            prevButton.disabled = currentIndex <= 1;
             
             // Enable/disable next button
-            nextButton.disabled = currentQuestionIndex >= questionDropdown.options.length - 1;
+            nextButton.disabled = currentIndex >= questionDropdown.options.length - 1;
         }
         
         // Function to navigate between questions
