@@ -421,45 +421,39 @@
 
         // Get explanation function
         async function getExplanation() {
-            const explanationBox = document.getElementById('explanationBox');
-            const loading = document.getElementById('loading');
             const testNumber = document.getElementById('testNumberDropdown').value;
             const questionNumber = document.getElementById('questionNumberDropdown').value;
+            const questionText = document.getElementById('questionText').value;
 
-            if (!testNumber || !questionNumber || !currentQuestionDetails) {
-                alert('Please select both test and question numbers');
+            if (!testNumber || !questionNumber || !questionText) {
+                alert('Please enter a test number, question number, and question text.');
                 return;
             }
-
-            loading.style.display = 'block';
-            explanationBox.style.display = 'none';
 
             try {
                 const response = await fetch('/.netlify/functions/get-explanation', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         testNumber,
                         questionNumber,
-                        question: currentQuestionDetails.latex || ''
+                        question: questionText
                     })
                 });
 
-                if (!response.ok) throw new Error('Failed to get explanation');
-                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error('Failed to fetch explanation');
+                }
 
+                const data = await response.json();
+                const explanationBox = document.getElementById('explanationBox');
                 explanationBox.innerHTML = data.explanation;
-                explanationBox.style.display = 'block';
-                // Rerun MathJax on the explanation box
-                MathJax.typesetPromise([explanationBox]).catch(err => console.error('MathJax Error:', err));
+                MathJax.typeset([explanationBox]);
             } catch (error) {
-                console.error('Error getting explanation:', error);
-                explanationBox.innerHTML = 'Failed to get explanation. Please try again.';
-                explanationBox.style.display = 'block';
-            } finally {
-                loading.style.display = 'none';
+                console.error('Error:', error);
+                alert('Failed to get explanation. Please try again.');
             }
         }
     </script>
