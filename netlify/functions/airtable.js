@@ -46,7 +46,16 @@ exports.handler = async (event) => {
                     .then(records => {
                         console.log("Raw Records:", records.map(r => r.fields));
                         return [...new Set(records.map(r => r.get('Test Number')).filter(Boolean))]
-                            .sort((a, b) => a.localeCompare(b));
+                            .sort((a, b) => {
+                                // Extract numeric parts
+                                const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+                                const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+                                
+                                if (numA === numB) {
+                                    return a.localeCompare(b); // Fall back to string comparison if numbers are equal
+                                }
+                                return numA - numB;
+                            });
                     });
                 return formatResponse(200, testNumbers);
 
