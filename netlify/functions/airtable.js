@@ -345,13 +345,15 @@ exports.handler = async (event) => {
                         photo: record.get('Photo'),
                         latexMarkdown: record.get('LatexMarkdown'),
                         testNumber: record.get('Test Number'),
-                        questionNumber: record.get('Question Number'),
+                        questionNumber: parseInt(record.get('Question Number'), 10),  // Convert to number
                         answer: record.get('Answer')
                     })).sort((a, b) => {
-                        // Sort by test number first, then question number
-                        const testCompare = a.testNumber.localeCompare(b.testNumber);
-                        if (testCompare !== 0) return testCompare;
-                        return a.questionNumber - b.questionNumber;
+                        // First sort by question number numerically
+                        const questionCompare = a.questionNumber - b.questionNumber;
+                        if (questionCompare !== 0) return questionCompare;
+                        
+                        // If question numbers are the same, sort by test number
+                        return a.testNumber.localeCompare(b.testNumber);
                     });
 
                     console.log(`Returning ${questions.length} questions`);

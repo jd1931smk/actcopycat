@@ -264,8 +264,8 @@
                                    id="checkbox-${q.id}" 
                                    onchange="updateSelection()"
                                    data-index="${index}">
-                            <p><strong>Test ${q.testNumber}, #${q.questionNumber}</strong></p>
-                            ${q.photo ? `<img src="${q.photo[0].url}" alt="Question ${index + 1}">` : q.latexMarkdown}
+                            <p><strong>Question #${q.questionNumber}</strong> (From Test ${q.testNumber})</p>
+                            ${q.photo ? `<img src="${q.photo[0].url}" alt="Question ${q.questionNumber}">` : q.latexMarkdown}
                         </div>
                     `).join('')}
                 `;
@@ -331,7 +331,7 @@
                 <hr>
                 ${selectedQuestions.map((q, index) => `
                     <div class="question">
-                        <p><strong>Question ${index + 1}</strong> (Source: Test ${q.testNumber}, #${q.questionNumber})</p>
+                        <p><strong>Question ${index + 1}</strong> (Original: Question #${q.questionNumber} from Test ${q.testNumber})</p>
                         ${q.photo ? `<img src="${q.photo[0].url}" alt="Question ${index + 1}">` : q.latexMarkdown}
                         <div style="margin: 20px 0; border-bottom: 1px dashed #ccc;"></div>
                     </div>
