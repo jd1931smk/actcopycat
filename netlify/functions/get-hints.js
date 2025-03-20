@@ -25,30 +25,10 @@ exports.handler = async function(event, context) {
             anthropic: !!process.env.ANTHROPIC_API_KEY
         });
 
-        // Check for required API keys
-        if (!process.env.OPENAI_API_KEY || !process.env.DEEPSEEK_API_KEY || !process.env.ANTHROPIC_API_KEY) {
-            console.error('Missing API keys:', {
-                openai: !process.env.OPENAI_API_KEY,
-                deepseek: !process.env.DEEPSEEK_API_KEY,
-                anthropic: !process.env.ANTHROPIC_API_KEY
-            });
-            return {
-                statusCode: 500,
-                body: JSON.stringify({ 
-                    error: 'Server configuration error - Missing API keys',
-                    details: {
-                        openai: !process.env.OPENAI_API_KEY ? 'missing' : 'present',
-                        deepseek: !process.env.DEEPSEEK_API_KEY ? 'missing' : 'present',
-                        anthropic: !process.env.ANTHROPIC_API_KEY ? 'missing' : 'present'
-                    }
-                })
-            };
-        }
-
         // Initialize API clients
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
         const deepseek = new DeepSeekAPI(process.env.DEEPSEEK_API_KEY);
-        const anthropic = new AnthropicAPI(process.env.ANTHROPIC_API_KEY);
+        const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+        const anthropic = process.env.ANTHROPIC_API_KEY ? new AnthropicAPI(process.env.ANTHROPIC_API_KEY) : null;
 
         // Prepare the prompt for all models
         const prompt = `For this ACT Math question (Test ${testNumber}, Question ${questionNumber}):
@@ -61,32 +41,38 @@ Please provide a helpful hint that guides the student toward the solution withou
 3. Help identify what mathematical principles to apply
 4. NOT reveal the actual answer or solution steps`;
 
-        // Get hints from all three models in parallel
-        const [deepseekHint, gpt4Hint, claudeHint] = await Promise.all([
-            // DeepSeek hint
-            deepseek.generateHint(prompt).catch(error => {
-                console.error('DeepSeek API Error:', error.response?.data || error.message);
-                return 'Unable to generate hint at this time.';
-            }),
-            
-            // GPT-4 hint
-            openai.chat.completions.create({
-                model: 'gpt-4-turbo-preview',
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.7,
-                max_tokens: 250
-            }).then(response => response.choices[0].message.content)
-            .catch(error => {
+        // Get hints from each model independently
+        let deepseekHint = 'Unable to generate hint at this time.';
+        let gpt4Hint = 'Unable to generate hint at this time.';
+        let claudeHint = 'Unable to generate hint at this time.';
+
+        try {
+            deepseekHint = await deepseek.generateHint(prompt);
+        } catch (error) {
+            console.error('DeepSeek API Error:', error.response?.data || error.message);
+        }
+
+        if (openai) {
+            try {
+                const gpt4Response = await openai.chat.completions.create({
+                    model: 'gpt-4-turbo-preview',
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.7,
+                    max_tokens: 250
+                });
+                gpt4Hint = gpt4Response.choices[0].message.content;
+            } catch (error) {
                 console.error('OpenAI API Error:', error.response?.data || error.message);
-                return 'Unable to generate hint at this time.';
-            }),
-            
-            // Claude 3.5 hint
-            anthropic.generateHint(prompt).catch(error => {
+            }
+        }
+
+        if (anthropic) {
+            try {
+                claudeHint = await anthropic.generateHint(prompt);
+            } catch (error) {
                 console.error('Anthropic API Error:', error.response?.data || error.message);
-                return 'Unable to generate hint at this time.';
-            })
-        ]);
+            }
+        }
 
         return {
             statusCode: 200,
