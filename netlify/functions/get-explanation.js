@@ -1,6 +1,4 @@
 const OpenAI = require('openai');
-const { DeepSeekAPI } = require('./deepseek-api');
-const { AnthropicAPI } = require('./anthropic-api');
 
 exports.handler = async function(event, context) {
     if (event.httpMethod !== 'POST') {
@@ -17,8 +15,8 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // Initialize API clients
-        const deepseek = new DeepSeekAPI(process.env.DEEPSEEK_API_KEY);
+        // Initialize OpenAI client
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
         // Prepare the prompt for the explanation
         const prompt = `For this ACT Math question (Test ${testNumber}, Question ${questionNumber}):
@@ -30,19 +28,27 @@ Please provide a detailed explanation of how to solve this problem. The explanat
 2. Explain the mathematical concepts and principles involved
 3. Walk through the solution step by step
 4. Explain why each step is necessary
-5. Conclude with the final answer and verify it makes sense`;
+5. Conclude with the final answer and verify it makes sense
+
+Format your response using LaTeX math notation where appropriate, using \( \) for inline math and \[ \] for display math.`;
 
         try {
-            const explanation = await deepseek.generateHint(prompt);
+            const response = await openai.chat.completions.create({
+                model: 'gpt-4-turbo-preview',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.7,
+                max_tokens: 1000
+            });
+
             return {
                 statusCode: 200,
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ explanation })
+                body: JSON.stringify({ explanation: response.choices[0].message.content })
             };
         } catch (error) {
-            console.error('DeepSeek API Error:', error);
+            console.error('OpenAI API Error:', error);
             return {
                 statusCode: 500,
                 body: JSON.stringify({ error: 'Failed to generate explanation' })

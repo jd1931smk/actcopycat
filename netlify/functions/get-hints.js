@@ -39,33 +39,26 @@ Please provide a helpful hint that guides the student toward the solution withou
 4. NOT reveal the actual answer or solution steps`;
 
         // Get hints from each model independently
-        let deepseekHint = 'Unable to generate hint at this time.';
-        let gpt4Hint = 'Unable to generate hint at this time.';
-        let claudeHint = 'Unable to generate hint at this time.';
-
-        try {
-            deepseekHint = await deepseek.generateHint(prompt);
-        } catch (error) {
-            console.error('DeepSeek API Error:', error);
-        }
-
-        try {
-            const gpt4Response = await openai.chat.completions.create({
+        const hints = await Promise.allSettled([
+            deepseek.generateHint(prompt).catch(error => {
+                console.error('DeepSeek API Error:', error);
+                return 'Unable to generate hint at this time.';
+            }),
+            openai.chat.completions.create({
                 model: 'gpt-4-turbo-preview',
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.7,
                 max_tokens: 250
-            });
-            gpt4Hint = gpt4Response.choices[0].message.content;
-        } catch (error) {
-            console.error('OpenAI API Error:', error);
-        }
-
-        try {
-            claudeHint = await anthropic.generateHint(prompt);
-        } catch (error) {
-            console.error('Anthropic API Error:', error);
-        }
+            }).then(response => response.choices[0].message.content)
+            .catch(error => {
+                console.error('OpenAI API Error:', error);
+                return 'Unable to generate hint at this time.';
+            }),
+            anthropic.generateHint(prompt).catch(error => {
+                console.error('Anthropic API Error:', error);
+                return 'Unable to generate hint at this time.';
+            })
+        ]);
 
         return {
             statusCode: 200,
@@ -73,9 +66,9 @@ Please provide a helpful hint that guides the student toward the solution withou
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                deepseek: deepseekHint,
-                gpt4: gpt4Hint,
-                claude: claudeHint
+                deepseek: hints[0].value || 'Unable to generate hint at this time.',
+                gpt4: hints[1].value || 'Unable to generate hint at this time.',
+                claude: hints[2].value || 'Unable to generate hint at this time.'
             })
         };
     } catch (error) {
