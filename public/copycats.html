@@ -422,7 +422,9 @@
                             cloneCard.appendChild(modelHeader);
 
                             const questionText = document.createElement('div');
-                            questionText.innerHTML = clone.clone.replace(/(\r\n|\n|\r)/g, '<br>');
+                            // Format answer choices to be on separate lines
+                            const formattedText = clone.clone.replace(/([A-E]\.)(?!\s*$)/g, '<br>$1');
+                            questionText.innerHTML = formattedText.replace(/(\r\n|\n|\r)/g, '<br>');
                             cloneCard.appendChild(questionText);
 
                             // Add click handler to open practice page
