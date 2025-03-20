@@ -3,7 +3,8 @@
     "version": "1.0.0",
     "dependencies": {
         "airtable": "^0.11.6",
+        "axios": "^1.6.7",
         "dotenv": "^16.0.3",
-        "openai": "^4.87.4"
+        "openai": "^4.28.0"
     }
 }

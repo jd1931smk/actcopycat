@@ -1,4 +1,4 @@
-const { Configuration, OpenAIApi } = require('openai');
+const OpenAI = require('openai');
 const { DeepSeekAPI } = require('./deepseek-api');
 const { AnthropicAPI } = require('./anthropic-api');
 
@@ -17,10 +17,17 @@ exports.handler = async function(event, context) {
             };
         }
 
+        // Check for required API keys
+        if (!process.env.OPENAI_API_KEY || !process.env.DEEPSEEK_API_KEY || !process.env.ANTHROPIC_API_KEY) {
+            console.error('Missing required API keys');
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ error: 'Server configuration error' })
+            };
+        }
+
         // Initialize API clients
-        const openai = new OpenAIApi(new Configuration({
-            apiKey: process.env.OPENAI_API_KEY
-        }));
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
         const deepseek = new DeepSeekAPI(process.env.DEEPSEEK_API_KEY);
         const anthropic = new AnthropicAPI(process.env.ANTHROPIC_API_KEY);
 
@@ -39,25 +46,25 @@ Please provide a helpful hint that guides the student toward the solution withou
         const [deepseekHint, gpt4Hint, claudeHint] = await Promise.all([
             // DeepSeek hint
             deepseek.generateHint(prompt).catch(error => {
-                console.error('DeepSeek API Error:', error);
+                console.error('DeepSeek API Error:', error.response?.data || error.message);
                 return 'Unable to generate hint at this time.';
             }),
             
             // GPT-4 hint
-            openai.createChatCompletion({
-                model: 'gpt-4',
+            openai.chat.completions.create({
+                model: 'gpt-4-turbo-preview',
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.7,
                 max_tokens: 250
-            }).then(response => response.data.choices[0].message.content)
+            }).then(response => response.choices[0].message.content)
             .catch(error => {
-                console.error('OpenAI API Error:', error);
+                console.error('OpenAI API Error:', error.response?.data || error.message);
                 return 'Unable to generate hint at this time.';
             }),
             
             // Claude 3.5 hint
             anthropic.generateHint(prompt).catch(error => {
-                console.error('Anthropic API Error:', error);
+                console.error('Anthropic API Error:', error.response?.data || error.message);
                 return 'Unable to generate hint at this time.';
             })
         ]);
