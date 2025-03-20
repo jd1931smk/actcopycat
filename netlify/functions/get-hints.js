@@ -22,45 +22,10 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // Debug log for environment and API keys
-        console.log('Environment:', {
-            NODE_ENV: process.env.NODE_ENV,
-            NETLIFY: process.env.NETLIFY,
-            CONTEXT: process.env.CONTEXT
-        });
-        
-        console.log('API Keys present:', {
-            openai: !!process.env.OPENAI_API_KEY,
-            deepseek: !!process.env.DEEPSEEK_API_KEY,
-            anthropic: !!process.env.ANTHROPIC_API_KEY
-        });
-
-        // Initialize API clients with better error handling
-        let deepseek = null;
-        let openai = null;
-        let anthropic = null;
-
-        try {
-            deepseek = new DeepSeekAPI(process.env.DEEPSEEK_API_KEY);
-        } catch (error) {
-            console.error('Failed to initialize DeepSeek client:', error);
-        }
-
-        try {
-            if (process.env.OPENAI_API_KEY) {
-                openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-            }
-        } catch (error) {
-            console.error('Failed to initialize OpenAI client:', error);
-        }
-
-        try {
-            if (process.env.ANTHROPIC_API_KEY) {
-                anthropic = new AnthropicAPI(process.env.ANTHROPIC_API_KEY);
-            }
-        } catch (error) {
-            console.error('Failed to initialize Anthropic client:', error);
-        }
+        // Initialize API clients
+        const deepseek = new DeepSeekAPI(process.env.DEEPSEEK_API_KEY);
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const anthropic = new AnthropicAPI(process.env.ANTHROPIC_API_KEY);
 
         // Prepare the prompt for all models
         const prompt = `For this ACT Math question (Test ${testNumber}, Question ${questionNumber}):
@@ -73,63 +38,33 @@ Please provide a helpful hint that guides the student toward the solution withou
 3. Help identify what mathematical principles to apply
 4. NOT reveal the actual answer or solution steps`;
 
-        // Get hints from each model independently with detailed error logging
+        // Get hints from each model independently
         let deepseekHint = 'Unable to generate hint at this time.';
         let gpt4Hint = 'Unable to generate hint at this time.';
         let claudeHint = 'Unable to generate hint at this time.';
 
-        if (deepseek) {
-            try {
-                console.log('Attempting to get DeepSeek hint...');
-                deepseekHint = await deepseek.generateHint(prompt);
-                console.log('Successfully got DeepSeek hint');
-            } catch (error) {
-                console.error('DeepSeek API Error:', {
-                    message: error.message,
-                    response: error.response?.data,
-                    stack: error.stack
-                });
-            }
-        } else {
-            console.log('DeepSeek client not initialized');
+        try {
+            deepseekHint = await deepseek.generateHint(prompt);
+        } catch (error) {
+            console.error('DeepSeek API Error:', error);
         }
 
-        if (openai) {
-            try {
-                console.log('Attempting to get GPT-4 hint...');
-                const gpt4Response = await openai.chat.completions.create({
-                    model: 'gpt-4-turbo-preview',
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature: 0.7,
-                    max_tokens: 250
-                });
-                gpt4Hint = gpt4Response.choices[0].message.content;
-                console.log('Successfully got GPT-4 hint');
-            } catch (error) {
-                console.error('OpenAI API Error:', {
-                    message: error.message,
-                    response: error.response?.data,
-                    stack: error.stack
-                });
-            }
-        } else {
-            console.log('OpenAI client not initialized');
+        try {
+            const gpt4Response = await openai.chat.completions.create({
+                model: 'gpt-4-turbo-preview',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.7,
+                max_tokens: 250
+            });
+            gpt4Hint = gpt4Response.choices[0].message.content;
+        } catch (error) {
+            console.error('OpenAI API Error:', error);
         }
 
-        if (anthropic) {
-            try {
-                console.log('Attempting to get Claude hint...');
-                claudeHint = await anthropic.generateHint(prompt);
-                console.log('Successfully got Claude hint');
-            } catch (error) {
-                console.error('Anthropic API Error:', {
-                    message: error.message,
-                    response: error.response?.data,
-                    stack: error.stack
-                });
-            }
-        } else {
-            console.log('Anthropic client not initialized');
+        try {
+            claudeHint = await anthropic.generateHint(prompt);
+        } catch (error) {
+            console.error('Anthropic API Error:', error);
         }
 
         return {
@@ -144,10 +79,7 @@ Please provide a helpful hint that guides the student toward the solution withou
             })
         };
     } catch (error) {
-        console.error('Function Error:', {
-            message: error.message,
-            stack: error.stack
-        });
+        console.error('Function Error:', error);
         return {
             statusCode: 500,
             body: JSON.stringify({ error: 'Internal server error' })
