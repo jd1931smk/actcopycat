@@ -177,7 +177,14 @@ exports.handler = async (event) => {
                         .replace(/\\\\([^\\])/g, '\\$1')  // Fix double escaped backslashes
                         .replace(/\\{2,}/g, '\\')         // Fix multiple backslashes
                         .replace(/\\([^a-zA-Z{}\[\]])/g, '\\$1')  // Ensure proper escaping of special characters
+                        .replace(/You can't use 'macro parameter charact/g, '') // Remove error message
                         .trim();
+
+                    // Clean up any remaining LaTeX issues
+                    explanation = explanation
+                        .replace(/\\\s+/g, '\\') // Remove spaces after backslashes
+                        .replace(/\s*\n\s*/g, '\n') // Clean up newlines
+                        .replace(/\n{3,}/g, '\n\n'); // Reduce multiple newlines
 
                     console.log('Processed explanation:', explanation);
 
