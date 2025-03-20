@@ -1,0 +1,28 @@
+2025-03-19 09:28:23,923 - INFO - Starting cleanup with options: limit=2, record=None, live=False
+2025-03-19 09:33:00,792 - INFO - Starting cleanup with options: limit=2, record=None, live=False
+2025-03-19 09:34:09,650 - INFO - Starting cleanup with options: limit=2, record=None, live=False
+2025-03-19 09:34:22,047 - INFO - Found 2 records with explanations to process
+2025-03-19 09:34:22,048 - INFO - Processing record rec01uCOAXSbRwsLW (Test C03-2, Question 18)...
+2025-03-19 09:34:32,802 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 529 "
+2025-03-19 09:34:32,803 - INFO - Retrying request to /v1/messages in 0.492321 seconds
+2025-03-19 09:34:43,810 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 529 "
+2025-03-19 09:34:43,813 - INFO - Retrying request to /v1/messages in 0.887471 seconds
+2025-03-19 09:34:57,244 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 529 "
+2025-03-19 09:34:57,245 - ERROR - Error calling Claude API: Error code: 529 - {'type': 'error', 'error': {'type': 'overloaded_error', 'message': 'Overloaded'}}
+2025-03-19 09:34:57,246 - INFO - No changes needed for record rec01uCOAXSbRwsLW
+2025-03-19 09:34:57,246 - INFO - Processing record rec04YadKKULPrHBX (Test 58E, Question 42)...
+2025-03-19 09:35:07,849 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 529 "
+2025-03-19 09:35:07,852 - INFO - Retrying request to /v1/messages in 0.401827 seconds
+2025-03-19 09:35:18,676 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 529 "
+2025-03-19 09:35:18,677 - INFO - Retrying request to /v1/messages in 0.756442 seconds
+2025-03-19 09:35:31,554 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 529 "
+2025-03-19 09:35:31,556 - ERROR - Error calling Claude API: Error code: 529 - {'type': 'error', 'error': {'type': 'overloaded_error', 'message': 'Overloaded'}}
+2025-03-19 09:35:31,556 - INFO - No changes needed for record rec04YadKKULPrHBX
+2025-03-19 09:35:31,556 - INFO - ==================================================
+2025-03-19 09:35:31,556 - INFO - Summary:
+2025-03-19 09:35:31,556 - INFO - Processed: 2
+2025-03-19 09:35:31,556 - INFO - Updated: 0
+2025-03-19 09:35:31,556 - INFO - Skipped (no changes): 2
+2025-03-19 09:35:31,556 - INFO - Errors: 0
+2025-03-19 09:35:31,556 - INFO - ==================================================
+2025-03-19 09:35:31,556 - INFO - Cleanup completed!

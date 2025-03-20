@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explanation Cleanup Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .controls {
+            width: 300px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .results {
+            flex: 1;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+        button, select, input {
+            margin: 10px 0;
+            padding: 8px;
+            width: 100%;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .preview-container {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .preview-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .preview-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .preview-content {
+            white-space: pre-wrap;
+        }
+        .math-preview {
+            border-top: 1px solid #eee;
+            margin-top: 10px;
+            padding-top: 10px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            }
+        };
+    </script>
+</head>
+<body>
+    <h1>Explanation Cleanup Tool</h1>
+    <p>This tool cleans up LaTeX formatting in explanations using Claude 3.5.</p>
+    
+    <div class="container">
+        <div class="controls">
+            <h2>Controls</h2>
+            
+            <div>
+                <label for="testNumberDropdown">Test Number:</label>
+                <select id="testNumberDropdown">
+                    <option value="">All Tests</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="questionNumberDropdown">Question Number:</label>
+                <select id="questionNumberDropdown">
+                    <option value="">All Questions</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="recordIdInput">Record ID (optional):</label>
+                <input type="text" id="recordIdInput" placeholder="Enter record ID...">
+            </div>
+            
+            <div>
+                <label>
+                    <input type="checkbox" id="previewCheckbox" checked>
+                    Preview mode (no database updates)
+                </label>
+            </div>
+            
+            <button id="cleanupButton">Run Cleanup</button>
+            <button id="fetchTestsButton">Load Test Numbers</button>
+        </div>
+        
+        <div class="results">
+            <h2>Results</h2>
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Processing explanations. This may take a while...</p>
+            </div>
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load test numbers
+            document.getElementById('fetchTestsButton').addEventListener('click', loadTestNumbers);
+            
+            // Handle test number selection
+            document.getElementById('testNumberDropdown').addEventListener('change', function() {
+                const testNumber = this.value;
+                if (testNumber) {
+                    loadQuestionNumbers(testNumber);
+                } else {
+                    const dropdown = document.getElementById('questionNumberDropdown');
+                    dropdown.innerHTML = '<option value="">All Questions</option>';
+                }
+            });
+            
+            // Run cleanup
+            document.getElementById('cleanupButton').addEventListener('click', runCleanup);
+        });
+        
+        // Load test numbers
+        async function loadTestNumbers() {
+            try {
+                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
+                if (!response.ok) throw new Error('Failed to fetch test numbers');
+                const testNumbers = await response.json();
+                
+                const dropdown = document.getElementById('testNumberDropdown');
+                dropdown.innerHTML = '<option value="">All Tests</option>';
+                
+                testNumbers.forEach(testNumber => {
+                    const option = document.createElement('option');
+                    option.value = testNumber;
+                    option.textContent = testNumber;
+                    dropdown.appendChild(option);
+                });
+                
+                showMessage('Test numbers loaded successfully.');
+            } catch (error) {
+                console.error('Error loading test numbers:', error);
+                showMessage(`Error: ${error.message}`);
+            }
+        }
+        
+        // Load question numbers for a specific test
+        async function loadQuestionNumbers(testNumber) {
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
+                if (!response.ok) throw new Error('Failed to fetch question numbers');
+                const questionNumbers = await response.json();
+                
+                const dropdown = document.getElementById('questionNumberDropdown');
+                dropdown.innerHTML = '<option value="">All Questions</option>';
+                
+                questionNumbers.forEach(number => {
+                    const option = document.createElement('option');
+                    option.value = number;
+                    option.textContent = number;
+                    dropdown.appendChild(option);
+                });
+                
+                showMessage('Question numbers loaded successfully.');
+            } catch (error) {
+                console.error('Error loading question numbers:', error);
+                showMessage(`Error: ${error.message}`);
+            }
+        }
+        
+        // Run the cleanup process
+        async function runCleanup() {
+            const testNumber = document.getElementById('testNumberDropdown').value;
+            const questionNumber = document.getElementById('questionNumberDropdown').value;
+            const recordId = document.getElementById('recordIdInput').value.trim();
+            const previewMode = document.getElementById('previewCheckbox').checked;
+            
+            // Show loading indicator
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('resultsContainer').innerHTML = '';
+            
+            try {
+                // Build the URL
+                let url = '/.netlify/functions/cleanup-explanations-v2?preview=' + previewMode;
+                if (recordId) {
+                    url += `&recordId=${encodeURIComponent(recordId)}`;
+                }
+                
+                // Call the function
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to process explanations');
+                }
+                
+                // Display results
+                displayResults(data);
+            } catch (error) {
+                console.error('Error running cleanup:', error);
+                showMessage(`Error: ${error.message}`);
+            } finally {
+                // Hide loading indicator
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        // Display the results
+        function displayResults(data) {
+            const container = document.getElementById('resultsContainer');
+            
+            // Create summary
+            const summary = document.createElement('div');
+            summary.innerHTML = `
+                <h3>Summary</h3>
+                <p>Total processed: ${data.results.processedCount}</p>
+                <p>Updated: ${data.results.updatedCount}</p>
+                <p>Skipped (no changes): ${data.results.skippedCount}</p>
+                <p>Errors: ${data.results.errors.length}</p>
+            `;
+            container.appendChild(summary);
+            
+            // Display previews if available
+            if (data.results.previews && data.results.previews.length > 0) {
+                const previewContainer = document.createElement('div');
+                previewContainer.className = 'preview-container';
+                previewContainer.innerHTML = '<h3>Previews</h3>';
+                
+                data.results.previews.forEach(preview => {
+                    const item = document.createElement('div');
+                    item.className = 'preview-item';
+                    
+                    item.innerHTML = `
+                        <div class="preview-title">
+                            Test ${preview.testNumber}, Question ${preview.questionNumber} (Record ID: ${preview.recordId})
+                        </div>
+                        <h4>Original:</h4>
+                        <div class="preview-content">${preview.original}</div>
+                        <div class="math-preview" id="original-${preview.recordId}"></div>
+                        
+                        <h4>Cleaned:</h4>
+                        <div class="preview-content">${preview.cleaned}</div>
+                        <div class="math-preview" id="cleaned-${preview.recordId}"></div>
+                    `;
+                    
+                    previewContainer.appendChild(item);
+                    
+                    // Add the original and cleaned versions for MathJax rendering
+                    setTimeout(() => {
+                        const originalPreview = document.getElementById(`original-${preview.recordId}`);
+                        originalPreview.innerHTML = preview.original;
+                        
+                        const cleanedPreview = document.getElementById(`cleaned-${preview.recordId}`);
+                        cleanedPreview.innerHTML = preview.cleaned;
+                        
+                        MathJax.typesetPromise([originalPreview, cleanedPreview])
+                            .catch(err => console.error('MathJax Error:', err));
+                    }, 100);
+                });
+                
+                container.appendChild(previewContainer);
+            }
+            
+            // Display errors if any
+            if (data.results.errors.length > 0) {
+                const errorsContainer = document.createElement('div');
+                errorsContainer.innerHTML = '<h3>Errors</h3>';
+                
+                data.results.errors.forEach(error => {
+                    const errorItem = document.createElement('div');
+                    errorItem.className = 'preview-item';
+                    errorItem.innerHTML = `
+                        <div class="preview-title">Record ID: ${error.recordId}</div>
+                        <div class="preview-content">${error.error}</div>
+                    `;
+                    errorsContainer.appendChild(errorItem);
+                });
+                
+                container.appendChild(errorsContainer);
+            }
+        }
+        
+        // Show a message in the results container
+        function showMessage(message) {
+            document.getElementById('resultsContainer').innerHTML = `<p>${message}</p>`;
+        }
+    </script>
+</body>
+</html> 

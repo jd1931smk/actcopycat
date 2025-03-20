@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Netlify functions for ACT CopyCat",
   "dependencies": {
-    "airtable": "^0.12.2",
-    "@anthropic/sdk": "^0.18.0"
+    "airtable": "^0.12.2"
   }
 } 

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug LaTeX</title>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .debug-output {
+            white-space: pre-wrap;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #f5f5f5;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>LaTeX Debug Tool</h1>
+    
+    <div>
+        <select id="testNumberDropdown">
+            <option value="">Select Test</option>
+        </select>
+        <select id="questionNumberDropdown">
+            <option value="">Select Question</option>
+        </select>
+        <button onclick="fetchExplanation()">Fetch Explanation</button>
+    </div>
+    
+    <h2>Raw Explanation Text</h2>
+    <div id="rawOutput" class="debug-output"></div>
+    
+    <h2>Character Analysis</h2>
+    <table id="charTable">
+        <thead>
+            <tr>
+                <th>Index</th>
+                <th>Character</th>
+                <th>Code Point</th>
+                <th>HTML Entity</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    
+    <script>
+        // Load test numbers on page load
+        window.onload = async function() {
+            await loadTestNumbers();
+        };
+
+        // Load test numbers
+        async function loadTestNumbers() {
+            try {
+                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
+                if (!response.ok) throw new Error('Failed to fetch test numbers');
+                const testNumbers = await response.json();
+                
+                const dropdown = document.getElementById('testNumberDropdown');
+                testNumbers.forEach(testNumber => {
+                    const option = document.createElement('option');
+                    option.value = testNumber;
+                    option.textContent = testNumber;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading test numbers:', error);
+            }
+        }
+
+        // Event listener for test number selection
+        document.getElementById('testNumberDropdown').addEventListener('change', async function() {
+            const testNumber = this.value;
+            if (!testNumber) return;
+
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
+                if (!response.ok) throw new Error('Failed to fetch question numbers');
+                const questionNumbers = await response.json();
+
+                const dropdown = document.getElementById('questionNumberDropdown');
+                dropdown.innerHTML = '<option value="">Select Question</option>';
+                questionNumbers.forEach(number => {
+                    const option = document.createElement('option');
+                    option.value = number;
+                    option.textContent = number;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading question numbers:', error);
+            }
+        });
+
+        // Fetch and analyze explanation
+        async function fetchExplanation() {
+            const testNumber = document.getElementById('testNumberDropdown').value;
+            const questionNumber = document.getElementById('questionNumberDropdown').value;
+            
+            if (!testNumber || !questionNumber) {
+                alert('Please select a test and question number');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getExplanation&testNumber=${testNumber}&questionNumber=${questionNumber}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to get explanation');
+                }
+                
+                if (data.explanation) {
+                    // Display raw text
+                    document.getElementById('rawOutput').textContent = data.explanation;
+                    
+                    // Analyze each character
+                    const tableBody = document.querySelector('#charTable tbody');
+                    tableBody.innerHTML = '';
+                    
+                    const text = data.explanation;
+                    for (let i = 0; i < text.length; i++) {
+                        const char = text[i];
+                        const codePoint = char.codePointAt(0);
+                        const htmlEntity = `&#${codePoint};`;
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${i}</td>
+                            <td>${char === '\\' ? '\\\\' : char}</td>
+                            <td>${codePoint}</td>
+                            <td>${htmlEntity}</td>
+                        `;
+                        
+                        // Highlight special characters
+                        if (char === '\\' || char === '$' || char === '^' || char === '{' || char === '}') {
+                            row.style.backgroundColor = '#ffeeee';
+                        }
+                        
+                        tableBody.appendChild(row);
+                    }
+                } else {
+                    document.getElementById('rawOutput').textContent = 'No explanation available for this question.';
+                    document.querySelector('#charTable tbody').innerHTML = '';
+                }
+            } catch (error) {
+                console.error('Error getting explanation:', error);
+                document.getElementById('rawOutput').textContent = `Error: ${error.message}`;
+                document.querySelector('#charTable tbody').innerHTML = '';
+            }
+        }
+    </script>
+</body>
+</html> 

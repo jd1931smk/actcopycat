@@ -2,6 +2,8 @@
     "name": "actcopycat",
     "version": "1.0.0",
     "dependencies": {
-      "airtable": "^0.11.6"
+        "airtable": "^0.11.6",
+        "dotenv": "^16.0.3",
+        "openai": "^4.87.4"
     }
-  }
+}

@@ -74,28 +74,51 @@ for record in records:
 
     # Updated prompt with example
     prompt = f"""
-    Here is a question in LatexMarkdown format:
+       Here is a question in LatexMarkdown format:
 
-    {latex_markdown}
+       {latex_markdown}
 
-    Please provide the following in a structured response:
-    1) **Analysis:** Explain, as a 17-year-old student, why a student might choose wrong answers.
-    2) **New Question:** Create a similar question with different values/context in Markdown with LaTeX (inline $...$, display $$...$$), starting directly with the question (no numbers like '9.' or intros like 'Here is a question').
-    3) **Answer:** Provide the correct answer as a single letter (A, B, C, D, or E).
-    4) **Explanation:** Explain how to solve the new question as a 17-year-old average math student, using simple language.
+       Please perform the following tasks:
 
-    Example response:
-    **Analysis:**
-    Students might pick C if they forget to divide.
-    **New Question:**
-    What is $x$ if $2x + 3 = 7$?
-    **Answer:**
-    A
-    **Explanation:**
-    Subtract 3 from both sides to get $2x = 4$, then divide by 2, so $x = 2$.
+       1) Analyze the question as if you are a 17-year-old student. Think about why a student might choose each of the wrong answers.
 
-    Your response:
-    """
+       2) Create a similar question with different values and/or context. The new question must follow these strict formatting rules:
+          - Use proper LaTeX syntax within MathJax delimiters
+          - Use \\( ... \\) for inline math expressions (ensure proper spacing around delimiters)
+          - Use \\[ ... \\] for standalone/display math equations (on their own line)
+          - Do NOT begin with a number (e.g., "9." or "1.")
+          - Do NOT begin with introductory text (e.g., "Here is a new question" or "Consider the following")
+          - Start directly with the question content (e.g., "What is the value of \\(x\\)...")
+          - Include the multiple choice answers as part of the question text, formatted as:
+            (A) \\(answer\\)
+            (B) \\(answer\\)
+            (C) \\(answer\\)
+            (D) \\(answer\\)
+            (E) \\(answer\\)
+          - Ensure all mathematical expressions are properly formatted with correct LaTeX commands
+          - Remove any unnecessary line breaks or spaces
+          - Use proper spacing around math delimiters (e.g., "If \\( x = 5 \\), then..." not "If\\(x=5\\),then...")
+
+       3) Provide an explanation of how to solve the new question, written as if you are a 17-year-old average math student explaining it to a peer. Use simple language and avoid advanced mathematical terms. Follow the same formatting rules for any math expressions in the explanation.
+
+       Structure your response as follows:
+
+       **Analysis:**
+
+       [Your analysis here]
+
+       **New Question:**
+
+       [Complete question including the multiple choice answers, all with proper MathJax formatting]
+
+       **Answer:**
+
+       [Just the letter of the correct answer (A, B, C, D, or E) with no quotes or additional text]
+
+       **Explanation:**
+
+       [Your explanation here with proper MathJax formatting]
+       """
 
     try:
         # Call DeepSeek R1 API

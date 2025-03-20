@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathJax Test</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .content {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>MathJax Test Page</h1>
+    
+    <button onclick="fetchExplanation()">Fetch Explanation</button>
+    <button onclick="displaySampleMath()">Display Sample Math</button>
+    
+    <div id="output" class="content"></div>
+    
+    <script>
+        // Sample explanation text with LaTeX
+        const sampleExplanation = `To solve this problem, we need to find positive integers (x) and (y) such that the greatest common factor (GCF) of (x^2 y^2) and (x y^3) is 45. We then need to determine which of the provided answer choices could be equal to (y).
+
+### Step 1: Express the GCF in Terms of Prime Factors
+
+The given GCF is 45. We express 45 in terms of its prime factors:
+
+(45 = 3^2 \\times 5^1)
+
+### Step 2: Set Up Expressions for (x^2 y^2) and (x y^3)
+
+Assume:
+
+- (x = 3^a \\times 5^b \\times \\ldots)
+- (y = 3^c \\times 5^d \\times \\ldots)
+
+Then:
+
+- (x^2 y^2 = 3^{2a + 2c} \\times 5^{2b + 2d} \\times \\ldots)
+- (x y^3 = 3^{a + 3c} \\times 5^{b + 3d} \\times \\ldots)`;
+
+        // Sample math test
+        function displaySampleMath() {
+            const output = document.getElementById('output');
+            output.innerHTML = `
+                <h3>Sample Math Rendering</h3>
+                <p>Inline math: $x^2 + y^2 = z^2$</p>
+                <p>Display math: $$\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$</p>
+                <p>Another example: $\\sin \\theta=-\\frac{3}{5}$ and $\\pi < \\theta < \\frac{3\\pi}{2}$</p>
+                <p>GCF example: $45 = 3^2 \\times 5^1$</p>
+            `;
+            
+            MathJax.typesetPromise([output]).catch(err => console.error('MathJax Error:', err));
+        }
+
+        // Fetch explanation from API
+        async function fetchExplanation() {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Loading...';
+            
+            try {
+                // Use a test number and question number that has an explanation
+                const response = await fetch('/.netlify/functions/airtable?action=getExplanation&testNumber=1MC&questionNumber=43');
+                const data = await response.json();
+                
+                if (data.explanation) {
+                    output.innerHTML = `<h3>Explanation from API:</h3><div>${data.explanation.replace(/\n/g, '<br>')}</div>`;
+                    console.log('Raw API data:', data.explanation);
+                } else {
+                    output.innerHTML = 'No explanation found for this question.';
+                }
+                
+                MathJax.typesetPromise([output]).catch(err => console.error('MathJax Error:', err));
+            } catch (error) {
+                console.error('Error fetching explanation:', error);
+                output.innerHTML = `Error: ${error.message}`;
+            }
+        }
+        
+        // Display the sample explanation on load
+        window.onload = function() {
+            const output = document.getElementById('output');
+            output.innerHTML = `<h3>Sample Explanation:</h3><div>${sampleExplanation.replace(/\n/g, '<br>')}</div>`;
+            MathJax.typesetPromise([output]).catch(err => console.error('MathJax Error:', err));
+        };
+    </script>
+</body>
+</html> 
