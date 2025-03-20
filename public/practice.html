@@ -188,10 +188,12 @@
                 if (!response.ok) throw new Error('Failed to get hint');
                 const data = await response.json();
                 
-                hintDiv.textContent = data.hint;
+                hintDiv.innerHTML = data.hint;
                 hintDiv.style.display = 'block';
+                // Rerun MathJax on the hint
+                MathJax.typesetPromise([hintDiv]).catch(err => console.error('MathJax Error:', err));
             } catch (error) {
-                hintDiv.textContent = 'Sorry, unable to generate a hint at this time. Please try again later.';
+                hintDiv.innerHTML = 'Sorry, unable to generate a hint at this time. Please try again later.';
                 hintDiv.style.display = 'block';
             } finally {
                 spinner.style.display = 'none';
