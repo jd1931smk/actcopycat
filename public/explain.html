@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT Math - Explain Everything</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .selection-area {
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .question-area {
+            background-color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .answer-area {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .submit-btn {
+            background-color: #007bff;
+            color: white;
+        }
+        .hint-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+        .explain-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        .feedback {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+            font-size: 16px;
+        }
+        .feedback.correct {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .feedback.incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .hint-box, .explanation-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            display: none;
+        }
+        .loading {
+            display: none;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .loading:after {
+            content: "...";
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+        select, input {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            margin: 20px 0;
+        }
+        .answer-display {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .explanation-box {
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .mjx-chtml {
+            margin: 0 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="selection-area">
+        <select id="testNumberDropdown">
+            <option value="">Select Test</option>
+        </select>
+        <select id="questionNumberDropdown">
+            <option value="">Select Question</option>
+        </select>
+    </div>
+
+    <div class="question-area">
+        <div id="questionDisplay"></div>
+        <div class="answer-area">
+            <label for="answerInput">Your Answer (A-E): </label>
+            <input type="text" id="answerInput" maxlength="1" style="text-transform: uppercase;">
+            <div class="button-group">
+                <button class="submit-btn" onclick="checkAnswer()">Check Answer</button>
+                <button class="hint-btn" onclick="getHint()">Get Hint</button>
+                <button class="explain-btn" onclick="getExplanation()">Show Explanation</button>
+            </div>
+            <div id="feedback" class="feedback"></div>
+            <div id="loading" class="loading">Processing</div>
+            <div id="hintBox" class="hint-box"></div>
+            <div id="explanationBox" class="explanation-box"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load test numbers on page load
+        window.onload = async function() {
+            await loadTestNumbers();
+        };
+
+        // Load test numbers
+        async function loadTestNumbers() {
+            try {
+                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
+                if (!response.ok) throw new Error('Failed to fetch test numbers');
+                const testNumbers = await response.json();
+                
+                const dropdown = document.getElementById('testNumberDropdown');
+                testNumbers.forEach(testNumber => {
+                    const option = document.createElement('option');
+                    option.value = testNumber;
+                    option.textContent = testNumber;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading test numbers:', error);
+            }
+        }
+
+        // Event listener for test number selection
+        document.getElementById('testNumberDropdown').addEventListener('change', async function() {
+            const testNumber = this.value;
+            if (!testNumber) return;
+
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
+                if (!response.ok) throw new Error('Failed to fetch question numbers');
+                const questionNumbers = await response.json();
+
+                const dropdown = document.getElementById('questionNumberDropdown');
+                dropdown.innerHTML = '<option value="">Select Question</option>';
+                questionNumbers.forEach(number => {
+                    const option = document.createElement('option');
+                    option.value = number;
+                    option.textContent = number;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading question numbers:', error);
+            }
+        });
+
+        // Event listener for question number selection
+        document.getElementById('questionNumberDropdown').addEventListener('change', async function() {
+            const testNumber = document.getElementById('testNumberDropdown').value;
+            const questionNumber = this.value;
+            if (!testNumber || !questionNumber) return;
+
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                if (!response.ok) throw new Error('Failed to fetch question details');
+                const data = await response.json();
+
+                const questionDisplay = document.getElementById('questionDisplay');
+                if (data.photo && data.photo.length > 0) {
+                    questionDisplay.innerHTML = `<img src="${data.photo[0].url}" alt="Question ${questionNumber}">`;
+                } else {
+                    questionDisplay.innerHTML = 'Question image not found';
+                }
+
+                // Reset UI elements
+                document.getElementById('feedback').style.display = 'none';
+                document.getElementById('hintBox').style.display = 'none';
+                document.getElementById('explanationBox').style.display = 'none';
+                document.getElementById('answerInput').value = '';
+            } catch (error) {
+                console.error('Error loading question:', error);
+            }
+        });
+
+        // Check answer function
+        async function checkAnswer() {
+            const testNumber = document.getElementById('testNumberDropdown').value;
+            const questionNumber = document.getElementById('questionNumberDropdown').value;
+            const answer = document.getElementById('answerInput').value.toUpperCase();
+            const feedback = document.getElementById('feedback');
+
+            if (!answer || !/^[A-E]$/.test(answer)) {
+                feedback.className = 'feedback incorrect';
+                feedback.textContent = 'Please enter a valid answer (A-E)';
+                feedback.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getCorrectAnswer&testNumber=${testNumber}&questionNumber=${questionNumber}`);
+                if (!response.ok) throw new Error('Failed to get correct answer');
+                const data = await response.json();
+                
+                if (data.correctAnswer) {
+                    if (answer === data.correctAnswer.toUpperCase()) {
+                        feedback.className = 'feedback correct';
+                        feedback.innerHTML = `
+                            <div>Correct! Great job! 🎉</div>
+                            <div class="answer-display">The correct answer is \\(\\text{${data.correctAnswer}}\\)</div>
+                        `;
+                    } else {
+                        feedback.className = 'feedback incorrect';
+                        feedback.innerHTML = `
+                            <div>Incorrect. Try again or use the hint for help.</div>
+                            <div class="answer-display">Your answer: \\(\\text{${answer}}\\)</div>
+                        `;
+                    }
+                    MathJax.typesetPromise([feedback]).catch(err => console.error('MathJax Error:', err));
+                } else {
+                    feedback.className = 'feedback';
+                    feedback.textContent = 'Could not verify answer at this time.';
+                }
+                feedback.style.display = 'block';
+            } catch (error) {
+                console.error('Error checking answer:', error);
+                feedback.className = 'feedback';
+                feedback.textContent = 'Error checking answer. Please try again.';
+                feedback.style.display = 'block';
+            }
+        }
+
+        // Get hint function
+        async function getHint() {
+            const testNumber = document.getElementById('testNumberDropdown').value;
+            const questionNumber = document.getElementById('questionNumberDropdown').value;
+            const loading = document.getElementById('loading');
+            const hintBox = document.getElementById('hintBox');
+
+            loading.style.display = 'block';
+            hintBox.style.display = 'none';
+
+            try {
+                const response = await fetch('/.netlify/functions/get-hint', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ testNumber, questionNumber })
+                });
+
+                if (!response.ok) throw new Error('Failed to get hint');
+                const data = await response.json();
+                
+                hintBox.innerHTML = data.hint;
+                MathJax.typesetPromise([hintBox]).catch(err => console.error('MathJax Error:', err));
+                hintBox.style.display = 'block';
+            } catch (error) {
+                console.error('Error getting hint:', error);
+                hintBox.textContent = 'Error getting hint. Please try again.';
+                hintBox.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Get explanation function
+        async function getExplanation() {
+            const testNumber = document.getElementById('testNumberDropdown').value;
+            const questionNumber = document.getElementById('questionNumberDropdown').value;
+            const explanationBox = document.getElementById('explanationBox');
+            const loading = document.getElementById('loading');
+
+            loading.style.display = 'block';
+            explanationBox.style.display = 'none';
+
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getExplanation&testNumber=${testNumber}&questionNumber=${questionNumber}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to get explanation');
+                }
+                
+                if (data.explanation) {
+                    // Just set the raw content - let MathJax handle the formatting
+                    explanationBox.innerHTML = data.explanation;
+                    
+                    try {
+                        await MathJax.typesetPromise([explanationBox]);
+                        explanationBox.style.display = 'block';
+                    } catch (err) {
+                        console.error('MathJax Error:', err);
+                        explanationBox.innerHTML = 'Error rendering math. Please try again.';
+                        explanationBox.style.display = 'block';
+                    }
+                } else {
+                    explanationBox.innerHTML = 'No explanation available for this question.';
+                    explanationBox.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error getting explanation:', error);
+                explanationBox.innerHTML = `Error getting explanation: ${error.message}. Please try again.`;
+                explanationBox.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html> 

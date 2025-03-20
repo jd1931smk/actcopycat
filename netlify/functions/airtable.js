@@ -3,10 +3,10 @@ const Airtable = require('airtable');
 // Debugging: Log if environment variables are loaded
 console.log("Checking environment variables...");
 console.log("BASE_ID:", process.env.BASE_ID ? "✅ Loaded" : "❌ MISSING");
-console.log("API_KEY:", process.env.API_KEY ? "✅ Loaded" : "❌ MISSING");
+console.log("AIRTABLE_API_KEY:", process.env.AIRTABLE_API_KEY ? "✅ Loaded" : "❌ MISSING");
 
 // Initialize Airtable with API Key
-const base = new Airtable({ apiKey: process.env.API_KEY }).base(process.env.BASE_ID);
+const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.BASE_ID);
 
 exports.handler = async (event) => {
     console.log("Received request:", {
@@ -232,6 +232,137 @@ exports.handler = async (event) => {
                 } catch (error) {
                     console.error('Error fetching clones:', error);
                     return formatResponse(500, { error: error.message });
+                }
+
+            case 'getSkills':
+                try {
+                    console.log('Fetching skills from Skills table...');
+                    console.log('Using BASE_ID:', process.env.BASE_ID);
+                    
+                    // Get all records from Skills table using the correct table ID
+                    const records = await base('tbl6l9Pu2uHM2XlvV')
+                        .select({
+                            fields: ['Name']  // Just get the name field
+                        })
+                        .all();
+
+                    console.log(`Found ${records.length} skills`);
+                    console.log('Raw records:', records.map(r => ({ 
+                        id: r.id, 
+                        name: r.get('Name'),
+                        fields: r.fields 
+                    })));
+                    
+                    // Format the skills array
+                    const skills = records
+                        .map(record => ({
+                            id: record.id,
+                            name: record.get('Name') || 'Unknown Skill'
+                        }))
+                        .sort((a, b) => a.name.localeCompare(b.name));
+
+                    console.log('Formatted skills:', skills);
+                    
+                    return formatResponse(200, skills);
+                } catch (error) {
+                    console.error('Error in getSkills:', error);
+                    console.error('Error details:', error.message);
+                    if (error.stack) console.error('Stack trace:', error.stack);
+                    return formatResponse(500, { error: `Failed to fetch skills: ${error.message}` });
+                }
+
+            case 'getWorksheetQuestions':
+                const { skillId } = event.queryStringParameters;
+                console.log('Received parameters:', { skillId });
+
+                if (!skillId) {
+                    console.log('Missing required parameter: skillId');
+                    return formatResponse(400, { error: 'Skill ID is required' });
+                }
+
+                try {
+                    console.log(`Fetching questions for skill ${skillId}`);
+                    
+                    // First, get the skill and its linked questions
+                    const skillRecords = await base('tbl6l9Pu2uHM2XlvV')
+                        .select({
+                            filterByFormula: `RECORD_ID() = '${skillId}'`,
+                            fields: ['Name', 'Table 1']
+                        })
+                        .all();
+                    
+                    if (skillRecords.length === 0) {
+                        console.log(`No skill found with ID: ${skillId}`);
+                        return formatResponse(404, { error: 'Skill not found' });
+                    }
+
+                    const skillRecord = skillRecords[0];
+                    const skillName = skillRecord.get('Name');
+                    const linkedQuestions = skillRecord.get('Table 1') || [];
+                    
+                    console.log(`Found skill: ${skillName} with ${linkedQuestions.length} linked questions`);
+                    
+                    if (linkedQuestions.length === 0) {
+                        console.log('No questions linked to this skill');
+                        return formatResponse(404, { error: 'No questions found for this skill' });
+                    }
+
+                    // Get the actual question records
+                    const records = await base('Questions')
+                        .select({
+                            filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(',')})`,
+                            fields: [
+                                'Photo', 
+                                'LatexMarkdown',
+                                'Test Number', 
+                                'Question Number'
+                            ]
+                        })
+                        .all();
+
+                    console.log(`Found ${records.length} matching questions`);
+                    
+                    // Log details about the first few records
+                    if (records.length > 0) {
+                        console.log('First 3 records:');
+                        records.slice(0, 3).forEach((record, i) => {
+                            console.log(`Record ${i + 1}:`, {
+                                id: record.id,
+                                fields: record.fields,
+                                testNumber: record.get('Test Number'),
+                                questionNumber: record.get('Question Number')
+                            });
+                        });
+                    }
+
+                    // Randomly select up to 10 questions
+                    const shuffled = records.sort(() => 0.5 - Math.random());
+                    const selected = shuffled.slice(0, 10);
+
+                    // Format the response
+                    const questions = selected.map(record => {
+                        const formatted = {
+                            photo: record.get('Photo'),
+                            latexMarkdown: record.get('LatexMarkdown'),
+                            testNumber: record.get('Test Number'),
+                            questionNumber: record.get('Question Number')
+                        };
+                        console.log('Formatted question:', formatted);
+                        return formatted;
+                    });
+
+                    console.log(`Returning ${questions.length} questions`);
+                    if (questions.length === 0) {
+                        console.log('No questions found matching criteria.');
+                        return formatResponse(404, { error: 'No questions found matching the selected skill.' });
+                    }
+                    
+                    return formatResponse(200, questions);
+                } catch (error) {
+                    console.error('Error in getWorksheetQuestions:', error);
+                    console.error('Error details:', error.message);
+                    if (error.stack) console.error('Stack trace:', error.stack);
+                    return formatResponse(500, { error: `Failed to fetch questions: ${error.message}` });
                 }
 
             default:

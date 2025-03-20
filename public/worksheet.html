@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT Math Worksheet Generator</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .controls {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        #downloadPdf {
+            background-color: #28a745;
+        }
+        #downloadPdf:hover {
+            background-color: #218838;
+        }
+        .worksheet {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .question {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        .question img {
+            max-width: 100%;
+            height: auto;
+            margin: 10px 0;
+        }
+        @media print {
+            .controls, .button-group {
+                display: none;
+            }
+            .worksheet {
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                background-color: white;
+                padding: 0;
+                margin: 0;
+            }
+            .question {
+                page-break-inside: avoid;
+                margin-bottom: 20px;
+            }
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .loading:after {
+            content: "...";
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h1>ACT Math Worksheet Generator</h1>
+        <div class="form-group">
+            <label for="skillSelect">Select Skill:</label>
+            <select id="skillSelect">
+                <option value="">Loading skills...</option>
+            </select>
+        </div>
+        <div class="button-group">
+            <button onclick="generateWorksheet()">Generate Worksheet</button>
+            <button id="downloadPdf" onclick="downloadPdf()" style="display: none;">Download PDF</button>
+        </div>
+    </div>
+
+    <div id="loading" class="loading">Generating worksheet...</div>
+    <div id="worksheet" class="worksheet"></div>
+
+    <script>
+        // Load available skills when the page loads
+        window.onload = async function() {
+            try {
+                const response = await fetch('/.netlify/functions/airtable?action=getSkills');
+                if (!response.ok) throw new Error('Failed to fetch skills');
+                const skills = await response.json();
+                
+                const skillSelect = document.getElementById('skillSelect');
+                skillSelect.innerHTML = skills.map(skill => 
+                    `<option value="${skill.id}">${skill.name}</option>`
+                ).join('');
+            } catch (error) {
+                console.error('Error loading skills:', error);
+                document.getElementById('skillSelect').innerHTML = '<option value="">Error loading skills</option>';
+            }
+        };
+
+        async function generateWorksheet() {
+            const skillId = document.getElementById('skillSelect').value;
+            const loading = document.getElementById('loading');
+            const worksheet = document.getElementById('worksheet');
+            const downloadPdfButton = document.getElementById('downloadPdf');
+
+            if (!skillId) {
+                alert('Please select a skill');
+                return;
+            }
+
+            loading.style.display = 'block';
+            worksheet.innerHTML = '';
+            downloadPdfButton.style.display = 'none';
+
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getWorksheetQuestions&skillId=${encodeURIComponent(skillId)}`);
+                if (!response.ok) throw new Error('Failed to fetch questions');
+                const questions = await response.json();
+
+                const currentDate = new Date().toLocaleDateString();
+                worksheet.innerHTML = `
+                    <h2>ACT Math Practice Worksheet</h2>
+                    <p><strong>Skill:</strong> ${document.getElementById('skillSelect').options[document.getElementById('skillSelect').selectedIndex].text}</p>
+                    <p><strong>Date:</strong> ${currentDate}</p>
+                    <hr>
+                    ${questions.map((q, index) => `
+                        <div class="question">
+                            <p><strong>Question ${index + 1}</strong> (Source: Test ${q.testNumber}, #${q.questionNumber})</p>
+                            ${q.photo ? `<img src="${q.photo[0].url}" alt="Question ${index + 1}">` : q.latexMarkdown}
+                            <div style="margin: 20px 0; border-bottom: 1px dashed #ccc;"></div>
+                        </div>
+                    `).join('')}
+                `;
+
+                // Render math expressions
+                if (window.MathJax) {
+                    await MathJax.typesetPromise([worksheet]);
+                }
+                
+                // Show the download button after content is loaded
+                downloadPdfButton.style.display = 'inline-block';
+            } catch (error) {
+                console.error('Error generating worksheet:', error);
+                worksheet.innerHTML = '<p>Error generating worksheet. Please try again.</p>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function downloadPdf() {
+            window.print();
+        }
+    </script>
+</body>
+</html> 
