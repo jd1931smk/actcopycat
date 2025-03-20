@@ -217,7 +217,191 @@
     <div id="resultContainer"></div>
 
     <script>
-        // ... rest of your JavaScript code ...
+        let currentTestNumber = '';
+        let currentQuestionNumber = '';
+        
+        // Function to populate test numbers dropdown
+        async function populateTestNumbers() {
+            try {
+                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
+                const testNumbers = await response.json();
+                const dropdown = document.getElementById('testNumberDropdown');
+                
+                // Clear existing options except the first one
+                dropdown.innerHTML = '<option value="">Select a test number</option>';
+                
+                // Sort test numbers
+                testNumbers.sort((a, b) => {
+                    // Extract numeric parts if they exist
+                    const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+                    const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+                    
+                    if (numA === numB) {
+                        return a.localeCompare(b);
+                    }
+                    return numA - numB;
+                });
+                
+                // Add new options
+                testNumbers.forEach(testNumber => {
+                    const option = document.createElement('option');
+                    option.value = testNumber;
+                    option.textContent = testNumber;
+                    dropdown.appendChild(option);
+                });
+                
+                // If there was a previously selected test number, try to restore it
+                if (currentTestNumber) {
+                    dropdown.value = currentTestNumber;
+                }
+            } catch (error) {
+                console.error('Error fetching test numbers:', error);
+            }
+        }
+        
+        // Function to populate question numbers dropdown
+        async function populateQuestionNumbers(testNumber) {
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
+                const questionNumbers = await response.json();
+                const dropdown = document.getElementById('questionNumberDropdown');
+                
+                // Clear existing options except the first one
+                dropdown.innerHTML = '<option value="">Select a question number</option>';
+                
+                // Sort question numbers numerically
+                questionNumbers.sort((a, b) => parseInt(a) - parseInt(b));
+                
+                // Add new options
+                questionNumbers.forEach(questionNumber => {
+                    const option = document.createElement('option');
+                    option.value = questionNumber;
+                    option.textContent = questionNumber;
+                    dropdown.appendChild(option);
+                });
+                
+                // If there was a previously selected question number, try to restore it
+                if (currentQuestionNumber) {
+                    dropdown.value = currentQuestionNumber;
+                }
+                
+                // Enable/disable navigation buttons
+                updateNavigationButtons();
+            } catch (error) {
+                console.error('Error fetching question numbers:', error);
+            }
+        }
+        
+        // Function to fetch and display question
+        async function fetchAndDisplayQuestion() {
+            const testNumber = document.getElementById('testNumberDropdown').value;
+            const questionNumber = document.getElementById('questionNumberDropdown').value;
+            
+            if (!testNumber || !questionNumber) {
+                alert('Please select both a test number and question number.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getQuestion&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                const data = await response.json();
+                
+                // Update current selections
+                currentTestNumber = testNumber;
+                currentQuestionNumber = questionNumber;
+                
+                // Display the question
+                const resultContainer = document.getElementById('resultContainer');
+                
+                // Create HTML for the question
+                let html = '<div class="question-card">';
+                
+                // Add test and question number
+                html += `<h3>Test ${testNumber}, Question ${questionNumber}</h3>`;
+                
+                // Add photo if available
+                if (data.photo && data.photo.length > 0) {
+                    data.photo.forEach(photo => {
+                        html += `<img src="${photo.url}" alt="Question image">`;
+                    });
+                }
+                
+                // Add LaTeX content if available
+                if (data.latexMarkdown) {
+                    html += `<div class="latex-content">${data.latexMarkdown}</div>`;
+                }
+                
+                html += '</div>';
+                
+                // Update the container
+                resultContainer.innerHTML = html;
+                
+                // Render LaTeX
+                if (window.MathJax) {
+                    MathJax.typesetPromise();
+                }
+                
+                // Update navigation buttons
+                updateNavigationButtons();
+            } catch (error) {
+                console.error('Error fetching question:', error);
+                alert('Error fetching question. Please try again.');
+            }
+        }
+        
+        // Function to update navigation buttons
+        function updateNavigationButtons() {
+            const testDropdown = document.getElementById('testNumberDropdown');
+            const questionDropdown = document.getElementById('questionNumberDropdown');
+            const prevButton = document.getElementById('prevButton');
+            const nextButton = document.getElementById('nextButton');
+            
+            const currentTestIndex = testDropdown.selectedIndex;
+            const currentQuestionIndex = questionDropdown.selectedIndex;
+            
+            // Enable/disable previous button
+            prevButton.disabled = currentQuestionIndex <= 1;
+            
+            // Enable/disable next button
+            nextButton.disabled = currentQuestionIndex >= questionDropdown.options.length - 1;
+        }
+        
+        // Function to navigate between questions
+        function navigateQuestion(direction) {
+            const questionDropdown = document.getElementById('questionNumberDropdown');
+            const currentIndex = questionDropdown.selectedIndex;
+            
+            if (direction === 'prev' && currentIndex > 1) {
+                questionDropdown.selectedIndex = currentIndex - 1;
+            } else if (direction === 'next' && currentIndex < questionDropdown.options.length - 1) {
+                questionDropdown.selectedIndex = currentIndex + 1;
+            }
+            
+            fetchAndDisplayQuestion();
+        }
+        
+        // Event Listeners
+        document.getElementById('testNumberDropdown').addEventListener('change', function() {
+            const selectedTest = this.value;
+            if (selectedTest) {
+                currentTestNumber = selectedTest;
+                currentQuestionNumber = ''; // Reset question number when test changes
+                populateQuestionNumbers(selectedTest);
+            }
+        });
+        
+        document.getElementById('questionNumberDropdown').addEventListener('change', function() {
+            const selectedQuestion = this.value;
+            if (selectedQuestion) {
+                currentQuestionNumber = selectedQuestion;
+                fetchAndDisplayQuestion();
+            }
+        });
+        
+        document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
+        
+        // Initial population of test numbers
+        populateTestNumbers();
     </script>
 </body>
 </html> 
