@@ -120,7 +120,9 @@
         // Initialize the page
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('modelHeader').textContent = model || 'Practice Question';
-            document.getElementById('questionText').innerHTML = clone;
+            // Format answer choices to be on separate lines
+            const formattedText = clone.replace(/([A-E]\.)(?!\s*$)/g, '<br>$1');
+            document.getElementById('questionText').innerHTML = formattedText;
             MathJax.typesetPromise().catch(err => console.error('MathJax Error:', err));
         });
 
