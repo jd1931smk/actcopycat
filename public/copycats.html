@@ -65,6 +65,14 @@
 
         .clone-card {
             background-color: #dee2e6;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .clone-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: #e9ecef;
         }
 
         .original-question {
@@ -360,10 +368,30 @@
                     
                     cloneData.forEach((clone, index) => {
                         if (clone.clone) {
-                            html += `<div class="question-card clone-card">`;
-                            html += `<strong>Clone ${index + 1}</strong> (${clone.model})<br>`;
-                            html += `<div class="latex-content">${clone.clone}</div>`;
-                            html += '</div>';
+                            const cloneCard = document.createElement('div');
+                            cloneCard.className = 'question-card clone-card';
+                            cloneCard.style.cursor = 'pointer';  // Add pointer cursor
+                            
+                            const modelHeader = document.createElement('h3');
+                            modelHeader.textContent = clone.model || 'No Model';
+                            cloneCard.appendChild(modelHeader);
+
+                            const questionText = document.createElement('div');
+                            questionText.innerHTML = clone.clone.replace(/(\r\n|\n|\r)/g, '<br>') || 'No clone available';
+                            cloneCard.appendChild(questionText);
+
+                            // Add click handler to open practice page
+                            cloneCard.addEventListener('click', () => {
+                                const params = new URLSearchParams({
+                                    test: testNumber,
+                                    question: questionNumber,
+                                    model: clone.model || 'No Model',
+                                    clone: encodeURIComponent(clone.clone || '')
+                                });
+                                window.open(`practice.html?${params.toString()}`, '_blank');
+                            });
+
+                            html += cloneCard.outerHTML;
                         }
                     });
                     
