@@ -172,72 +172,93 @@
     </div>
 
     <script>
+        // Static test numbers - update this list as needed
+        const staticTestNumbers = [
+            'SATX',
+            '1MC', '2MC', '3MC', '4MC', '5MC',
+            'C01', 'C02', 'C03-2',
+            'Red Book 1', 'Red Book 2', 'Red Book 3',
+            'SHMM1', 'SHMM2', 'SHMM3', 'SHMM4', 'SHMM5', 'SHMM6', 'SHMM7', 'SHMM8', 'SHMM9',
+            'B02', 'B04', 'B05',
+            'D03', 'D06',
+            'Z04', 'Z15',
+            'A9', 'A10', 'A11'
+        ];
+
         // Load test numbers on page load
-        window.onload = async function() {
-            await loadTestNumbers();
+        window.onload = function() {
+            populateTestNumbers();
+            populateQuestionNumbers();
         };
 
-        // Load test numbers
-        async function loadTestNumbers() {
-            try {
-                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
-                if (!response.ok) throw new Error('Failed to fetch test numbers');
-                const testNumbers = await response.json();
+        // Populate test numbers dropdown
+        function populateTestNumbers() {
+            const dropdown = document.getElementById('testNumberDropdown');
+            dropdown.innerHTML = '<option value="">Select Test</option>';
+            
+            // Sort test numbers
+            staticTestNumbers.sort((a, b) => {
+                // Define order of special prefixes
+                const prefixOrder = {
+                    'SATX': 0,
+                    'MC': 1,
+                    'C': 2,
+                    'Red Book': 3,
+                    'SHMM': 4,
+                    'B': 5,
+                    'D': 6,
+                    'Z': 7,
+                    'A': 8
+                };
                 
-                // Sort test numbers
-                testNumbers.sort((a, b) => {
-                    // Define order of special prefixes
-                    const prefixOrder = {
-                        'SATX': 0,
-                        'MC': 1,
-                        'C': 2,
-                        'Red Book': 3,
-                        'SHMM': 4,
-                        'B': 5,
-                        'D': 6,
-                        'Z': 7,
-                        'A': 8
-                    };
-                    
-                    // Function to get prefix and number
-                    const getPrefixAndNum = (str) => {
-                        // Special case for MC tests
-                        if (str.endsWith('MC')) {
-                            const num = parseInt(str) || 0;
-                            return { prefix: 'MC', num, order: prefixOrder['MC'] };
-                        }
-                        
-                        // Check other prefixes
-                        for (let prefix in prefixOrder) {
-                            if (str.startsWith(prefix)) {
-                                const num = parseInt(str.replace(prefix, '')) || 0;
-                                return { prefix, num, order: prefixOrder[prefix] };
-                            }
-                        }
-                        return { prefix: '', num: 0, order: 999 };
-                    };
-                    
-                    const infoA = getPrefixAndNum(a);
-                    const infoB = getPrefixAndNum(b);
-                    
-                    // First compare by prefix order
-                    if (infoA.order !== infoB.order) {
-                        return infoA.order - infoB.order;
+                // Function to get prefix and number
+                const getPrefixAndNum = (str) => {
+                    // Special case for MC tests
+                    if (str.endsWith('MC')) {
+                        const num = parseInt(str) || 0;
+                        return { prefix: 'MC', num, order: prefixOrder['MC'] };
                     }
                     
-                    // Then compare by number
-                    return infoA.num - infoB.num;
-                });
+                    // Check other prefixes
+                    for (let prefix in prefixOrder) {
+                        if (str.startsWith(prefix)) {
+                            const num = parseInt(str.replace(prefix, '')) || 0;
+                            return { prefix, num, order: prefixOrder[prefix] };
+                        }
+                    }
+                    return { prefix: '', num: 0, order: 999 };
+                };
                 
-                const dropdown = document.getElementById('testNumberDropdown');
-                testNumbers.forEach(testNumber => {
-                    const option = document.createElement('option');
-                    option.value = testNumber;
-                    option.textContent = testNumber;
-                    dropdown.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error loading test numbers:', error);
+                const infoA = getPrefixAndNum(a);
+                const infoB = getPrefixAndNum(b);
+                
+                // First compare by prefix order
+                if (infoA.order !== infoB.order) {
+                    return infoA.order - infoB.order;
+                }
+                
+                // Then compare by number
+                return infoA.num - infoB.num;
+            });
+
+            staticTestNumbers.forEach(testNumber => {
+                const option = document.createElement('option');
+                option.value = testNumber;
+                option.textContent = testNumber;
+                dropdown.appendChild(option);
+            });
+        }
+
+        // Populate question numbers dropdown (1-60)
+        function populateQuestionNumbers() {
+            const dropdown = document.getElementById('questionNumberDropdown');
+            dropdown.innerHTML = '<option value="">Select Question</option>';
+            
+            for (let i = 1; i <= 60; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                dropdown.appendChild(option);
             }
         }
 
@@ -246,22 +267,15 @@
             const testNumber = this.value;
             if (!testNumber) return;
 
-            try {
-                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
-                if (!response.ok) throw new Error('Failed to fetch question numbers');
-                const questionNumbers = await response.json();
-
-                const dropdown = document.getElementById('questionNumberDropdown');
-                dropdown.innerHTML = '<option value="">Select Question</option>';
-                questionNumbers.forEach(number => {
-                    const option = document.createElement('option');
-                    option.value = number;
-                    option.textContent = number;
-                    dropdown.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error loading question numbers:', error);
-            }
+            // Reset question number dropdown selection
+            document.getElementById('questionNumberDropdown').value = '';
+            
+            // Reset UI elements
+            document.getElementById('feedback').style.display = 'none';
+            document.getElementById('hintBox').style.display = 'none';
+            document.getElementById('explanationBox').style.display = 'none';
+            document.getElementById('answerInput').value = '';
+            document.getElementById('questionDisplay').innerHTML = '';
         });
 
         // Add a variable to store the current question details
