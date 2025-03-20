@@ -323,7 +323,7 @@ exports.handler = async (event) => {
                         return formatResponse(404, { error: 'No questions found for this skill' });
                     }
 
-                    // Get the actual question records
+                    // Get all question records
                     const records = await base('Questions')
                         .select({
                             filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(',')})`,
@@ -331,40 +331,27 @@ exports.handler = async (event) => {
                                 'Photo', 
                                 'LatexMarkdown',
                                 'Test Number', 
-                                'Question Number'
+                                'Question Number',
+                                'Answer'  // Also get the correct answer
                             ]
                         })
                         .all();
 
                     console.log(`Found ${records.length} matching questions`);
-                    
-                    // Log details about the first few records
-                    if (records.length > 0) {
-                        console.log('First 3 records:');
-                        records.slice(0, 3).forEach((record, i) => {
-                            console.log(`Record ${i + 1}:`, {
-                                id: record.id,
-                                fields: record.fields,
-                                testNumber: record.get('Test Number'),
-                                questionNumber: record.get('Question Number')
-                            });
-                        });
-                    }
 
-                    // Randomly select up to 10 questions
-                    const shuffled = records.sort(() => 0.5 - Math.random());
-                    const selected = shuffled.slice(0, 10);
-
-                    // Format the response
-                    const questions = selected.map(record => {
-                        const formatted = {
-                            photo: record.get('Photo'),
-                            latexMarkdown: record.get('LatexMarkdown'),
-                            testNumber: record.get('Test Number'),
-                            questionNumber: record.get('Question Number')
-                        };
-                        console.log('Formatted question:', formatted);
-                        return formatted;
+                    // Format all questions
+                    const questions = records.map(record => ({
+                        id: record.id,  // Include record ID for unique identification
+                        photo: record.get('Photo'),
+                        latexMarkdown: record.get('LatexMarkdown'),
+                        testNumber: record.get('Test Number'),
+                        questionNumber: record.get('Question Number'),
+                        answer: record.get('Answer')
+                    })).sort((a, b) => {
+                        // Sort by test number first, then question number
+                        const testCompare = a.testNumber.localeCompare(b.testNumber);
+                        if (testCompare !== 0) return testCompare;
+                        return a.questionNumber - b.questionNumber;
                     });
 
                     console.log(`Returning ${questions.length} questions`);
@@ -373,7 +360,10 @@ exports.handler = async (event) => {
                         return formatResponse(404, { error: 'No questions found matching the selected skill.' });
                     }
                     
-                    return formatResponse(200, questions);
+                    return formatResponse(200, {
+                        skillName,
+                        questions
+                    });
                 } catch (error) {
                     console.error('Error in getWorksheetQuestions:', error);
                     console.error('Error details:', error.message);

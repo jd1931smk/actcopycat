@@ -49,6 +49,10 @@
         button:hover {
             background-color: #0056b3;
         }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
         .button-group {
             display: flex;
             gap: 10px;
@@ -70,15 +74,35 @@
         .question {
             margin-bottom: 30px;
             page-break-inside: avoid;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            position: relative;
+        }
+        .question.selected {
+            background-color: #f8f9fa;
+            border-color: #007bff;
         }
         .question img {
             max-width: 100%;
             height: auto;
             margin: 10px 0;
         }
+        .question-checkbox {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            transform: scale(1.5);
+        }
+        .selection-controls {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
         @media print {
-            .controls, .button-group {
-                display: none;
+            .controls, .button-group, .selection-controls, .question-checkbox {
+                display: none !important;
             }
             .worksheet {
                 box-shadow: none;
@@ -93,6 +117,12 @@
             .question {
                 page-break-inside: avoid;
                 margin-bottom: 20px;
+                border: none;
+                padding: 0;
+            }
+            .question.selected {
+                background-color: white;
+                border: none;
             }
         }
         .loading {
@@ -121,15 +151,25 @@
             </select>
         </div>
         <div class="button-group">
-            <button onclick="generateWorksheet()">Generate Worksheet</button>
-            <button id="downloadPdf" onclick="downloadPdf()" style="display: none;">Download PDF</button>
+            <button onclick="loadQuestions()">Load Questions</button>
+            <button id="generatePdf" onclick="generatePdf()" style="display: none;">Generate PDF</button>
         </div>
     </div>
 
-    <div id="loading" class="loading">Generating worksheet...</div>
+    <div id="loading" class="loading">Loading questions...</div>
+    
+    <div id="selectionControls" class="selection-controls" style="display: none;">
+        <button onclick="selectAll()">Select All</button>
+        <button onclick="deselectAll()">Deselect All</button>
+        <span id="selectedCount" style="margin-left: 20px;">0 questions selected</span>
+    </div>
+
     <div id="worksheet" class="worksheet"></div>
 
     <script>
+        let allQuestions = [];
+        let skillName = '';
+
         // Load available skills when the page loads
         window.onload = async function() {
             try {
@@ -147,11 +187,12 @@
             }
         };
 
-        async function generateWorksheet() {
+        async function loadQuestions() {
             const skillId = document.getElementById('skillSelect').value;
             const loading = document.getElementById('loading');
             const worksheet = document.getElementById('worksheet');
-            const downloadPdfButton = document.getElementById('downloadPdf');
+            const generatePdfButton = document.getElementById('generatePdf');
+            const selectionControls = document.getElementById('selectionControls');
 
             if (!skillId) {
                 alert('Please select a skill');
@@ -160,24 +201,28 @@
 
             loading.style.display = 'block';
             worksheet.innerHTML = '';
-            downloadPdfButton.style.display = 'none';
+            generatePdfButton.style.display = 'none';
+            selectionControls.style.display = 'none';
 
             try {
                 const response = await fetch(`/.netlify/functions/airtable?action=getWorksheetQuestions&skillId=${encodeURIComponent(skillId)}`);
                 if (!response.ok) throw new Error('Failed to fetch questions');
-                const questions = await response.json();
+                const data = await response.json();
+                allQuestions = data.questions;
+                skillName = data.skillName;
 
-                const currentDate = new Date().toLocaleDateString();
                 worksheet.innerHTML = `
-                    <h2>ACT Math Practice Worksheet</h2>
-                    <p><strong>Skill:</strong> ${document.getElementById('skillSelect').options[document.getElementById('skillSelect').selectedIndex].text}</p>
-                    <p><strong>Date:</strong> ${currentDate}</p>
-                    <hr>
-                    ${questions.map((q, index) => `
-                        <div class="question">
-                            <p><strong>Question ${index + 1}</strong> (Source: Test ${q.testNumber}, #${q.questionNumber})</p>
+                    <h2>Question Selection for ${skillName}</h2>
+                    <p>Select the questions you want to include in your worksheet:</p>
+                    ${allQuestions.map((q, index) => `
+                        <div class="question" id="question-${q.id}">
+                            <input type="checkbox" 
+                                   class="question-checkbox" 
+                                   id="checkbox-${q.id}" 
+                                   onchange="updateSelection()"
+                                   data-index="${index}">
+                            <p><strong>Test ${q.testNumber}, #${q.questionNumber}</strong></p>
                             ${q.photo ? `<img src="${q.photo[0].url}" alt="Question ${index + 1}">` : q.latexMarkdown}
-                            <div style="margin: 20px 0; border-bottom: 1px dashed #ccc;"></div>
                         </div>
                     `).join('')}
                 `;
@@ -187,19 +232,79 @@
                     await MathJax.typesetPromise([worksheet]);
                 }
                 
-                // Show the download button after content is loaded
-                downloadPdfButton.style.display = 'inline-block';
+                selectionControls.style.display = 'block';
+                generatePdfButton.style.display = 'inline-block';
+                updateSelection();
             } catch (error) {
-                console.error('Error generating worksheet:', error);
-                worksheet.innerHTML = '<p>Error generating worksheet. Please try again.</p>';
+                console.error('Error loading questions:', error);
+                worksheet.innerHTML = '<p>Error loading questions. Please try again.</p>';
             } finally {
                 loading.style.display = 'none';
             }
         }
 
-        function downloadPdf() {
-            window.print();
+        function updateSelection() {
+            const checkboxes = document.querySelectorAll('.question-checkbox');
+            const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            document.getElementById('selectedCount').textContent = `${selectedCount} questions selected`;
+            
+            // Update question div styling
+            checkboxes.forEach(cb => {
+                const questionDiv = document.getElementById(`question-${cb.id.split('-')[1]}`);
+                if (cb.checked) {
+                    questionDiv.classList.add('selected');
+                } else {
+                    questionDiv.classList.remove('selected');
+                }
+            });
+
+            // Enable/disable generate button
+            document.getElementById('generatePdf').disabled = selectedCount === 0;
+        }
+
+        function selectAll() {
+            const checkboxes = document.querySelectorAll('.question-checkbox');
+            checkboxes.forEach(cb => cb.checked = true);
+            updateSelection();
+        }
+
+        function deselectAll() {
+            const checkboxes = document.querySelectorAll('.question-checkbox');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateSelection();
+        }
+
+        function generatePdf() {
+            const selectedQuestions = Array.from(document.querySelectorAll('.question-checkbox:checked'))
+                .map(cb => allQuestions[parseInt(cb.dataset.index)]);
+
+            const currentDate = new Date().toLocaleDateString();
+            const worksheet = document.getElementById('worksheet');
+            
+            worksheet.innerHTML = `
+                <h2>ACT Math Practice Worksheet</h2>
+                <p><strong>Skill:</strong> ${skillName}</p>
+                <p><strong>Date:</strong> ${currentDate}</p>
+                <hr>
+                ${selectedQuestions.map((q, index) => `
+                    <div class="question">
+                        <p><strong>Question ${index + 1}</strong> (Source: Test ${q.testNumber}, #${q.questionNumber})</p>
+                        ${q.photo ? `<img src="${q.photo[0].url}" alt="Question ${index + 1}">` : q.latexMarkdown}
+                        <div style="margin: 20px 0; border-bottom: 1px dashed #ccc;"></div>
+                    </div>
+                `).join('')}
+            `;
+
+            // Render math expressions and print
+            if (window.MathJax) {
+                MathJax.typesetPromise([worksheet]).then(() => {
+                    window.print();
+                });
+            } else {
+                window.print();
+            }
         }
     </script>
 </body>
+</html> 
 </html> 
