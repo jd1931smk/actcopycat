@@ -88,15 +88,17 @@ exports.handler = async (event) => {
                 const question = await base('Questions')
                     .select({
                         filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
-                        fields: ['Photo', 'Record ID', 'LaTeX']
+                        fields: ['Photo', 'Record ID', 'LaTeX', 'LatexMarkdown', 'Question Text']
                     })
                     .firstPage()
                     .then(records => records[0] ? {
                         id: records[0].get('Record ID'),
                         photo: records[0].get('Photo'),
-                        latex: records[0].get('LaTeX')
+                        latex: records[0].get('LaTeX') || records[0].get('LatexMarkdown') || records[0].get('Question Text'),
+                        questionText: records[0].get('Question Text')
                     } : null);
                 if (!question) return formatResponse(404, 'Question not found');
+                console.log('Returning question details:', question);
                 return formatResponse(200, question);
 
             case 'getCorrectAnswer':

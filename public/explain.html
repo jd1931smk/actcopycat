@@ -169,6 +169,29 @@
             margin-top: 15px;
             line-height: 1.6;
         }
+        .question-text {
+            margin: 20px 0;
+            font-size: 16px;
+            line-height: 1.6;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        #questionDisplay {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        #questionDisplay img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -300,10 +323,26 @@
                 currentQuestionDetails = data;
 
                 const questionDisplay = document.getElementById('questionDisplay');
+                let questionHtml = '';
+                
+                // Add the image if available
                 if (data.photo && data.photo.length > 0) {
-                    questionDisplay.innerHTML = `<img src="${data.photo[0].url}" alt="Question ${questionNumber}">`;
+                    questionHtml += `<img src="${data.photo[0].url}" alt="Question ${questionNumber}">`;
+                }
+                
+                // Add the question text/latex if available
+                if (data.latex) {
+                    questionHtml += `<div class="question-text">${data.latex}</div>`;
+                } else if (data.questionText) {
+                    questionHtml += `<div class="question-text">${data.questionText}</div>`;
+                }
+
+                if (questionHtml) {
+                    questionDisplay.innerHTML = questionHtml;
+                    // Render any LaTeX in the question
+                    MathJax.typesetPromise([questionDisplay]).catch(err => console.error('MathJax Error:', err));
                 } else {
-                    questionDisplay.innerHTML = 'Question image not found';
+                    questionDisplay.innerHTML = 'Question content not found';
                 }
 
                 // Reset UI elements
