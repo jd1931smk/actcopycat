@@ -183,7 +183,8 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
-            align-items: center;
+            align-items: flex-start;
+            width: 100%;
         }
 
         #questionDisplay img {
@@ -321,12 +322,27 @@
 
                 // Store the full question details
                 currentQuestionDetails = data;
+                console.log('Question details:', data);
 
                 const questionDisplay = document.getElementById('questionDisplay');
+                let questionHtml = '';
+                
+                // Add the image if available
                 if (data.photo && data.photo.length > 0) {
-                    questionDisplay.innerHTML = `<img src="${data.photo[0].url}" alt="Question ${questionNumber}">`;
+                    questionHtml += `<img src="${data.photo[0].url}" alt="Question ${questionNumber}">`;
+                }
+
+                // Add the question text/latex if available
+                if (data.latex) {
+                    questionHtml += `<div class="question-text">${data.latex}</div>`;
+                }
+
+                if (questionHtml) {
+                    questionDisplay.innerHTML = questionHtml;
+                    // Render any LaTeX in the question
+                    MathJax.typesetPromise([questionDisplay]).catch(err => console.error('MathJax Error:', err));
                 } else {
-                    questionDisplay.innerHTML = 'Question image not found';
+                    questionDisplay.innerHTML = 'Question content not found';
                 }
 
                 // Reset UI elements
@@ -410,7 +426,9 @@
                     body: JSON.stringify({
                         testNumber,
                         questionNumber,
-                        question: currentQuestionDetails.latex || ''
+                        question: currentQuestionDetails.photo && currentQuestionDetails.photo.length > 0 
+                            ? `[Image Question] Test ${testNumber}, Question ${questionNumber}`
+                            : currentQuestionDetails.latex || `Test ${testNumber}, Question ${questionNumber}`
                     })
                 });
 
@@ -467,7 +485,9 @@
                     body: JSON.stringify({
                         testNumber,
                         questionNumber,
-                        question: currentQuestionDetails.latex || ''
+                        question: currentQuestionDetails.photo && currentQuestionDetails.photo.length > 0 
+                            ? `[Image Question] Test ${testNumber}, Question ${questionNumber}`
+                            : currentQuestionDetails.latex || `Test ${testNumber}, Question ${questionNumber}`
                     })
                 });
 
