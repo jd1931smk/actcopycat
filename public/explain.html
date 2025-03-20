@@ -465,7 +465,7 @@
             const testNumber = document.getElementById('testNumberDropdown').value;
             const questionNumber = document.getElementById('questionNumberDropdown').value;
 
-            if (!testNumber || !questionNumber || !currentQuestionDetails) {
+            if (!testNumber || !questionNumber) {
                 alert('Please select both test and question numbers');
                 return;
             }
@@ -477,19 +477,7 @@
             explanationBox.style.display = 'none';
 
             try {
-                const response = await fetch('/.netlify/functions/get-explanation', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        testNumber,
-                        questionNumber,
-                        question: currentQuestionDetails.photo && currentQuestionDetails.photo.length > 0 
-                            ? `[Image Question] Test ${testNumber}, Question ${questionNumber}`
-                            : currentQuestionDetails.latex || `Test ${testNumber}, Question ${questionNumber}`
-                    })
-                });
+                const response = await fetch(`/.netlify/functions/airtable?action=getExplanation&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch explanation');
