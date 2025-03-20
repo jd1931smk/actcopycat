@@ -423,12 +423,17 @@
         async function getExplanation() {
             const testNumber = document.getElementById('testNumberDropdown').value;
             const questionNumber = document.getElementById('questionNumberDropdown').value;
-            const questionText = document.getElementById('questionText').value;
 
-            if (!testNumber || !questionNumber || !questionText) {
-                alert('Please enter a test number, question number, and question text.');
+            if (!testNumber || !questionNumber || !currentQuestionDetails) {
+                alert('Please select both test and question numbers');
                 return;
             }
+
+            const explanationBox = document.getElementById('explanationBox');
+            const loading = document.getElementById('loading');
+
+            loading.style.display = 'block';
+            explanationBox.style.display = 'none';
 
             try {
                 const response = await fetch('/.netlify/functions/get-explanation', {
@@ -439,7 +444,7 @@
                     body: JSON.stringify({
                         testNumber,
                         questionNumber,
-                        question: questionText
+                        question: currentQuestionDetails.latex || ''
                     })
                 });
 
@@ -448,12 +453,15 @@
                 }
 
                 const data = await response.json();
-                const explanationBox = document.getElementById('explanationBox');
                 explanationBox.innerHTML = data.explanation;
-                MathJax.typeset([explanationBox]);
+                explanationBox.style.display = 'block';
+                MathJax.typesetPromise([explanationBox]).catch(err => console.error('MathJax Error:', err));
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to get explanation. Please try again.');
+                explanationBox.innerHTML = 'Failed to get explanation. Please try again.';
+                explanationBox.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
             }
         }
     </script>
