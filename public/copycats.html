@@ -259,6 +259,13 @@
                     
                     // Function to get prefix and number
                     const getPrefixAndNum = (str) => {
+                        // Special case for MC tests
+                        if (str.endsWith('MC')) {
+                            const num = parseInt(str) || 0;
+                            return { prefix: 'MC', num, order: prefixOrder['MC'] };
+                        }
+                        
+                        // Check other prefixes
                         for (let prefix in prefixOrder) {
                             if (str.startsWith(prefix)) {
                                 const num = parseInt(str.replace(prefix, '')) || 0;
