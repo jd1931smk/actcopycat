@@ -213,14 +213,27 @@ exports.handler = async (event) => {
 
                 console.log(`✅ Fetching clones for Test: ${testNumber}, Question: ${questionNumber}`);
                 
-                // More flexible matching - try both exact and flexible formats
-                const filterFormula = `OR(
-                    {Original Question} = '${testNumber} - ${questionNumber}',
-                    {Original Question} = '${testNumber}-${questionNumber}',
-                    {Original Question} = '${testNumber} ${questionNumber}'
-                )`;
-
                 try {
+                    // First check if the question exists
+                    const questionExists = await base('Questions')
+                        .select({
+                            filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
+                            fields: ['Record ID']
+                        })
+                        .firstPage();
+
+                    if (!questionExists || questionExists.length === 0) {
+                        console.error("❌ Original question not found");
+                        return formatResponse(404, { error: "Original question not found" });
+                    }
+
+                    // More flexible matching - try both exact and flexible formats
+                    const filterFormula = `OR(
+                        {Original Question} = '${testNumber} - ${questionNumber}',
+                        {Original Question} = '${testNumber}-${questionNumber}',
+                        {Original Question} = '${testNumber} ${questionNumber}'
+                    )`;
+
                     const records = await base('CopyCats')
                         .select({
                             filterByFormula: filterFormula,
@@ -240,19 +253,15 @@ exports.handler = async (event) => {
                         `);
                     });
 
-                    const clones = records.map(r => ({
-                        clone: r.get('Corrected Clone Question LM') || '',
-                        model: r.get('AI Model') || 'No Model',
-                        originalQuestion: r.get('Original Question') || ''
-                    }));
+                    const clones = records
+                        .filter(r => r.get('Corrected Clone Question LM')) // Only include records with actual clone content
+                        .map(r => ({
+                            clone: r.get('Corrected Clone Question LM'),
+                            model: r.get('AI Model') || 'No Model',
+                            originalQuestion: r.get('Original Question')
+                        }));
 
-                    // Log any skipped questions
-                    const emptyClones = clones.filter(item => !item.clone);
-                    if (emptyClones.length > 0) {
-                        console.log(`⚠️ Found ${emptyClones.length} empty clone questions:`, emptyClones);
-                    }
-
-                    console.log(`✅ Returning ${clones.length} clones`);
+                    console.log(`✅ Returning ${clones.length} valid clones`);
                     return formatResponse(200, clones);
                 } catch (error) {
                     console.error('Error fetching clones:', error);
