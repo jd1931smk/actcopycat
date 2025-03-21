@@ -7,13 +7,18 @@ const base = new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(process.e
 // Initialize OpenAI with proper error handling
 let openai;
 try {
+    if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY environment variable is not set');
+    }
     openai = new OpenAI({ 
         apiKey: process.env.OPENAI_API_KEY,
         maxRetries: 3,
         timeout: 30000
     });
+    console.log('OpenAI client initialized successfully');
 } catch (error) {
     console.error('Failed to initialize OpenAI:', error);
+    throw error; // Re-throw to prevent the function from continuing without OpenAI
 }
 
 exports.handler = async function(event, context) {
@@ -44,6 +49,13 @@ exports.handler = async function(event, context) {
         if (!openai) {
             throw new Error('OpenAI client not properly initialized');
         }
+
+        // Log environment status
+        console.log('Environment check:', {
+            hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+            hasAirtableKey: !!process.env.AIRTABLE_API_KEY,
+            hasBaseId: !!process.env.BASE_ID
+        });
 
         // If latex wasn't provided, try to get it from the Questions table
         let questionLatex = latex;
@@ -129,25 +141,36 @@ Explanation:
 [Simple explanation here]`;
 
         console.log('Calling GPT-4 to generate clone');
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [
-                {
-                    role: "system",
-                    content: "You are a helpful AI that creates high-quality clone questions for ACT Math practice. You must structure your response exactly as requested with the Analysis, New Question, Answer, and Explanation sections."
-                },
-                {
-                    role: "user",
-                    content: prompt
-                }
-            ],
-            temperature: 0.7,
-            max_tokens: 1000
-        });
+        let completion;
+        try {
+            completion = await openai.chat.completions.create({
+                model: "gpt-4",
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a helpful AI that creates high-quality clone questions for ACT Math practice. You must structure your response exactly as requested with the Analysis, New Question, Answer, and Explanation sections."
+                    },
+                    {
+                        role: "user",
+                        content: prompt
+                    }
+                ],
+                temperature: 0.7,
+                max_tokens: 1000
+            });
+        } catch (error) {
+            console.error('OpenAI API Error:', error);
+            throw new Error(`OpenAI API Error: ${error.message}`);
+        }
+
+        if (!completion || !completion.choices || !completion.choices[0] || !completion.choices[0].message) {
+            console.error('Invalid completion response:', completion);
+            throw new Error('Invalid response from OpenAI API');
+        }
 
         console.log('Received response from GPT-4');
         const response = completion.choices[0].message.content;
-        console.log('Response content length:', response.length);
+        console.log('Response content:', response);
 
         // Extract the sections using regex
         const analysisMatch = response.match(/Analysis:\s*([\s\S]*?)(?=\n\s*New Question:)/);
@@ -161,7 +184,7 @@ Explanation:
                 hasQuestion: !!questionMatch,
                 hasAnswer: !!answerMatch,
                 hasExplanation: !!explanationMatch,
-                response
+                fullResponse: response
             });
             throw new Error('Failed to parse GPT response - missing required sections');
         }
@@ -172,13 +195,19 @@ Explanation:
 
         console.log('Saving clone to Airtable');
         // Save to Airtable
-        const record = await base('tblpE46FDmB0LmeTU').create({
-            'Original Question': `${testNumber} - ${questionNumber}`,
-            'Corrected Clone Question LM': cleanQuestion,
-            'Answer': cleanAnswer,
-            'Model': 'GPT-4o',
-            'Explanation': explanationMatch[1].trim()
-        });
+        let record;
+        try {
+            record = await base('tblpE46FDmB0LmeTU').create({
+                'Original Question': `${testNumber} - ${questionNumber}`,
+                'Corrected Clone Question LM': cleanQuestion,
+                'Answer': cleanAnswer,
+                'Model': 'GPT-4o',
+                'Explanation': explanationMatch[1].trim()
+            });
+        } catch (error) {
+            console.error('Airtable Error:', error);
+            throw new Error(`Failed to save to Airtable: ${error.message}`);
+        }
 
         console.log('Clone saved successfully');
         return {
