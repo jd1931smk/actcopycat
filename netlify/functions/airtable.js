@@ -71,13 +71,21 @@ exports.handler = async (event) => {
                     .all()
                     .then(records => {
                         return records
-                            .map(r => {
-                                const num = r.get('Question Number');
-                                if (!num) return null;
-                                return parseInt(num, 10);
-                            })
-                            .filter(num => num !== null && !isNaN(num))
-                            .sort((a, b) => a - b);
+                            .map(r => r.get('Question Number'))
+                            .filter(Boolean)
+                            .sort((a, b) => {
+                                // Try to parse as numbers first
+                                const numA = parseInt(a);
+                                const numB = parseInt(b);
+                                
+                                // If both are valid numbers, compare numerically
+                                if (!isNaN(numA) && !isNaN(numB)) {
+                                    return numA - numB;
+                                }
+                                
+                                // Otherwise, use string comparison
+                                return String(a).localeCompare(String(b));
+                            });
                     });
 
                 return formatResponse(200, questionNumbers);
@@ -345,15 +353,13 @@ exports.handler = async (event) => {
                         photo: record.get('Photo'),
                         latexMarkdown: record.get('LatexMarkdown'),
                         testNumber: record.get('Test Number'),
-                        questionNumber: parseInt(record.get('Question Number'), 10),  // Convert to number
+                        questionNumber: record.get('Question Number'),
                         answer: record.get('Answer')
                     })).sort((a, b) => {
-                        // First sort by question number numerically
-                        const questionCompare = a.questionNumber - b.questionNumber;
-                        if (questionCompare !== 0) return questionCompare;
-                        
-                        // If question numbers are the same, sort by test number
-                        return a.testNumber.localeCompare(b.testNumber);
+                        // Sort by test number first, then question number
+                        const testCompare = a.testNumber.localeCompare(b.testNumber);
+                        if (testCompare !== 0) return testCompare;
+                        return a.questionNumber - b.questionNumber;
                     });
 
                     console.log(`Returning ${questions.length} questions`);
