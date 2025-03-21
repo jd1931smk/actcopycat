@@ -446,8 +446,11 @@
                     clonesPlaceholder.appendChild(generatingDiv);
 
                     try {
-                        // Prepare photo data for the API
-                        const photoData = questionData.photo && questionData.photo.length > 0 ? questionData.photo[0] : null;
+                        // Prepare photo data for the API - only send what's needed for context
+                        const photoData = questionData.photo && questionData.photo.length > 0 ? {
+                            url: questionData.photo[0].url,
+                            description: `Question image from Test ${testNumber}, Question ${questionNumber}`
+                        } : null;
 
                         // Call GPT-4o to generate a clone
                         const generateResponse = await fetch('/.netlify/functions/generate-clone', {
