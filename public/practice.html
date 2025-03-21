@@ -128,8 +128,14 @@
         // Initialize the page
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('modelHeader').textContent = model || 'Practice Question';
-            // Format answer choices to be on separate lines
-            const formattedText = clone.replace(/([A-E]\.)(?!\s*$)/g, '<br>$1');
+            // Format answer choices and handle images
+            const formattedText = clone
+                // Convert ![(url)] format
+                .replace(/!\[\((.*?)\)\]/g, '<img src="$1" alt="Question image" style="max-width: 100%; margin: 10px 0;">')
+                // Also handle standard Markdown format
+                .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; margin: 10px 0;">')
+                .replace(/([A-E]\.)(?!\s*$)/g, '<br>$1')
+                .replace(/(\r\n|\n|\r)/g, '<br>');
             document.getElementById('questionText').innerHTML = formattedText;
             MathJax.typesetPromise().catch(err => console.error('MathJax Error:', err));
         });

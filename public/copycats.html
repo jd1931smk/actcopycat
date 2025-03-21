@@ -380,9 +380,15 @@
                             cloneCard.appendChild(modelHeader);
 
                             const questionText = document.createElement('div');
-                            // Format answer choices to be on separate lines
-                            const formattedText = clone.clone.replace(/([A-E]\.)(?!\s*$)/g, '<br>$1');
-                            questionText.innerHTML = formattedText.replace(/(\r\n|\n|\r)/g, '<br>');
+                            // Handle both Markdown image syntax and the current format
+                            const formattedText = clone.clone
+                                // Convert ![(url)] format
+                                .replace(/!\[\((.*?)\)\]/g, '<img src="$1" alt="Question image" style="max-width: 100%; margin: 10px 0;">')
+                                // Also handle standard Markdown format just in case
+                                .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; margin: 10px 0;">')
+                                .replace(/([A-E]\.)(?!\s*$)/g, '<br>$1')
+                                .replace(/(\r\n|\n|\r)/g, '<br>');
+                            questionText.innerHTML = formattedText;
                             cloneCard.appendChild(questionText);
 
                             // Add click handler to open practice page
