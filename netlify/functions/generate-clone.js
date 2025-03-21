@@ -79,7 +79,7 @@ exports.handler = async function(event, context) {
         console.log('Question content being sent to GPT:', {
             hasLatex: !!questionLatex,
             hasPhoto: !!photo,
-            photoUrls: photo ? photo.urls : null,
+            photoData: photo,
             testNumber,
             questionNumber
         });
@@ -101,7 +101,7 @@ exports.handler = async function(event, context) {
 
 ${questionLatex || 'Image-based question'}
 
-${photo ? `[This question includes ${photo.urls.length} image(s) showing mathematical content. Please create a similar question that could be represented with a similar diagram.]` : ''}
+${photo ? `[This question includes an image showing mathematical content. Please create a similar question that could be represented with a similar diagram.]` : ''}
 
 Please perform the following tasks:
 
