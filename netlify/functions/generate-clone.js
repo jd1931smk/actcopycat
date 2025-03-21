@@ -3,6 +3,8 @@ const OpenAI = require('openai');
 
 // Validate environment variables
 function validateEnvironment() {
+    console.log('Validating environment variables...');
+    
     const requiredVars = {
         'OPENAI_API_KEY': process.env.OPENAI_API_KEY,
         'AIRTABLE_API_KEY': process.env.AIRTABLE_API_KEY,
@@ -16,20 +18,46 @@ function validateEnvironment() {
     if (missingVars.length > 0) {
         throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
     }
+
+    console.log('Environment variables validated successfully');
 }
 
 // Initialize services with proper error handling
-function initializeServices() {
-    validateEnvironment();
+async function initializeServices() {
+    console.log('Starting service initialization...');
     
-    const base = new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(process.env.BASE_ID);
-    const openai = new OpenAI({ 
-        apiKey: process.env.OPENAI_API_KEY,
-        maxRetries: 2,
-        timeout: 8000
-    });
+    try {
+        validateEnvironment();
+        
+        console.log('Initializing Airtable...');
+        const base = new Airtable({
+            apiKey: process.env.AIRTABLE_API_KEY,
+            endpointUrl: 'https://api.airtable.com'
+        }).base(process.env.BASE_ID);
 
-    return { base, openai };
+        // Test Airtable connection
+        console.log('Testing Airtable connection...');
+        await base('tblpE46FDmB0LmeTU').select({ maxRecords: 1 }).firstPage();
+        console.log('Airtable connection successful');
+
+        console.log('Initializing OpenAI...');
+        const openai = new OpenAI({ 
+            apiKey: process.env.OPENAI_API_KEY,
+            maxRetries: 2,
+            timeout: 8000
+        });
+
+        // Test OpenAI connection
+        console.log('Testing OpenAI connection...');
+        await openai.models.list();
+        console.log('OpenAI connection successful');
+
+        console.log('All services initialized successfully');
+        return { base, openai };
+    } catch (error) {
+        console.error('Service initialization failed:', error);
+        throw new Error(`Service initialization failed: ${error.message}`);
+    }
 }
 
 exports.handler = async function(event, context) {
@@ -44,14 +72,15 @@ exports.handler = async function(event, context) {
 
     let services;
     try {
-        services = initializeServices();
+        services = await initializeServices();
     } catch (error) {
         console.error('Failed to initialize services:', error);
         return {
             statusCode: 500,
             body: JSON.stringify({ 
                 error: 'Service initialization failed',
-                details: error.message
+                details: error.message,
+                stack: error.stack
             })
         };
     }
@@ -62,8 +91,10 @@ exports.handler = async function(event, context) {
         // If checkOnly is true, just check the status of an existing record
         if (checkOnly && recordId) {
             try {
+                console.log('Checking record status:', recordId);
                 const record = await services.base('tblpE46FDmB0LmeTU').find(recordId);
                 const status = record.get('Status');
+                console.log('Record status:', status);
                 
                 if (status === 'complete') {
                     return {
@@ -98,7 +129,8 @@ exports.handler = async function(event, context) {
                     statusCode: 500,
                     body: JSON.stringify({ 
                         error: 'Failed to check record status',
-                        details: error.message
+                        details: error.message,
+                        stack: error.stack
                     })
                 };
             }
@@ -118,18 +150,21 @@ exports.handler = async function(event, context) {
         // Create a new record for tracking
         let record;
         try {
+            console.log('Creating tracking record...');
             record = await services.base('tblpE46FDmB0LmeTU').create({
                 'Original Question': `${testNumber} - ${questionNumber}`,
                 'Status': 'pending',
                 'Model': 'GPT-4o'
             });
+            console.log('Created tracking record:', record.id);
         } catch (error) {
             console.error('Error creating record:', error);
             return {
                 statusCode: 500,
                 body: JSON.stringify({ 
                     error: 'Failed to create tracking record',
-                    details: error.message
+                    details: error.message,
+                    stack: error.stack
                 })
             };
         }
@@ -155,7 +190,8 @@ exports.handler = async function(event, context) {
             statusCode: 500,
             body: JSON.stringify({ 
                 error: 'Internal server error',
-                details: error.message
+                details: error.message,
+                stack: error.stack
             })
         };
     }
