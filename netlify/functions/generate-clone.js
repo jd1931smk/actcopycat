@@ -18,22 +18,18 @@ function validateEnvironment() {
     }
 }
 
-// Initialize Airtable and OpenAI with error handling
-let base;
-let openai;
-
-try {
+// Initialize services with proper error handling
+function initializeServices() {
     validateEnvironment();
     
-    base = new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(process.env.BASE_ID);
-    openai = new OpenAI({ 
+    const base = new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(process.env.BASE_ID);
+    const openai = new OpenAI({ 
         apiKey: process.env.OPENAI_API_KEY,
         maxRetries: 2,
         timeout: 8000
     });
-} catch (error) {
-    console.error('Failed to initialize services:', error);
-    throw error;
+
+    return { base, openai };
 }
 
 exports.handler = async function(event, context) {
@@ -46,13 +42,27 @@ exports.handler = async function(event, context) {
         };
     }
 
+    let services;
+    try {
+        services = initializeServices();
+    } catch (error) {
+        console.error('Failed to initialize services:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ 
+                error: 'Service initialization failed',
+                details: error.message
+            })
+        };
+    }
+
     try {
         const { testNumber, questionNumber, latex, photo, checkOnly, recordId } = JSON.parse(event.body);
         
         // If checkOnly is true, just check the status of an existing record
         if (checkOnly && recordId) {
             try {
-                const record = await base('tblpE46FDmB0LmeTU').find(recordId);
+                const record = await services.base('tblpE46FDmB0LmeTU').find(recordId);
                 const status = record.get('Status');
                 
                 if (status === 'complete') {
@@ -108,7 +118,7 @@ exports.handler = async function(event, context) {
         // Create a new record for tracking
         let record;
         try {
-            record = await base('tblpE46FDmB0LmeTU').create({
+            record = await services.base('tblpE46FDmB0LmeTU').create({
                 'Original Question': `${testNumber} - ${questionNumber}`,
                 'Status': 'pending',
                 'Model': 'GPT-4o'
@@ -125,7 +135,7 @@ exports.handler = async function(event, context) {
         }
 
         // Start the generation process in the background
-        generateClone(record.id, testNumber, questionNumber, latex, photo).catch(error => {
+        generateClone(services, record.id, testNumber, questionNumber, latex, photo).catch(error => {
             console.error('Background generation failed:', error);
         });
 
@@ -151,7 +161,7 @@ exports.handler = async function(event, context) {
     }
 };
 
-async function generateClone(recordId, testNumber, questionNumber, latex, photo) {
+async function generateClone(services, recordId, testNumber, questionNumber, latex, photo) {
     try {
         // Clean up the LaTeX content if it exists
         if (latex) {
@@ -196,7 +206,7 @@ Explanation:
 [Simple explanation here]`;
 
         console.log('Sending request to OpenAI...');
-        const completion = await openai.chat.completions.create({
+        const completion = await services.openai.chat.completions.create({
             model: "gpt-4",
             messages: [
                 {
@@ -225,7 +235,7 @@ Explanation:
         }
 
         // Update the record with the generated content
-        await base('tblpE46FDmB0LmeTU').update(recordId, {
+        await services.base('tblpE46FDmB0LmeTU').update(recordId, {
             'Corrected Clone Question LM': questionMatch[1].trim(),
             'Answer': answerMatch[1].trim(),
             'Explanation': explanationMatch[1].trim(),
@@ -238,7 +248,7 @@ Explanation:
         console.error('Error in generateClone:', error);
         // Update the record with the error
         try {
-            await base('tblpE46FDmB0LmeTU').update(recordId, {
+            await services.base('tblpE46FDmB0LmeTU').update(recordId, {
                 'Status': 'error',
                 'Error': error.message
             });
