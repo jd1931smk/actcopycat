@@ -11,6 +11,14 @@ function validateEnvironment() {
         'BASE_ID': process.env.BASE_ID
     };
 
+    // Log the presence/absence of each variable (without revealing values)
+    Object.entries(requiredVars).forEach(([key, value]) => {
+        console.log(`${key}: ${value ? '✓ Present' : '✗ Missing'}`);
+        if (value) {
+            console.log(`${key} length: ${value.length}`);
+        }
+    });
+
     const missingVars = Object.entries(requiredVars)
         .filter(([_, value]) => !value)
         .map(([key]) => key);
@@ -35,10 +43,15 @@ async function initializeServices() {
             endpointUrl: 'https://api.airtable.com'
         }).base(process.env.BASE_ID);
 
-        // Test Airtable connection
-        console.log('Testing Airtable connection...');
-        await base('tblpE46FDmB0LmeTU').select({ maxRecords: 1 }).firstPage();
-        console.log('Airtable connection successful');
+        // Test Airtable connection with error handling
+        try {
+            console.log('Testing Airtable connection...');
+            const testResult = await base('tblpE46FDmB0LmeTU').select({ maxRecords: 1 }).firstPage();
+            console.log('Airtable connection successful, received', testResult.length, 'records');
+        } catch (airtableError) {
+            console.error('Airtable connection test failed:', airtableError);
+            throw new Error(`Airtable connection failed: ${airtableError.message}`);
+        }
 
         console.log('Initializing OpenAI...');
         const openai = new OpenAI({ 
@@ -47,21 +60,35 @@ async function initializeServices() {
             timeout: 8000
         });
 
-        // Test OpenAI connection
-        console.log('Testing OpenAI connection...');
-        await openai.models.list();
-        console.log('OpenAI connection successful');
+        // Test OpenAI connection with error handling
+        try {
+            console.log('Testing OpenAI connection...');
+            const models = await openai.models.list();
+            console.log('OpenAI connection successful, found', models.data.length, 'models');
+        } catch (openaiError) {
+            console.error('OpenAI connection test failed:', openaiError);
+            throw new Error(`OpenAI connection failed: ${openaiError.message}`);
+        }
 
         console.log('All services initialized successfully');
         return { base, openai };
     } catch (error) {
-        console.error('Service initialization failed:', error);
-        throw new Error(`Service initialization failed: ${error.message}`);
+        console.error('Service initialization failed:', {
+            error: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        throw error;
     }
 }
 
 exports.handler = async function(event, context) {
-    console.log('Function invoked:', event.httpMethod, event.path);
+    console.log('Function invoked:', {
+        method: event.httpMethod,
+        path: event.path,
+        headers: event.headers,
+        body: event.body ? JSON.parse(event.body) : null
+    });
 
     if (event.httpMethod !== 'POST') {
         return { 
@@ -74,14 +101,16 @@ exports.handler = async function(event, context) {
     try {
         services = await initializeServices();
     } catch (error) {
-        console.error('Failed to initialize services:', error);
+        const errorResponse = {
+            error: 'Service initialization failed',
+            details: error.message,
+            type: error.name,
+            stack: error.stack
+        };
+        console.error('Initialization error:', errorResponse);
         return {
             statusCode: 500,
-            body: JSON.stringify({ 
-                error: 'Service initialization failed',
-                details: error.message,
-                stack: error.stack
-            })
+            body: JSON.stringify(errorResponse)
         };
     }
 
