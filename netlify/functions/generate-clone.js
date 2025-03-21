@@ -11,130 +11,105 @@ console.log('Environment variables check:', {
     BASE_ID: process.env.BASE_ID ? '✅ Present' : '❌ Missing'
 });
 
-// Initialize OpenAI with proper error handling
-let openai;
-try {
-    if (!process.env.OPENAI_API_KEY) {
-        console.error('❌ OPENAI_API_KEY is not set in environment');
-        throw new Error('OPENAI_API_KEY environment variable is not set');
-    }
-    openai = new OpenAI({ 
-        apiKey: process.env.OPENAI_API_KEY,
-        maxRetries: 3,
-        timeout: 30000
-    });
-    console.log('✅ OpenAI client initialized successfully');
-} catch (error) {
-    console.error('❌ Failed to initialize OpenAI:', error);
-    throw error; // Re-throw to prevent the function from continuing without OpenAI
-}
+// Initialize OpenAI
+const openai = new OpenAI({ 
+    apiKey: process.env.OPENAI_API_KEY,
+    maxRetries: 2,
+    timeout: 8000  // Reduced timeout to ensure we don't hit Netlify's limit
+});
 
 exports.handler = async function(event, context) {
-    console.log('🔄 Function invoked with event:', {
-        method: event.httpMethod,
-        path: event.path,
-        headers: event.headers
-    });
+    console.log('Function invoked:', event.httpMethod, event.path);
 
     if (event.httpMethod !== 'POST') {
         return { 
             statusCode: 405, 
-            body: JSON.stringify({ error: 'Method Not Allowed' }),
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            body: JSON.stringify({ error: 'Method Not Allowed' })
         };
     }
 
     try {
-        console.log('📥 Received request to generate clone');
-        const { testNumber, questionNumber, latex, photo } = JSON.parse(event.body);
+        const { testNumber, questionNumber, latex, photo, checkOnly, recordId } = JSON.parse(event.body);
         
-        console.log('📋 Request parameters:', {
-            testNumber,
-            questionNumber,
-            hasLatex: !!latex,
-            hasPhoto: !!photo
-        });
-
-        if (!testNumber || !questionNumber) {
-            console.error('❌ Missing required parameters');
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ error: 'Test number and question number are required' }),
-                headers: { 'Content-Type': 'application/json' }
-            };
-        }
-
-        // Check if OpenAI is properly initialized
-        if (!openai) {
-            console.error('❌ OpenAI client not initialized');
-            throw new Error('OpenAI client not properly initialized');
-        }
-
-        // Log environment status again
-        console.log('🔍 Environment check:', {
-            hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-            hasAirtableKey: !!process.env.AIRTABLE_API_KEY,
-            hasBaseId: !!process.env.BASE_ID,
-            openAIKeyLength: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0
-        });
-
-        // If latex wasn't provided, try to get it from the Questions table
-        let questionLatex = latex;
-        if (!questionLatex) {
-            console.log('Latex not provided, fetching from Questions table');
+        // If checkOnly is true, just check the status of an existing record
+        if (checkOnly && recordId) {
             try {
-                const records = await base('Questions')
-                    .select({
-                        filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = '${questionNumber}')`,
-                        fields: ['LatexMarkdown']
-                    })
-                    .firstPage();
-
-                if (records && records.length > 0) {
-                    questionLatex = records[0].get('LatexMarkdown');
-                    console.log('Found LaTeX content:', questionLatex ? 'Yes' : 'No');
+                const record = await base('tblpE46FDmB0LmeTU').find(recordId);
+                const status = record.get('Status');
+                
+                if (status === 'complete') {
+                    return {
+                        statusCode: 200,
+                        body: JSON.stringify({
+                            status: 'complete',
+                            question: record.get('Corrected Clone Question LM'),
+                            answer: record.get('Answer'),
+                            explanation: record.get('Explanation')
+                        })
+                    };
+                } else {
+                    return {
+                        statusCode: 202,
+                        body: JSON.stringify({
+                            status: 'pending',
+                            recordId
+                        })
+                    };
                 }
             } catch (error) {
-                console.error('Error fetching from Questions table:', error);
+                console.error('Error checking record:', error);
+                return {
+                    statusCode: 500,
+                    body: JSON.stringify({ error: 'Failed to check record status' })
+                };
             }
         }
 
-        if (!questionLatex && !photo) {
-            console.error('No latex or photo available for question');
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ error: 'Question content not available' }),
-                headers: { 'Content-Type': 'application/json' }
-            };
-        }
-        
-        // Log the content we're sending to GPT
-        console.log('Question content being sent to GPT:', {
-            hasLatex: !!questionLatex,
-            hasPhoto: !!photo,
-            photoUrl: photo?.url,
-            testNumber,
-            questionNumber
+        // Create a new record for tracking
+        const record = await base('tblpE46FDmB0LmeTU').create({
+            'Original Question': `${testNumber} - ${questionNumber}`,
+            'Status': 'pending',
+            'Model': 'GPT-4o'
         });
 
+        // Start the generation process in the background
+        generateClone(record.id, testNumber, questionNumber, latex, photo).catch(console.error);
+
+        // Return immediately with the record ID
+        return {
+            statusCode: 202,
+            body: JSON.stringify({
+                status: 'pending',
+                recordId: record.id,
+                message: 'Clone generation started'
+            })
+        };
+
+    } catch (error) {
+        console.error('Error:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+        };
+    }
+};
+
+async function generateClone(recordId, testNumber, questionNumber, latex, photo) {
+    try {
         // Clean up the LaTeX content if it exists
-        if (questionLatex) {
-            // Remove any HTML tags that might interfere with GPT's understanding
-            questionLatex = questionLatex.replace(/<[^>]*>/g, '');
-            // Fix any double escaped LaTeX delimiters
-            questionLatex = questionLatex.replace(/\\\\\(/g, '\\(').replace(/\\\\\)/g, '\\)');
-            questionLatex = questionLatex.replace(/\\\\\[/g, '\\[').replace(/\\\\\]/g, '\\]');
-            // Ensure proper spacing around delimiters
-            questionLatex = questionLatex.replace(/([^\s])\\\(/g, '$1 \\(').replace(/\\\)([^\s])/g, '\\) $1');
-            questionLatex = questionLatex.replace(/([^\s])\\\[/g, '$1 \\[').replace(/\\\]([^\s])/g, '\\] $1');
+        if (latex) {
+            latex = latex.replace(/<[^>]*>/g, '')
+                .replace(/\\\\\(/g, '\\(')
+                .replace(/\\\\\)/g, '\\)')
+                .replace(/\\\\\[/g, '\\[')
+                .replace(/\\\\\]/g, '\\]')
+                .replace(/([^\s])\\\(/g, '$1 \\(')
+                .replace(/\\\)([^\s])/g, '\\) $1');
         }
 
-        // Construct the prompt for GPT-4
-        let prompt = `Please analyze and create a clone of this ACT Math question:
+        const prompt = `Please analyze and create a clone of this ACT Math question:
 
-${questionLatex || 'Image-based question'}
+${latex || 'Image-based question'}
 
 ${photo ? `[This question includes an image showing mathematical content. The image shows: ${photo.description}. Please create a similar question that could be represented with a similar diagram.]` : ''}
 
@@ -163,100 +138,46 @@ Answer:
 Explanation:
 [Simple explanation here]`;
 
-        console.log('Calling GPT-4 to generate clone');
-        let completion;
-        try {
-            completion = await openai.chat.completions.create({
-                model: "gpt-4",
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a helpful AI that creates high-quality clone questions for ACT Math practice. You must structure your response exactly as requested with the Analysis, New Question, Answer, and Explanation sections."
-                    },
-                    {
-                        role: "user",
-                        content: prompt
-                    }
-                ],
-                temperature: 0.7,
-                max_tokens: 1000
-            });
-        } catch (error) {
-            console.error('OpenAI API Error:', error);
-            throw new Error(`OpenAI API Error: ${error.message}`);
-        }
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [
+                {
+                    role: "system",
+                    content: "You are a helpful AI that creates high-quality clone questions for ACT Math practice. You must structure your response exactly as requested with the Analysis, New Question, Answer, and Explanation sections."
+                },
+                {
+                    role: "user",
+                    content: prompt
+                }
+            ],
+            temperature: 0.7,
+            max_tokens: 1000
+        });
 
-        if (!completion || !completion.choices || !completion.choices[0] || !completion.choices[0].message) {
-            console.error('Invalid completion response:', completion);
-            throw new Error('Invalid response from OpenAI API');
-        }
-
-        console.log('Received response from GPT-4');
         const response = completion.choices[0].message.content;
-        console.log('Response content:', response);
 
-        // Extract the sections using regex
-        const analysisMatch = response.match(/Analysis:\s*([\s\S]*?)(?=\n\s*New Question:)/);
+        // Extract the sections
         const questionMatch = response.match(/New Question:\s*([\s\S]*?)(?=\n\s*Answer:)/);
         const answerMatch = response.match(/Answer:\s*([A-E])/);
         const explanationMatch = response.match(/Explanation:\s*([\s\S]*?)$/);
 
         if (!questionMatch || !answerMatch || !explanationMatch) {
-            console.error('Failed to parse GPT response. Response structure:', {
-                hasAnalysis: !!analysisMatch,
-                hasQuestion: !!questionMatch,
-                hasAnswer: !!answerMatch,
-                hasExplanation: !!explanationMatch,
-                fullResponse: response
-            });
-            throw new Error('Failed to parse GPT response - missing required sections');
+            throw new Error('Failed to parse GPT response');
         }
 
-        // Clean up the question text
-        const cleanQuestion = questionMatch[1].trim();
-        const cleanAnswer = answerMatch[1].trim();
+        // Update the record with the generated content
+        await base('tblpE46FDmB0LmeTU').update(recordId, {
+            'Corrected Clone Question LM': questionMatch[1].trim(),
+            'Answer': answerMatch[1].trim(),
+            'Explanation': explanationMatch[1].trim(),
+            'Status': 'complete'
+        });
 
-        console.log('Saving clone to Airtable');
-        // Save to Airtable
-        let record;
-        try {
-            record = await base('tblpE46FDmB0LmeTU').create({
-                'Original Question': `${testNumber} - ${questionNumber}`,
-                'Corrected Clone Question LM': cleanQuestion,
-                'Answer': cleanAnswer,
-                'Model': 'GPT-4o',
-                'Explanation': explanationMatch[1].trim()
-            });
-        } catch (error) {
-            console.error('Airtable Error:', error);
-            throw new Error(`Failed to save to Airtable: ${error.message}`);
-        }
-
-        console.log('Clone saved successfully');
-        return {
-            statusCode: 200,
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                question: cleanQuestion,
-                answer: cleanAnswer,
-                explanation: explanationMatch[1].trim(),
-                recordId: record.id
-            })
-        };
     } catch (error) {
-        console.error('Error:', error);
-        return {
-            statusCode: 500,
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                error: error.message,
-                details: 'Failed to generate or save clone question',
-                stack: error.stack
-            })
-        };
+        // Update the record with the error
+        await base('tblpE46FDmB0LmeTU').update(recordId, {
+            'Status': 'error',
+            'Error': error.message
+        });
     }
-}; 
+} 

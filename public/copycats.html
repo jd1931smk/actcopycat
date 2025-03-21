@@ -369,7 +369,6 @@
                 originalHeader.textContent = `Original Question (Test ${testNumber}, Question ${questionNumber})`;
                 originalQuestion.appendChild(originalHeader);
                 
-                // Only show LaTeX content if there's no photo
                 if (questionData.photo && questionData.photo.length > 0) {
                     questionData.photo.forEach(photo => {
                         const img = document.createElement('img');
@@ -385,12 +384,9 @@
                 }
                 
                 questionsContainer.appendChild(originalQuestion);
-                
-                // Update the container with the original question
                 resultContainer.innerHTML = '';
                 resultContainer.appendChild(questionsContainer);
                 
-                // Render LaTeX for original question
                 await MathJax.typesetPromise([resultContainer]);
 
                 // Create a placeholder for clones
@@ -402,7 +398,7 @@
                 clonesPlaceholder.appendChild(loadingMessage);
                 questionsContainer.appendChild(clonesPlaceholder);
 
-                // Then fetch clones
+                // First try to fetch existing clones
                 const clonesResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
                 if (!clonesResponse.ok) {
                     throw new Error(`HTTP error! status: ${clonesResponse.status}`);
@@ -446,66 +442,87 @@
                     clonesPlaceholder.appendChild(generatingDiv);
 
                     try {
-                        // Prepare photo data for the API - only send what's needed for context
-                        const photoData = questionData.photo && questionData.photo.length > 0 ? {
-                            url: questionData.photo[0].url,
-                            description: `Question image from Test ${testNumber}, Question ${questionNumber}`
-                        } : null;
-
-                        console.log('Sending request to generate clone:', {
-                            testNumber,
-                            questionNumber,
-                            hasLatex: !!questionData.latex,
-                            hasPhoto: !!photoData
-                        });
-
-                        // Call GPT-4o to generate a clone
+                        // Start the clone generation process
                         const generateResponse = await fetch('/.netlify/functions/generate-clone', {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 testNumber,
                                 questionNumber,
                                 latex: questionData.latex,
-                                photo: photoData
+                                photo: questionData.photo && questionData.photo.length > 0 ? {
+                                    url: questionData.photo[0].url,
+                                    description: `Question image from Test ${testNumber}, Question ${questionNumber}`
+                                } : null
                             })
                         });
 
-                        const responseData = await generateResponse.json();
-                        console.log('Generate clone response:', responseData);
-
                         if (!generateResponse.ok) {
-                            throw new Error(responseData.error || responseData.details || 'Failed to generate clone');
+                            throw new Error(`HTTP error! status: ${generateResponse.status}`);
                         }
 
-                        // Create and display the generated clone
-                        const cloneHeader = document.createElement('h3');
-                        cloneHeader.textContent = 'Generated Clone Question';
-                        clonesPlaceholder.innerHTML = '';
-                        clonesPlaceholder.appendChild(cloneHeader);
+                        const responseData = await generateResponse.json();
                         
-                        const cloneCard = document.createElement('div');
-                        cloneCard.className = 'question-card clone-card';
-                        
-                        const modelHeader = document.createElement('h3');
-                        modelHeader.textContent = 'GPT-4o';
-                        cloneCard.appendChild(modelHeader);
+                        if (responseData.status === 'pending') {
+                            // Poll for completion
+                            let attempts = 0;
+                            const maxAttempts = 30; // 30 seconds total
+                            const pollInterval = 1000; // 1 second
 
-                        const questionText = document.createElement('div');
-                        questionText.innerHTML = responseData.question
-                            .replace(/([A-E]\.)(?!\s*$)/g, '<br>$1')
-                            .replace(/(\r\n|\n|\r)/g, '<br>');
-                        cloneCard.appendChild(questionText);
+                            const pollForCompletion = async () => {
+                                if (attempts >= maxAttempts) {
+                                    generatingDiv.innerHTML = 'Generation timed out. Please try again.';
+                                    return;
+                                }
 
-                        clonesPlaceholder.appendChild(cloneCard);
+                                const checkResponse = await fetch('/.netlify/functions/generate-clone', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        checkOnly: true,
+                                        recordId: responseData.recordId
+                                    })
+                                });
 
-                        // Render LaTeX for the new clone
-                        await MathJax.typesetPromise([cloneCard]);
+                                const checkData = await checkResponse.json();
+
+                                if (checkData.status === 'complete') {
+                                    // Display the generated clone
+                                    generatingDiv.style.display = 'none';
+                                    
+                                    const cloneHeader = document.createElement('h3');
+                                    cloneHeader.textContent = 'Generated Clone Question';
+                                    clonesPlaceholder.appendChild(cloneHeader);
+                                    
+                                    const cloneCard = document.createElement('div');
+                                    cloneCard.className = 'question-card clone-card';
+                                    
+                                    const modelHeader = document.createElement('h3');
+                                    modelHeader.textContent = 'GPT-4o';
+                                    cloneCard.appendChild(modelHeader);
+
+                                    const questionText = document.createElement('div');
+                                    questionText.innerHTML = checkData.question
+                                        .replace(/([A-E]\.)(?!\s*$)/g, '<br>$1')
+                                        .replace(/(\r\n|\n|\r)/g, '<br>');
+                                    cloneCard.appendChild(questionText);
+
+                                    clonesPlaceholder.appendChild(cloneCard);
+                                    await MathJax.typesetPromise([cloneCard]);
+                                } else if (checkData.status === 'error') {
+                                    generatingDiv.innerHTML = `Error generating clone: ${checkData.error}`;
+                                    generatingDiv.style.color = '#dc3545';
+                                } else {
+                                    attempts++;
+                                    setTimeout(pollForCompletion, pollInterval);
+                                }
+                            };
+
+                            await pollForCompletion();
+                        }
                     } catch (error) {
                         console.error('Error generating clone:', error);
-                        generatingDiv.innerHTML = `Failed to generate clone question: ${error.message}`;
+                        generatingDiv.innerHTML = `Error generating clone: ${error.message}`;
                         generatingDiv.style.color = '#dc3545';
                     }
                 }
@@ -513,6 +530,9 @@
                 // Update current selections
                 currentTestNumber = testNumber;
                 currentQuestionNumber = questionNumber;
+                
+                // Update navigation buttons
+                updateNavigationButtons();
                 
             } catch (error) {
                 console.error('Error:', error);
