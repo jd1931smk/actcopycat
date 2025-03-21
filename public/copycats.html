@@ -452,6 +452,13 @@
                             description: `Question image from Test ${testNumber}, Question ${questionNumber}`
                         } : null;
 
+                        console.log('Sending request to generate clone:', {
+                            testNumber,
+                            questionNumber,
+                            hasLatex: !!questionData.latex,
+                            hasPhoto: !!photoData
+                        });
+
                         // Call GPT-4o to generate a clone
                         const generateResponse = await fetch('/.netlify/functions/generate-clone', {
                             method: 'POST',
@@ -466,13 +473,13 @@
                             })
                         });
 
+                        const responseData = await generateResponse.json();
+                        console.log('Generate clone response:', responseData);
+
                         if (!generateResponse.ok) {
-                            const errorData = await generateResponse.json();
-                            throw new Error(errorData.error || 'Failed to generate clone');
+                            throw new Error(responseData.error || responseData.details || 'Failed to generate clone');
                         }
 
-                        const generatedClone = await generateResponse.json();
-                        
                         // Create and display the generated clone
                         const cloneHeader = document.createElement('h3');
                         cloneHeader.textContent = 'Generated Clone Question';
@@ -487,7 +494,7 @@
                         cloneCard.appendChild(modelHeader);
 
                         const questionText = document.createElement('div');
-                        questionText.innerHTML = generatedClone.question
+                        questionText.innerHTML = responseData.question
                             .replace(/([A-E]\.)(?!\s*$)/g, '<br>$1')
                             .replace(/(\r\n|\n|\r)/g, '<br>');
                         cloneCard.appendChild(questionText);
