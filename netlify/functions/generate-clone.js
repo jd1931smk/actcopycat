@@ -6,16 +6,57 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 exports.handler = async function(event, context) {
     if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
+        return { 
+            statusCode: 405, 
+            body: JSON.stringify({ error: 'Method Not Allowed' }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
     }
 
     try {
+        console.log('Received request to generate clone');
         const { testNumber, questionNumber, latex, photo } = JSON.parse(event.body);
+        
+        if (!testNumber || !questionNumber) {
+            console.error('Missing required parameters');
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Test number and question number are required' }),
+                headers: { 'Content-Type': 'application/json' }
+            };
+        }
+
+        // If latex wasn't provided, try to get it from the Questions table
+        let questionLatex = latex;
+        if (!questionLatex) {
+            console.log('Latex not provided, fetching from Questions table');
+            const records = await base('Questions')
+                .select({
+                    filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
+                    fields: ['LatexMarkdown']
+                })
+                .firstPage();
+
+            if (records && records.length > 0) {
+                questionLatex = records[0].get('LatexMarkdown');
+            }
+        }
+
+        if (!questionLatex && !photo) {
+            console.error('No latex or photo available for question');
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Question content not available' }),
+                headers: { 'Content-Type': 'application/json' }
+            };
+        }
         
         // Construct the prompt for GPT-4o
         let prompt = `Please analyze and create a clone of this ACT Math question:
 
-${latex || 'Image-based question'}
+${questionLatex || 'Image-based question'}
 
 ${photo ? '[This question includes an image]' : ''}
 
@@ -60,7 +101,7 @@ Structure your response as follows:
 
 [Your explanation here with proper MathJax formatting]`;
 
-        // Call GPT-4o
+        console.log('Calling GPT-4 to generate clone');
         const completion = await openai.chat.completions.create({
             model: "gpt-4",
             messages: [
@@ -78,6 +119,7 @@ Structure your response as follows:
         });
 
         const response = completion.choices[0].message.content;
+        console.log('Received response from GPT-4');
 
         // Parse the response
         const analysisMatch = response.match(/\*\*Analysis:\*\*\n\n([\s\S]*?)(?=\n\n\*\*New Question:\*\*)/);
@@ -86,9 +128,11 @@ Structure your response as follows:
         const explanationMatch = response.match(/\*\*Explanation:\*\*\n\n([\s\S]*?)$/);
 
         if (!questionMatch || !answerMatch || !explanationMatch) {
+            console.error('Failed to parse GPT response:', response);
             throw new Error('Failed to parse GPT response');
         }
 
+        console.log('Saving clone to Airtable');
         // Save to Airtable
         const record = await base('tblpE46FDmB0LmeTU').create({
             'Original Question': `${testNumber} - ${questionNumber}`,
@@ -98,6 +142,7 @@ Structure your response as follows:
             'Explanation': explanationMatch[1].trim()
         });
 
+        console.log('Clone saved successfully');
         return {
             statusCode: 200,
             headers: {
@@ -114,7 +159,13 @@ Structure your response as follows:
         console.error('Error:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: error.message })
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                error: error.message,
+                details: 'Failed to generate or save clone question'
+            })
         };
     }
 }; 
