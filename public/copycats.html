@@ -364,48 +364,6 @@
                 }
                 const cloneData = await clonesResponse.json();
                 
-                // If no clones exist, generate one using GPT-4o
-                if (!cloneData || cloneData.length === 0) {
-                    const generatingDiv = document.createElement('div');
-                    generatingDiv.className = 'generating-message';
-                    generatingDiv.innerHTML = 'No clones found. Generating a new clone question...';
-                    resultContainer.appendChild(generatingDiv);
-
-                    try {
-                        // Call GPT-4o to generate a clone
-                        const generateResponse = await fetch('/.netlify/functions/generate-clone', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                testNumber,
-                                questionNumber,
-                                latex: questionData.latex,
-                                photo: questionData.photo
-                            })
-                        });
-
-                        if (!generateResponse.ok) throw new Error('Failed to generate clone');
-                        const generatedClone = await generateResponse.json();
-                        
-                        // Add the generated clone to cloneData
-                        cloneData = [{
-                            clone: generatedClone.question,
-                            model: 'GPT-4o',
-                            originalQuestion: `${testNumber} - ${questionNumber}`
-                        }];
-                    } catch (error) {
-                        console.error('Error generating clone:', error);
-                        generatingDiv.innerHTML = 'Failed to generate clone question.';
-                        return;
-                    }
-                }
-                
-                // Update current selections
-                currentTestNumber = testNumber;
-                currentQuestionNumber = questionNumber;
-                
                 // Create container elements
                 const questionsContainer = document.createElement('div');
                 questionsContainer.className = 'questions-container';
@@ -416,6 +374,14 @@
                 const originalHeader = document.createElement('h3');
                 originalHeader.textContent = `Original Question (Test ${testNumber}, Question ${questionNumber})`;
                 originalQuestion.appendChild(originalHeader);
+                
+                // Add the LaTeX content
+                if (questionData.latex) {
+                    const latexContent = document.createElement('div');
+                    latexContent.className = 'latex-content';
+                    latexContent.innerHTML = questionData.latex;
+                    originalQuestion.appendChild(latexContent);
+                }
                 
                 if (questionData.photo && questionData.photo.length > 0) {
                     questionData.photo.forEach(photo => {
@@ -463,7 +429,70 @@
                     });
                     
                     questionsContainer.appendChild(cloneQuestionsDiv);
+                } else {
+                    const generatingDiv = document.createElement('div');
+                    generatingDiv.className = 'generating-message';
+                    generatingDiv.innerHTML = 'No clones found. Generating a new clone question...';
+                    questionsContainer.appendChild(generatingDiv);
+
+                    try {
+                        // Call GPT-4o to generate a clone
+                        const generateResponse = await fetch('/.netlify/functions/generate-clone', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                testNumber,
+                                questionNumber,
+                                latex: questionData.latex,
+                                photo: questionData.photo
+                            })
+                        });
+
+                        if (!generateResponse.ok) {
+                            const errorData = await generateResponse.json();
+                            throw new Error(errorData.error || 'Failed to generate clone');
+                        }
+
+                        const generatedClone = await generateResponse.json();
+                        
+                        // Create and display the generated clone
+                        const cloneQuestionsDiv = document.createElement('div');
+                        cloneQuestionsDiv.className = 'clone-questions';
+                        
+                        const cloneHeader = document.createElement('h3');
+                        cloneHeader.textContent = 'Generated Clone Question';
+                        cloneQuestionsDiv.appendChild(cloneHeader);
+                        
+                        const cloneCard = document.createElement('div');
+                        cloneCard.className = 'question-card clone-card';
+                        
+                        const modelHeader = document.createElement('h3');
+                        modelHeader.textContent = 'GPT-4o';
+                        cloneCard.appendChild(modelHeader);
+
+                        const questionText = document.createElement('div');
+                        questionText.innerHTML = generatedClone.question
+                            .replace(/([A-E]\.)(?!\s*$)/g, '<br>$1')
+                            .replace(/(\r\n|\n|\r)/g, '<br>');
+                        cloneCard.appendChild(questionText);
+
+                        cloneQuestionsDiv.appendChild(cloneCard);
+                        questionsContainer.appendChild(cloneQuestionsDiv);
+
+                        // Remove the generating message
+                        generatingDiv.remove();
+                    } catch (error) {
+                        console.error('Error generating clone:', error);
+                        generatingDiv.innerHTML = `Failed to generate clone question: ${error.message}`;
+                        generatingDiv.style.color = '#dc3545';
+                    }
                 }
+                
+                // Update current selections
+                currentTestNumber = testNumber;
+                currentQuestionNumber = questionNumber;
                 
                 // Update the container
                 resultContainer.innerHTML = '';

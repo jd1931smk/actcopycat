@@ -1,8 +1,20 @@
 const Airtable = require('airtable');
 const OpenAI = require('openai');
 
-const base = new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(process.env.AIRTABLE_BASE_ID);
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Initialize Airtable
+const base = new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(process.env.BASE_ID);
+
+// Initialize OpenAI with proper error handling
+let openai;
+try {
+    openai = new OpenAI({ 
+        apiKey: process.env.OPENAI_API_KEY,
+        maxRetries: 3,
+        timeout: 30000
+    });
+} catch (error) {
+    console.error('Failed to initialize OpenAI:', error);
+}
 
 exports.handler = async function(event, context) {
     if (event.httpMethod !== 'POST') {
@@ -28,6 +40,11 @@ exports.handler = async function(event, context) {
             };
         }
 
+        // Check if OpenAI is properly initialized
+        if (!openai) {
+            throw new Error('OpenAI client not properly initialized');
+        }
+
         // If latex wasn't provided, try to get it from the Questions table
         let questionLatex = latex;
         if (!questionLatex) {
@@ -41,6 +58,7 @@ exports.handler = async function(event, context) {
 
             if (records && records.length > 0) {
                 questionLatex = records[0].get('LatexMarkdown');
+                console.log('Found LaTeX content:', questionLatex ? 'Yes' : 'No');
             }
         }
 
@@ -53,7 +71,15 @@ exports.handler = async function(event, context) {
             };
         }
         
-        // Construct the prompt for GPT-4o
+        // Log the content we're sending to GPT
+        console.log('Question content being sent to GPT:', {
+            hasLatex: !!questionLatex,
+            hasPhoto: !!photo,
+            testNumber,
+            questionNumber
+        });
+
+        // Construct the prompt for GPT-4
         let prompt = `Please analyze and create a clone of this ACT Math question:
 
 ${questionLatex || 'Image-based question'}
@@ -118,8 +144,9 @@ Structure your response as follows:
             max_tokens: 2000
         });
 
-        const response = completion.choices[0].message.content;
         console.log('Received response from GPT-4');
+        const response = completion.choices[0].message.content;
+        console.log('Response content length:', response.length);
 
         // Parse the response
         const analysisMatch = response.match(/\*\*Analysis:\*\*\n\n([\s\S]*?)(?=\n\n\*\*New Question:\*\*)/);
@@ -128,8 +155,14 @@ Structure your response as follows:
         const explanationMatch = response.match(/\*\*Explanation:\*\*\n\n([\s\S]*?)$/);
 
         if (!questionMatch || !answerMatch || !explanationMatch) {
-            console.error('Failed to parse GPT response:', response);
-            throw new Error('Failed to parse GPT response');
+            console.error('Failed to parse GPT response. Response structure:', {
+                hasAnalysis: !!analysisMatch,
+                hasQuestion: !!questionMatch,
+                hasAnswer: !!answerMatch,
+                hasExplanation: !!explanationMatch,
+                response
+            });
+            throw new Error('Failed to parse GPT response - missing required sections');
         }
 
         console.log('Saving clone to Airtable');
@@ -164,7 +197,8 @@ Structure your response as follows:
             },
             body: JSON.stringify({ 
                 error: error.message,
-                details: 'Failed to generate or save clone question'
+                details: 'Failed to generate or save clone question',
+                stack: error.stack
             })
         };
     }
