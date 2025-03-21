@@ -28,11 +28,14 @@
     <style>
         :root {
             --app-bg-color: #007bff;
+            --safe-area-top: env(safe-area-inset-top, 50px);
         }
         html {
             background-color: var(--app-bg-color);
             height: 100%;
             width: 100%;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
         }
         body {
             font-family: Arial, sans-serif;
@@ -40,7 +43,7 @@
             margin: 0 auto;
             min-height: 100vh;
             padding: 20px;
-            padding-top: max(20px, env(safe-area-inset-top));
+            padding-top: calc(var(--safe-area-top) + 20px);
             padding-bottom: max(20px, env(safe-area-inset-bottom));
             padding-left: max(20px, env(safe-area-inset-left));
             padding-right: max(20px, env(safe-area-inset-right));
@@ -48,6 +51,7 @@
             position: relative;
             -webkit-box-sizing: border-box;
             box-sizing: border-box;
+            overflow-x: hidden;
         }
         /* Full-width background for status bar */
         body::before {
@@ -57,7 +61,7 @@
             left: 0;
             right: 0;
             width: 100vw;
-            height: max(env(safe-area-inset-top), 50px);
+            height: var(--safe-area-top);
             background-color: var(--app-bg-color);
             z-index: 9999;
         }
@@ -70,11 +74,14 @@
             }
         }
         .selection-area {
+            margin-top: calc(var(--safe-area-top) - 20px);
             margin-bottom: 20px;
             padding: 20px;
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1;
         }
         .question-area {
             background-color: white;
@@ -235,6 +242,41 @@
             height: auto;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 10px;
+                padding-top: calc(var(--safe-area-top) + 10px);
+            }
+            .selection-area {
+                margin-top: 0;
+                padding: 15px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            select {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 10px;
+                font-size: 16px; /* Prevent iOS zoom on focus */
+            }
+            .button-group {
+                flex-direction: column;
+            }
+            button {
+                width: 100%;
+                margin-bottom: 10px;
+                padding: 15px;
+                font-size: 16px;
+            }
+            .question-area {
+                padding: 15px;
+            }
+            #questionDisplay {
+                gap: 15px;
+            }
         }
     </style>
 </head>
