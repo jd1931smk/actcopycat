@@ -43,15 +43,10 @@ async function initializeServices() {
             endpointUrl: 'https://api.airtable.com'
         }).base(process.env.BASE_ID);
 
-        // Test Airtable connection with error handling
-        try {
-            console.log('Testing Airtable connection...');
-            const testResult = await base('tblpE46FDmB0LmeTU').select({ maxRecords: 1 }).firstPage();
-            console.log('Airtable connection successful, received', testResult.length, 'records');
-        } catch (airtableError) {
-            console.error('Airtable connection test failed:', airtableError);
-            throw new Error(`Airtable connection failed: ${airtableError.message}`);
-        }
+        // Test Airtable connection
+        console.log('Testing Airtable connection...');
+        await base('tblpE46FDmB0LmeTU').select({ maxRecords: 1 }).firstPage();
+        console.log('Airtable connection successful');
 
         console.log('Initializing OpenAI...');
         const openai = new OpenAI({ 
@@ -60,15 +55,10 @@ async function initializeServices() {
             timeout: 8000
         });
 
-        // Test OpenAI connection with error handling
-        try {
-            console.log('Testing OpenAI connection...');
-            const models = await openai.models.list();
-            console.log('OpenAI connection successful, found', models.data.length, 'models');
-        } catch (openaiError) {
-            console.error('OpenAI connection test failed:', openaiError);
-            throw new Error(`OpenAI connection failed: ${openaiError.message}`);
-        }
+        // Test OpenAI connection
+        console.log('Testing OpenAI connection...');
+        await openai.models.list();
+        console.log('OpenAI connection successful');
 
         console.log('All services initialized successfully');
         return { base, openai };
@@ -85,9 +75,7 @@ async function initializeServices() {
 exports.handler = async function(event, context) {
     console.log('Function invoked:', {
         method: event.httpMethod,
-        path: event.path,
-        headers: event.headers,
-        body: event.body ? JSON.parse(event.body) : null
+        path: event.path
     });
 
     if (event.httpMethod !== 'POST') {
@@ -101,16 +89,13 @@ exports.handler = async function(event, context) {
     try {
         services = await initializeServices();
     } catch (error) {
-        const errorResponse = {
-            error: 'Service initialization failed',
-            details: error.message,
-            type: error.name,
-            stack: error.stack
-        };
-        console.error('Initialization error:', errorResponse);
+        console.error('Failed to initialize services:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify(errorResponse)
+            body: JSON.stringify({ 
+                error: 'Service initialization failed',
+                details: error.message
+            })
         };
     }
 
@@ -158,87 +143,23 @@ exports.handler = async function(event, context) {
                     statusCode: 500,
                     body: JSON.stringify({ 
                         error: 'Failed to check record status',
-                        details: error.message,
-                        stack: error.stack
+                        details: error.message
                     })
                 };
             }
         }
 
-        // Validate required fields for new generation
-        if (!testNumber || !questionNumber) {
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ 
-                    error: 'Missing required fields',
-                    details: 'Test number and question number are required'
-                })
-            };
-        }
-
         // Create a new record for tracking
-        let record;
-        try {
-            console.log('Creating tracking record...');
-            record = await services.base('tblpE46FDmB0LmeTU').create({
-                'Original Question': `${testNumber} - ${questionNumber}`,
-                'Status': 'pending',
-                'Model': 'GPT-4o'
-            });
-            console.log('Created tracking record:', record.id);
-        } catch (error) {
-            console.error('Error creating record:', error);
-            return {
-                statusCode: 500,
-                body: JSON.stringify({ 
-                    error: 'Failed to create tracking record',
-                    details: error.message,
-                    stack: error.stack
-                })
-            };
-        }
-
-        // Start the generation process in the background
-        generateClone(services, record.id, testNumber, questionNumber, latex, photo).catch(error => {
-            console.error('Background generation failed:', error);
+        console.log('Creating new record for:', testNumber, questionNumber);
+        const record = await services.base('tblpE46FDmB0LmeTU').create({
+            'Original Question': `${testNumber} - ${questionNumber}`,
+            'Status': 'pending',
+            'Model': 'GPT-4o'
         });
+        console.log('Created record:', record.id);
 
-        // Return immediately with the record ID
-        return {
-            statusCode: 202,
-            body: JSON.stringify({
-                status: 'pending',
-                recordId: record.id,
-                message: 'Clone generation started'
-            })
-        };
-
-    } catch (error) {
-        console.error('Error in handler:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ 
-                error: 'Internal server error',
-                details: error.message,
-                stack: error.stack
-            })
-        };
-    }
-};
-
-async function generateClone(services, recordId, testNumber, questionNumber, latex, photo) {
-    try {
-        // Clean up the LaTeX content if it exists
-        if (latex) {
-            latex = latex.replace(/<[^>]*>/g, '')
-                .replace(/\\\\\(/g, '\\(')
-                .replace(/\\\\\)/g, '\\)')
-                .replace(/\\\\\[/g, '\\[')
-                .replace(/\\\\\]/g, '\\]')
-                .replace(/([^\s])\\\(/g, '$1 \\(')
-                .replace(/\\\)([^\s])/g, '\\) $1');
-        }
-
+        // Start the generation process
+        console.log('Starting clone generation...');
         const prompt = `Please analyze and create a clone of this ACT Math question:
 
 ${latex || 'Image-based question'}
@@ -300,26 +221,33 @@ Explanation:
         }
 
         // Update the record with the generated content
-        await services.base('tblpE46FDmB0LmeTU').update(recordId, {
+        await services.base('tblpE46FDmB0LmeTU').update(record.id, {
             'Corrected Clone Question LM': questionMatch[1].trim(),
             'Answer': answerMatch[1].trim(),
             'Explanation': explanationMatch[1].trim(),
             'Status': 'complete'
         });
 
-        console.log('Successfully updated record with generated content');
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                status: 'complete',
+                recordId: record.id,
+                question: questionMatch[1].trim(),
+                answer: answerMatch[1].trim(),
+                explanation: explanationMatch[1].trim()
+            })
+        };
 
     } catch (error) {
-        console.error('Error in generateClone:', error);
-        // Update the record with the error
-        try {
-            await services.base('tblpE46FDmB0LmeTU').update(recordId, {
-                'Status': 'error',
-                'Error': error.message
-            });
-        } catch (updateError) {
-            console.error('Failed to update record with error:', updateError);
-        }
-        throw error;
+        console.error('Error in handler:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ 
+                error: 'Internal server error',
+                details: error.message,
+                stack: error.stack
+            })
+        };
     }
-} 
+}; 
