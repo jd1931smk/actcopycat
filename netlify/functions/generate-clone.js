@@ -1,22 +1,40 @@
 const Airtable = require('airtable');
 const OpenAI = require('openai');
 
-// Initialize Airtable
-const base = new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(process.env.BASE_ID);
+// Validate environment variables
+function validateEnvironment() {
+    const requiredVars = {
+        'OPENAI_API_KEY': process.env.OPENAI_API_KEY,
+        'AIRTABLE_API_KEY': process.env.AIRTABLE_API_KEY,
+        'BASE_ID': process.env.BASE_ID
+    };
 
-// Log environment variables status at startup
-console.log('Environment variables check:', {
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY ? '✅ Present' : '❌ Missing',
-    AIRTABLE_API_KEY: process.env.AIRTABLE_API_KEY ? '✅ Present' : '❌ Missing',
-    BASE_ID: process.env.BASE_ID ? '✅ Present' : '❌ Missing'
-});
+    const missingVars = Object.entries(requiredVars)
+        .filter(([_, value]) => !value)
+        .map(([key]) => key);
 
-// Initialize OpenAI
-const openai = new OpenAI({ 
-    apiKey: process.env.OPENAI_API_KEY,
-    maxRetries: 2,
-    timeout: 8000  // Reduced timeout to ensure we don't hit Netlify's limit
-});
+    if (missingVars.length > 0) {
+        throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    }
+}
+
+// Initialize Airtable and OpenAI with error handling
+let base;
+let openai;
+
+try {
+    validateEnvironment();
+    
+    base = new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(process.env.BASE_ID);
+    openai = new OpenAI({ 
+        apiKey: process.env.OPENAI_API_KEY,
+        maxRetries: 2,
+        timeout: 8000
+    });
+} catch (error) {
+    console.error('Failed to initialize services:', error);
+    throw error;
+}
 
 exports.handler = async function(event, context) {
     console.log('Function invoked:', event.httpMethod, event.path);
@@ -47,6 +65,14 @@ exports.handler = async function(event, context) {
                             explanation: record.get('Explanation')
                         })
                     };
+                } else if (status === 'error') {
+                    return {
+                        statusCode: 500,
+                        body: JSON.stringify({
+                            status: 'error',
+                            error: record.get('Error') || 'Unknown error occurred'
+                        })
+                    };
                 } else {
                     return {
                         statusCode: 202,
@@ -60,20 +86,48 @@ exports.handler = async function(event, context) {
                 console.error('Error checking record:', error);
                 return {
                     statusCode: 500,
-                    body: JSON.stringify({ error: 'Failed to check record status' })
+                    body: JSON.stringify({ 
+                        error: 'Failed to check record status',
+                        details: error.message
+                    })
                 };
             }
         }
 
+        // Validate required fields for new generation
+        if (!testNumber || !questionNumber) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ 
+                    error: 'Missing required fields',
+                    details: 'Test number and question number are required'
+                })
+            };
+        }
+
         // Create a new record for tracking
-        const record = await base('tblpE46FDmB0LmeTU').create({
-            'Original Question': `${testNumber} - ${questionNumber}`,
-            'Status': 'pending',
-            'Model': 'GPT-4o'
-        });
+        let record;
+        try {
+            record = await base('tblpE46FDmB0LmeTU').create({
+                'Original Question': `${testNumber} - ${questionNumber}`,
+                'Status': 'pending',
+                'Model': 'GPT-4o'
+            });
+        } catch (error) {
+            console.error('Error creating record:', error);
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ 
+                    error: 'Failed to create tracking record',
+                    details: error.message
+                })
+            };
+        }
 
         // Start the generation process in the background
-        generateClone(record.id, testNumber, questionNumber, latex, photo).catch(console.error);
+        generateClone(record.id, testNumber, questionNumber, latex, photo).catch(error => {
+            console.error('Background generation failed:', error);
+        });
 
         // Return immediately with the record ID
         return {
@@ -86,10 +140,13 @@ exports.handler = async function(event, context) {
         };
 
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error in handler:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: 'Internal server error' })
+            body: JSON.stringify({ 
+                error: 'Internal server error',
+                details: error.message
+            })
         };
     }
 };
@@ -138,6 +195,7 @@ Answer:
 Explanation:
 [Simple explanation here]`;
 
+        console.log('Sending request to OpenAI...');
         const completion = await openai.chat.completions.create({
             model: "gpt-4",
             messages: [
@@ -154,6 +212,7 @@ Explanation:
             max_tokens: 1000
         });
 
+        console.log('Received response from OpenAI');
         const response = completion.choices[0].message.content;
 
         // Extract the sections
@@ -162,7 +221,7 @@ Explanation:
         const explanationMatch = response.match(/Explanation:\s*([\s\S]*?)$/);
 
         if (!questionMatch || !answerMatch || !explanationMatch) {
-            throw new Error('Failed to parse GPT response');
+            throw new Error('Failed to parse GPT response - missing required sections');
         }
 
         // Update the record with the generated content
@@ -173,11 +232,19 @@ Explanation:
             'Status': 'complete'
         });
 
+        console.log('Successfully updated record with generated content');
+
     } catch (error) {
+        console.error('Error in generateClone:', error);
         // Update the record with the error
-        await base('tblpE46FDmB0LmeTU').update(recordId, {
-            'Status': 'error',
-            'Error': error.message
-        });
+        try {
+            await base('tblpE46FDmB0LmeTU').update(recordId, {
+                'Status': 'error',
+                'Error': error.message
+            });
+        } catch (updateError) {
+            console.error('Failed to update record with error:', updateError);
+        }
+        throw error;
     }
 } 
