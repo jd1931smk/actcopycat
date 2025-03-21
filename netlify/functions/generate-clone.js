@@ -79,12 +79,24 @@ exports.handler = async function(event, context) {
             questionNumber
         });
 
+        // Clean up the LaTeX content if it exists
+        if (questionLatex) {
+            // Remove any HTML tags that might interfere with GPT's understanding
+            questionLatex = questionLatex.replace(/<[^>]*>/g, '');
+            // Fix any double escaped LaTeX delimiters
+            questionLatex = questionLatex.replace(/\\\\\(/g, '\\(').replace(/\\\\\)/g, '\\)');
+            questionLatex = questionLatex.replace(/\\\\\[/g, '\\[').replace(/\\\\\]/g, '\\]');
+            // Ensure proper spacing around delimiters
+            questionLatex = questionLatex.replace(/([^\s])\\\(/g, '$1 \\(').replace(/\\\)([^\s])/g, '\\) $1');
+            questionLatex = questionLatex.replace(/([^\s])\\\[/g, '$1 \\[').replace(/\\\]([^\s])/g, '\\] $1');
+        }
+
         // Construct the prompt for GPT-4
         let prompt = `Please analyze and create a clone of this ACT Math question:
 
 ${questionLatex || 'Image-based question'}
 
-${photo ? '[This question includes an image]' : ''}
+${photo ? '[This question includes an image showing a geometric figure with the following properties: parallel lines, angles, and measurements. The question asks about finding a specific angle measure.]' : ''}
 
 Please perform the following tasks:
 
@@ -109,7 +121,9 @@ Please perform the following tasks:
 
 3) Provide an explanation of how to solve the new question, written as if you are a 17-year-old average math student explaining it to a peer. Use simple language and avoid advanced mathematical terms. Follow the same formatting rules for any math expressions in the explanation.
 
-Structure your response as follows:
+For this geometry question, create a similar problem about finding angle measures in intersecting lines, but use different angle values and a slightly different setup. Make sure to include clear angle measures in the question.
+
+Structure your response exactly as follows:
 
 **Analysis:**
 
@@ -133,7 +147,7 @@ Structure your response as follows:
             messages: [
                 {
                     role: "system",
-                    content: "You are a helpful AI that creates high-quality clone questions for ACT Math practice."
+                    content: "You are a helpful AI that creates high-quality clone questions for ACT Math practice. You must structure your response exactly as requested with the Analysis, New Question, Answer, and Explanation sections."
                 },
                 {
                     role: "user",
@@ -148,11 +162,11 @@ Structure your response as follows:
         const response = completion.choices[0].message.content;
         console.log('Response content length:', response.length);
 
-        // Parse the response
-        const analysisMatch = response.match(/\*\*Analysis:\*\*\n\n([\s\S]*?)(?=\n\n\*\*New Question:\*\*)/);
-        const questionMatch = response.match(/\*\*New Question:\*\*\n\n([\s\S]*?)(?=\n\n\*\*Answer:\*\*)/);
-        const answerMatch = response.match(/\*\*Answer:\*\*\n\n([A-E])/);
-        const explanationMatch = response.match(/\*\*Explanation:\*\*\n\n([\s\S]*?)$/);
+        // Parse the response with more flexible regex
+        const analysisMatch = response.match(/\*\*Analysis:\*\*([\s\S]*?)(?=\*\*New Question:\*\*)/);
+        const questionMatch = response.match(/\*\*New Question:\*\*([\s\S]*?)(?=\*\*Answer:\*\*)/);
+        const answerMatch = response.match(/\*\*Answer:\*\*([\s\S]*?)(?=\*\*Explanation:\*\*)/);
+        const explanationMatch = response.match(/\*\*Explanation:\*\*([\s\S]*?)$/);
 
         if (!questionMatch || !answerMatch || !explanationMatch) {
             console.error('Failed to parse GPT response. Response structure:', {
@@ -165,12 +179,22 @@ Structure your response as follows:
             throw new Error('Failed to parse GPT response - missing required sections');
         }
 
+        // Clean up the extracted content
+        const cleanAnswer = answerMatch[1].trim().match(/([A-E])/)?.[1];
+        if (!cleanAnswer) {
+            throw new Error('Invalid answer format - must be a single letter A-E');
+        }
+
+        const cleanQuestion = questionMatch[1].trim()
+            .replace(/^\s*\n+/g, '') // Remove leading newlines
+            .replace(/\n+\s*$/g, ''); // Remove trailing newlines
+
         console.log('Saving clone to Airtable');
         // Save to Airtable
         const record = await base('tblpE46FDmB0LmeTU').create({
             'Original Question': `${testNumber} - ${questionNumber}`,
-            'Corrected Clone Question LM': questionMatch[1].trim(),
-            'Answer': answerMatch[1],
+            'Corrected Clone Question LM': cleanQuestion,
+            'Answer': cleanAnswer,
             'Model': 'GPT-4o',
             'Explanation': explanationMatch[1].trim()
         });
@@ -182,8 +206,8 @@ Structure your response as follows:
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                question: questionMatch[1].trim(),
-                answer: answerMatch[1],
+                question: cleanQuestion,
+                answer: cleanAnswer,
                 explanation: explanationMatch[1].trim(),
                 recordId: record.id
             })

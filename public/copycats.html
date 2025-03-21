@@ -375,14 +375,7 @@
                 originalHeader.textContent = `Original Question (Test ${testNumber}, Question ${questionNumber})`;
                 originalQuestion.appendChild(originalHeader);
                 
-                // Add the LaTeX content
-                if (questionData.latex) {
-                    const latexContent = document.createElement('div');
-                    latexContent.className = 'latex-content';
-                    latexContent.innerHTML = questionData.latex;
-                    originalQuestion.appendChild(latexContent);
-                }
-                
+                // Only show LaTeX content if there's no photo
                 if (questionData.photo && questionData.photo.length > 0) {
                     questionData.photo.forEach(photo => {
                         const img = document.createElement('img');
@@ -390,6 +383,11 @@
                         img.alt = 'Question image';
                         originalQuestion.appendChild(img);
                     });
+                } else if (questionData.latex) {
+                    const latexContent = document.createElement('div');
+                    latexContent.className = 'latex-content';
+                    latexContent.innerHTML = questionData.latex;
+                    originalQuestion.appendChild(latexContent);
                 }
                 
                 questionsContainer.appendChild(originalQuestion);
