@@ -4,10 +4,18 @@ const OpenAI = require('openai');
 // Initialize Airtable
 const base = new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(process.env.BASE_ID);
 
+// Log environment variables status at startup
+console.log('Environment variables check:', {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY ? '✅ Present' : '❌ Missing',
+    AIRTABLE_API_KEY: process.env.AIRTABLE_API_KEY ? '✅ Present' : '❌ Missing',
+    BASE_ID: process.env.BASE_ID ? '✅ Present' : '❌ Missing'
+});
+
 // Initialize OpenAI with proper error handling
 let openai;
 try {
     if (!process.env.OPENAI_API_KEY) {
+        console.error('❌ OPENAI_API_KEY is not set in environment');
         throw new Error('OPENAI_API_KEY environment variable is not set');
     }
     openai = new OpenAI({ 
@@ -15,13 +23,19 @@ try {
         maxRetries: 3,
         timeout: 30000
     });
-    console.log('OpenAI client initialized successfully');
+    console.log('✅ OpenAI client initialized successfully');
 } catch (error) {
-    console.error('Failed to initialize OpenAI:', error);
+    console.error('❌ Failed to initialize OpenAI:', error);
     throw error; // Re-throw to prevent the function from continuing without OpenAI
 }
 
 exports.handler = async function(event, context) {
+    console.log('🔄 Function invoked with event:', {
+        method: event.httpMethod,
+        path: event.path,
+        headers: event.headers
+    });
+
     if (event.httpMethod !== 'POST') {
         return { 
             statusCode: 405, 
@@ -33,11 +47,18 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        console.log('Received request to generate clone');
+        console.log('📥 Received request to generate clone');
         const { testNumber, questionNumber, latex, photo } = JSON.parse(event.body);
         
+        console.log('📋 Request parameters:', {
+            testNumber,
+            questionNumber,
+            hasLatex: !!latex,
+            hasPhoto: !!photo
+        });
+
         if (!testNumber || !questionNumber) {
-            console.error('Missing required parameters');
+            console.error('❌ Missing required parameters');
             return {
                 statusCode: 400,
                 body: JSON.stringify({ error: 'Test number and question number are required' }),
@@ -47,14 +68,16 @@ exports.handler = async function(event, context) {
 
         // Check if OpenAI is properly initialized
         if (!openai) {
+            console.error('❌ OpenAI client not initialized');
             throw new Error('OpenAI client not properly initialized');
         }
 
-        // Log environment status
-        console.log('Environment check:', {
+        // Log environment status again
+        console.log('🔍 Environment check:', {
             hasOpenAIKey: !!process.env.OPENAI_API_KEY,
             hasAirtableKey: !!process.env.AIRTABLE_API_KEY,
-            hasBaseId: !!process.env.BASE_ID
+            hasBaseId: !!process.env.BASE_ID,
+            openAIKeyLength: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0
         });
 
         // If latex wasn't provided, try to get it from the Questions table
