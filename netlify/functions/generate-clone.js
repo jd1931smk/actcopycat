@@ -49,16 +49,20 @@ exports.handler = async function(event, context) {
         let questionLatex = latex;
         if (!questionLatex) {
             console.log('Latex not provided, fetching from Questions table');
-            const records = await base('Questions')
-                .select({
-                    filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
-                    fields: ['LatexMarkdown']
-                })
-                .firstPage();
+            try {
+                const records = await base('Questions')
+                    .select({
+                        filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = '${questionNumber}')`,
+                        fields: ['LatexMarkdown']
+                    })
+                    .firstPage();
 
-            if (records && records.length > 0) {
-                questionLatex = records[0].get('LatexMarkdown');
-                console.log('Found LaTeX content:', questionLatex ? 'Yes' : 'No');
+                if (records && records.length > 0) {
+                    questionLatex = records[0].get('LatexMarkdown');
+                    console.log('Found LaTeX content:', questionLatex ? 'Yes' : 'No');
+                }
+            } catch (error) {
+                console.error('Error fetching from Questions table:', error);
             }
         }
 
@@ -75,6 +79,7 @@ exports.handler = async function(event, context) {
         console.log('Question content being sent to GPT:', {
             hasLatex: !!questionLatex,
             hasPhoto: !!photo,
+            photoUrls: photo ? photo.urls : null,
             testNumber,
             questionNumber
         });
@@ -96,7 +101,7 @@ exports.handler = async function(event, context) {
 
 ${questionLatex || 'Image-based question'}
 
-${photo ? '[This question includes an image showing a geometric figure with the following properties: parallel lines, angles, and measurements. The question asks about finding a specific angle measure.]' : ''}
+${photo ? `[This question includes ${photo.urls.length} image(s) showing mathematical content. Please create a similar question that could be represented with a similar diagram.]` : ''}
 
 Please perform the following tasks:
 

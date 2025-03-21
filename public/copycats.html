@@ -350,24 +350,18 @@
                 const resultContainer = document.getElementById('resultContainer');
                 resultContainer.innerHTML = '<div class="spinner" style="display: inline-block;"></div>';
                 
-                // First get the original question
+                // Create container elements
+                const questionsContainer = document.createElement('div');
+                questionsContainer.className = 'questions-container';
+
+                // First get and display the original question immediately
                 const questionResponse = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
                 if (!questionResponse.ok) {
                     throw new Error(`HTTP error! status: ${questionResponse.status}`);
                 }
                 const questionData = await questionResponse.json();
                 
-                // Then get the clones
-                const clonesResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
-                if (!clonesResponse.ok) {
-                    throw new Error(`HTTP error! status: ${clonesResponse.status}`);
-                }
-                const cloneData = await clonesResponse.json();
-                
-                // Create container elements
-                const questionsContainer = document.createElement('div');
-                questionsContainer.className = 'questions-container';
-                
+                // Display original question
                 const originalQuestion = document.createElement('div');
                 originalQuestion.className = 'original-question';
                 
@@ -392,14 +386,37 @@
                 
                 questionsContainer.appendChild(originalQuestion);
                 
+                // Update the container with the original question
+                resultContainer.innerHTML = '';
+                resultContainer.appendChild(questionsContainer);
+                
+                // Render LaTeX for original question
+                await MathJax.typesetPromise([resultContainer]);
+
+                // Create a placeholder for clones
+                const clonesPlaceholder = document.createElement('div');
+                clonesPlaceholder.className = 'clone-questions';
+                const loadingMessage = document.createElement('div');
+                loadingMessage.className = 'generating-message';
+                loadingMessage.innerHTML = 'Loading clone questions...';
+                clonesPlaceholder.appendChild(loadingMessage);
+                questionsContainer.appendChild(clonesPlaceholder);
+
+                // Then fetch clones
+                const clonesResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                if (!clonesResponse.ok) {
+                    throw new Error(`HTTP error! status: ${clonesResponse.status}`);
+                }
+                const cloneData = await clonesResponse.json();
+                
+                // Remove the loading message
+                clonesPlaceholder.innerHTML = '';
+                
                 // Add clone questions if available
                 if (cloneData && cloneData.length > 0) {
-                    const cloneQuestionsDiv = document.createElement('div');
-                    cloneQuestionsDiv.className = 'clone-questions';
-                    
                     const cloneHeader = document.createElement('h3');
                     cloneHeader.textContent = 'Clone Questions';
-                    cloneQuestionsDiv.appendChild(cloneHeader);
+                    clonesPlaceholder.appendChild(cloneHeader);
                     
                     cloneData.forEach((clone, index) => {
                         if (clone.clone) {
@@ -411,29 +428,30 @@
                             cloneCard.appendChild(modelHeader);
 
                             const questionText = document.createElement('div');
-                            // Handle both Markdown image syntax and the current format
                             const formattedText = clone.clone
-                                // Convert ![(url)] format
                                 .replace(/!\[\((.*?)\)\]/g, '<img src="$1" alt="Question image" style="max-width: 100%; margin: 10px 0;">')
-                                // Also handle standard Markdown format
                                 .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; margin: 10px 0;">')
                                 .replace(/([A-E]\.)(?!\s*$)/g, '<br>$1')
                                 .replace(/(\r\n|\n|\r)/g, '<br>');
                             questionText.innerHTML = formattedText;
                             cloneCard.appendChild(questionText);
 
-                            cloneQuestionsDiv.appendChild(cloneCard);
+                            clonesPlaceholder.appendChild(cloneCard);
                         }
                     });
-                    
-                    questionsContainer.appendChild(cloneQuestionsDiv);
                 } else {
                     const generatingDiv = document.createElement('div');
                     generatingDiv.className = 'generating-message';
                     generatingDiv.innerHTML = 'No clones found. Generating a new clone question...';
-                    questionsContainer.appendChild(generatingDiv);
+                    clonesPlaceholder.appendChild(generatingDiv);
 
                     try {
+                        // Prepare photo data for the API
+                        const photoData = questionData.photo ? {
+                            urls: questionData.photo.map(p => p.url),
+                            thumbnails: questionData.photo.map(p => p.thumbnails)
+                        } : null;
+
                         // Call GPT-4o to generate a clone
                         const generateResponse = await fetch('/.netlify/functions/generate-clone', {
                             method: 'POST',
@@ -444,7 +462,7 @@
                                 testNumber,
                                 questionNumber,
                                 latex: questionData.latex,
-                                photo: questionData.photo
+                                photo: photoData
                             })
                         });
 
@@ -456,12 +474,10 @@
                         const generatedClone = await generateResponse.json();
                         
                         // Create and display the generated clone
-                        const cloneQuestionsDiv = document.createElement('div');
-                        cloneQuestionsDiv.className = 'clone-questions';
-                        
                         const cloneHeader = document.createElement('h3');
                         cloneHeader.textContent = 'Generated Clone Question';
-                        cloneQuestionsDiv.appendChild(cloneHeader);
+                        clonesPlaceholder.innerHTML = '';
+                        clonesPlaceholder.appendChild(cloneHeader);
                         
                         const cloneCard = document.createElement('div');
                         cloneCard.className = 'question-card clone-card';
@@ -476,11 +492,10 @@
                             .replace(/(\r\n|\n|\r)/g, '<br>');
                         cloneCard.appendChild(questionText);
 
-                        cloneQuestionsDiv.appendChild(cloneCard);
-                        questionsContainer.appendChild(cloneQuestionsDiv);
+                        clonesPlaceholder.appendChild(cloneCard);
 
-                        // Remove the generating message
-                        generatingDiv.remove();
+                        // Render LaTeX for the new clone
+                        await MathJax.typesetPromise([cloneCard]);
                     } catch (error) {
                         console.error('Error generating clone:', error);
                         generatingDiv.innerHTML = `Failed to generate clone question: ${error.message}`;
@@ -492,12 +507,6 @@
                 currentTestNumber = testNumber;
                 currentQuestionNumber = questionNumber;
                 
-                // Update the container
-                resultContainer.innerHTML = '';
-                resultContainer.appendChild(questionsContainer);
-                
-                // Render LaTeX
-                MathJax.typesetPromise([resultContainer]).catch(err => console.error('MathJax Error:', err));
             } catch (error) {
                 console.error('Error:', error);
                 resultContainer.innerHTML = `<p>Error: ${error.message}</p>`;
