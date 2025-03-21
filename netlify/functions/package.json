@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Netlify functions for ACT CopyCat",
   "dependencies": {
-    "airtable": "^0.12.2"
+    "airtable": "^0.12.2",
+    "openai": "^4.28.0"
   }
-} 
+}
