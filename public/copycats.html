@@ -64,15 +64,27 @@
         }
 
         .clone-card {
-            background-color: #dee2e6;
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: transform 0.2s;
         }
 
-        .clone-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            background-color: #e9ecef;
+        .clone-card h3 {
+            color: #007bff;
+            margin-top: 0;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .clone-card img {
+            max-width: 100%;
+            height: auto;
+            margin: 10px 0;
+            border-radius: 4px;
         }
 
         .original-question {
@@ -191,6 +203,23 @@
             display: flex;
             align-items: center;
             margin: 10px 0;
+        }
+
+        .generating-message {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            font-style: italic;
+            color: #6c757d;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
         }
     </style>
 </head>
@@ -335,6 +364,44 @@
                 }
                 const cloneData = await clonesResponse.json();
                 
+                // If no clones exist, generate one using GPT-4o
+                if (!cloneData || cloneData.length === 0) {
+                    const generatingDiv = document.createElement('div');
+                    generatingDiv.className = 'generating-message';
+                    generatingDiv.innerHTML = 'No clones found. Generating a new clone question...';
+                    resultContainer.appendChild(generatingDiv);
+
+                    try {
+                        // Call GPT-4o to generate a clone
+                        const generateResponse = await fetch('/.netlify/functions/generate-clone', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                testNumber,
+                                questionNumber,
+                                latex: questionData.latex,
+                                photo: questionData.photo
+                            })
+                        });
+
+                        if (!generateResponse.ok) throw new Error('Failed to generate clone');
+                        const generatedClone = await generateResponse.json();
+                        
+                        // Add the generated clone to cloneData
+                        cloneData = [{
+                            clone: generatedClone.question,
+                            model: 'GPT-4o',
+                            originalQuestion: `${testNumber} - ${questionNumber}`
+                        }];
+                    } catch (error) {
+                        console.error('Error generating clone:', error);
+                        generatingDiv.innerHTML = 'Failed to generate clone question.';
+                        return;
+                    }
+                }
+                
                 // Update current selections
                 currentTestNumber = testNumber;
                 currentQuestionNumber = questionNumber;
@@ -384,23 +451,12 @@
                             const formattedText = clone.clone
                                 // Convert ![(url)] format
                                 .replace(/!\[\((.*?)\)\]/g, '<img src="$1" alt="Question image" style="max-width: 100%; margin: 10px 0;">')
-                                // Also handle standard Markdown format just in case
+                                // Also handle standard Markdown format
                                 .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; margin: 10px 0;">')
                                 .replace(/([A-E]\.)(?!\s*$)/g, '<br>$1')
                                 .replace(/(\r\n|\n|\r)/g, '<br>');
                             questionText.innerHTML = formattedText;
                             cloneCard.appendChild(questionText);
-
-                            // Add click handler to open practice page
-                            cloneCard.addEventListener('click', () => {
-                                const params = new URLSearchParams({
-                                    test: testNumber,
-                                    question: questionNumber,
-                                    model: clone.model || 'No Model',
-                                    clone: encodeURIComponent(clone.clone)
-                                });
-                                window.open(`practice.html?${params.toString()}`, '_blank');
-                            });
 
                             cloneQuestionsDiv.appendChild(cloneCard);
                         }
@@ -414,21 +470,10 @@
                 resultContainer.appendChild(questionsContainer);
                 
                 // Render LaTeX
-                if (window.MathJax) {
-                    MathJax.typesetPromise();
-                }
-                
-                // Update navigation buttons
-                updateNavigationButtons();
+                MathJax.typesetPromise([resultContainer]).catch(err => console.error('MathJax Error:', err));
             } catch (error) {
-                console.error('Error fetching question:', error);
-                document.getElementById('resultContainer').innerHTML = `
-                    <div class="error-message">
-                        Error loading question. Please try again or select a different question.
-                        <br>
-                        Error details: ${error.message}
-                    </div>
-                `;
+                console.error('Error:', error);
+                resultContainer.innerHTML = `<p>Error: ${error.message}</p>`;
             }
         }
         
