@@ -366,10 +366,10 @@ exports.handler = async (event) => {
                         questionNumber: record.get('Question Number'),
                         answer: record.get('Answer')
                     })).sort((a, b) => {
-                        // Sort by test number first, then question number
-                        const testCompare = a.testNumber.localeCompare(b.testNumber);
-                        if (testCompare !== 0) return testCompare;
-                        return a.questionNumber - b.questionNumber;
+                        // Sort by question number first, then test number
+                        const questionCompare = parseInt(a.questionNumber) - parseInt(b.questionNumber);
+                        if (questionCompare !== 0) return questionCompare;
+                        return a.testNumber.localeCompare(b.testNumber);
                     });
 
                     console.log(`Returning ${questions.length} questions`);
