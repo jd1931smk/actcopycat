@@ -129,7 +129,7 @@
         .photo-container {
             display: flex;
             gap: 20px;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
         }
         .photo-container img {
@@ -273,8 +273,8 @@
                             ${q.photo ? 
                                 q.photo.length === 2 ? 
                                     `<div class="photo-container">
-                                        <img src="${q.photo[0].url}" alt="Question ${index + 1} - Left">
-                                        <img src="${q.photo[1].url}" alt="Question ${index + 1} - Right">
+                                        <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left">
+                                        <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right">
                                     </div>` :
                                     q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('')
                                 : q.latexMarkdown}
@@ -347,8 +347,8 @@
                         ${q.photo ? 
                             q.photo.length === 2 ? 
                                 `<div class="photo-container">
-                                    <img src="${q.photo[0].url}" alt="Question ${index + 1} - Left">
-                                    <img src="${q.photo[1].url}" alt="Question ${index + 1} - Right">
+                                    <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left">
+                                    <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right">
                                 </div>` :
                                 q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('')
                             : q.latexMarkdown}
