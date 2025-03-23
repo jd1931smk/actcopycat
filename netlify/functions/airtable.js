@@ -277,30 +277,34 @@ exports.handler = async (event) => {
                         baseId: process.env.BASE_ID
                     });
                     
-                    // Get all records from Skills table using the correct table ID
-                    console.log('getSkills: Attempting to fetch from Skills table...');
-                    const records = await base('tbl6l9Pu2uHM2XlvV')
+                    // Get all records from Questions table
+                    console.log('getSkills: Attempting to fetch from Questions table...');
+                    const records = await base('tbllwZpPeh9yHJ3fM')
                         .select({
-                            fields: ['Name']  // Just get the name field
+                            fields: ['Skills']  // Get the Skills field
                         })
                         .all();
 
-                    console.log(`getSkills: Successfully fetched ${records.length} skills`);
-                    console.log('getSkills: Raw records:', records.map(r => ({ 
-                        id: r.id, 
-                        name: r.get('Name'),
-                        fields: r.fields 
-                    })));
+                    console.log(`getSkills: Successfully fetched ${records.length} records`);
                     
-                    // Format the skills array
-                    const skills = records
-                        .map(record => ({
-                            id: record.id,
-                            name: record.get('Name') || 'Unknown Skill'
+                    // Extract unique skills from all records
+                    const skillsSet = new Set();
+                    records.forEach(record => {
+                        const skills = record.get('Skills');
+                        if (Array.isArray(skills)) {
+                            skills.forEach(skill => skillsSet.add(skill));
+                        }
+                    });
+
+                    // Convert to array and format
+                    const skills = Array.from(skillsSet)
+                        .map(name => ({
+                            id: name.replace(/\s+/g, '-').toLowerCase(), // Create an ID from the name
+                            name: name
                         }))
                         .sort((a, b) => a.name.localeCompare(b.name));
 
-                    console.log('getSkills: Formatted and sorted skills:', skills);
+                    console.log('getSkills: Found unique skills:', skills);
                     
                     return formatResponse(200, skills);
                 } catch (error) {
@@ -322,34 +326,15 @@ exports.handler = async (event) => {
                 try {
                     console.log(`Fetching questions for skill ${skillId}`);
                     
-                    // First, get the skill and its linked questions
-                    const skillRecords = await base('tbl6l9Pu2uHM2XlvV')
+                    // Convert skillId back to skill name
+                    const skillName = skillId.split('-').map(word => 
+                        word.charAt(0).toUpperCase() + word.slice(1)
+                    ).join(' ');
+                    
+                    // Get all questions that have this skill
+                    const questionRecords = await base('tbllwZpPeh9yHJ3fM')
                         .select({
-                            filterByFormula: `RECORD_ID() = '${skillId}'`,
-                            fields: ['Name', 'Table 1']
-                        })
-                        .all();
-                    
-                    if (skillRecords.length === 0) {
-                        console.log(`No skill found with ID: ${skillId}`);
-                        return formatResponse(404, { error: 'Skill not found' });
-                    }
-
-                    const skillRecord = skillRecords[0];
-                    const skillName = skillRecord.get('Name');
-                    const linkedQuestions = skillRecord.get('Table 1') || [];
-                    
-                    console.log(`Found skill: ${skillName} with ${linkedQuestions.length} linked questions`);
-                    
-                    if (linkedQuestions.length === 0) {
-                        console.log('No questions linked to this skill');
-                        return formatResponse(404, { error: 'No questions found for this skill' });
-                    }
-
-                    // Get all question records
-                    const records = await base('Questions')
-                        .select({
-                            filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(',')})`,
+                            filterByFormula: `FIND("${skillName}", ARRAYJOIN({Skills})) > 0`,
                             fields: [
                                 'Photo', 
                                 'LatexMarkdown',
@@ -360,9 +345,9 @@ exports.handler = async (event) => {
                         })
                         .all();
 
-                    console.log(`Found ${records.length} matching questions`);
+                    console.log(`Found ${questionRecords.length} questions with skill: ${skillName}`);
 
-                    let allQuestions = records.map(record => ({
+                    let allQuestions = questionRecords.map(record => ({
                         id: record.id,
                         photo: record.get('Photo'),
                         latexMarkdown: record.get('LatexMarkdown'),
@@ -375,12 +360,12 @@ exports.handler = async (event) => {
                     // If includeClones is true, fetch and add clone questions
                     if (includeClones === 'true') {
                         console.log('Fetching clone questions...');
-                        const clonePromises = records.map(async record => {
+                        const clonePromises = questionRecords.map(async record => {
                             const testNumber = record.get('Test Number');
                             const questionNumber = record.get('Question Number');
                             
                             try {
-                                const cloneRecords = await base('CopyCats')
+                                const cloneRecords = await base('tblpE46FDmB0LmeTU')
                                     .select({
                                         filterByFormula: `{Original Question} = '${testNumber} - ${questionNumber}'`,
                                         fields: [
