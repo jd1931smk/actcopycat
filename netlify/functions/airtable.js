@@ -271,64 +271,89 @@ exports.handler = async (event) => {
             case 'getSkills':
                 try {
                     console.log('getSkills: Starting to fetch skills...');
+                    console.log('getSkills: Environment check:', {
+                        baseId: process.env.BASE_ID,
+                        hasApiKey: !!process.env.AIRTABLE_API_KEY
+                    });
                     
-                    // Get all records from Skills table
-                    console.log('getSkills: Attempting to fetch from Skills table...');
-                    let records;
+                    // First try to get a single record to verify table access
+                    console.log('getSkills: Testing table access...');
                     try {
-                        records = await base('tbl6l9Pu2uHM2XlvV')  // Skills table ID
+                        const testRecord = await base('tbl6l9Pu2uHM2XlvV')
                             .select({
-                                fields: ['Name']  // Get the Name field from Skills table
+                                maxRecords: 1,
+                                fields: ['Name']
                             })
-                            .all();
-
-                        console.log(`getSkills: Successfully fetched ${records.length} records`);
+                            .firstPage();
                         
-                        // Convert records to skills array
-                        const skills = records
-                            .map(record => {
-                                const name = record.get('Name');
-                                return name ? {
-                                    id: name.replace(/\s+/g, '-').toLowerCase(),
-                                    name: name
-                                } : null;
-                            })
-                            .filter(Boolean)
-                            .sort((a, b) => a.name.localeCompare(b.name));
-
-                        console.log('getSkills: Found skills:', skills);
-                        
-                        if (skills.length === 0) {
-                            console.error('No skills found in any records');
-                            return formatResponse(404, { error: 'No skills found in the database' });
-                        }
-                        
-                        return formatResponse(200, skills);
-                    } catch (fetchError) {
-                        console.error('getSkills: Error fetching records:', fetchError);
-                        console.error('getSkills: Error details:', {
-                            message: fetchError.message,
-                            error: fetchError.error,
-                            statusCode: fetchError.statusCode,
-                            stack: fetchError.stack
+                        console.log('getSkills: Table access test result:', {
+                            success: true,
+                            recordCount: testRecord.length,
+                            firstRecord: testRecord[0] ? {
+                                id: testRecord[0].id,
+                                hasName: !!testRecord[0].get('Name')
+                            } : null
                         });
-                        return formatResponse(500, { 
-                            error: `Failed to fetch records: ${fetchError.message}`,
-                            details: fetchError.error || 'No additional details'
+                    } catch (testError) {
+                        console.error('getSkills: Table access test failed:', {
+                            error: testError.message,
+                            type: testError.type,
+                            statusCode: testError.statusCode
+                        });
+                        throw new Error(`Table access test failed: ${testError.message}`);
+                    }
+
+                    // If we get here, table access worked, now get all records
+                    console.log('getSkills: Fetching all skills...');
+                    const records = await base('tbl6l9Pu2uHM2XlvV')
+                        .select({
+                            fields: ['Name']
+                        })
+                        .all();
+
+                    console.log(`getSkills: Fetched ${records.length} records`);
+                    
+                    // Map and log each record's data
+                    const skills = records.map(record => {
+                        const name = record.get('Name');
+                        console.log('getSkills: Processing record:', {
+                            id: record.id,
+                            hasName: !!name,
+                            name: name
+                        });
+                        return name ? {
+                            id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                            name: name
+                        } : null;
+                    })
+                    .filter(Boolean)
+                    .sort((a, b) => a.name.localeCompare(b.name));
+
+                    console.log('getSkills: Processed skills:', {
+                        totalSkills: skills.length,
+                        firstFew: skills.slice(0, 3)
+                    });
+                    
+                    if (skills.length === 0) {
+                        console.warn('getSkills: No skills found in records');
+                        return formatResponse(404, { 
+                            error: 'No skills found',
+                            details: 'The Skills table exists but contains no valid skill names'
                         });
                     }
+                    
+                    return formatResponse(200, skills);
                 } catch (error) {
-                    console.error('Error in getSkills:', error);
-                    console.error('Error details:', {
+                    console.error('getSkills: Fatal error:', {
                         message: error.message,
-                        stack: error.stack,
                         type: error.type,
-                        code: error.code
+                        code: error.code,
+                        stack: error.stack
                     });
                     return formatResponse(500, { 
-                        error: `Failed to fetch skills: ${error.message}`,
-                        type: error.type || 'Unknown',
-                        code: error.code || 'Unknown'
+                        error: 'Failed to fetch skills',
+                        details: error.message,
+                        type: error.type || 'Unknown'
                     });
                 }
 
