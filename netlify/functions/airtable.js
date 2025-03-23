@@ -350,7 +350,7 @@ exports.handler = async (event) => {
                     ).join(' ');
                     
                     // Get all questions that have this skill
-                    const questionRecords = await base('tbllwZpPeh9yHJ3fM')  // Questions table ID
+                    const questionRecords = await base('tbllwZpPeh9yHJ3fM')
                         .select({
                             filterByFormula: `FIND("${skillName}", ARRAYJOIN({Skills})) > 0`,
                             fields: [
@@ -375,58 +375,61 @@ exports.handler = async (event) => {
                         isClone: false
                     }));
 
-                    // If includeClones is true, fetch and add clone questions
-                    if (includeClones === 'true') {
+                    // If includeClones is true, fetch clone questions for each original question
+                    if (includeClones === 'true' && questionRecords.length > 0) {
                         console.log('Fetching clone questions...');
-                        const clonePromises = questionRecords.map(async record => {
-                            const testNumber = record.get('Test Number');
-                            const questionNumber = record.get('Question Number');
-                            
-                            try {
-                                const cloneRecords = await base('tblpE46FDmB0LmeTU')  // CopyCats table ID
-                                    .select({
-                                        filterByFormula: `{Original Question} = '${testNumber} - ${questionNumber}'`,
-                                        fields: [
-                                            'Photo',
-                                            'LatexMarkdown',
-                                            'Test Number',
-                                            'Question Number',
-                                            'Answer',
-                                            'Original Question'
-                                        ]
-                                    })
-                                    .all();
-
-                                return cloneRecords.map(clone => ({
-                                    id: clone.id,
-                                    photo: clone.get('Photo'),
-                                    latexMarkdown: clone.get('LatexMarkdown'),
-                                    testNumber: clone.get('Test Number') || `Clone of ${testNumber}`,
-                                    questionNumber: clone.get('Question Number') || questionNumber,
-                                    answer: clone.get('Answer'),
-                                    isClone: true,
-                                    originalQuestion: clone.get('Original Question')
-                                }));
-                            } catch (error) {
-                                console.error(`Error fetching clones for ${testNumber}-${questionNumber}:`, error);
-                                return [];
-                            }
-                        });
-
-                        const cloneResults = await Promise.all(clonePromises);
-                        const cloneQuestions = cloneResults.flat();
-                        console.log(`Found ${cloneQuestions.length} clone questions`);
                         
-                        // Add clone questions to the main questions array
-                        allQuestions = [...allQuestions, ...cloneQuestions];
+                        // Create an OR formula for all original questions
+                        const originalQuestionFormulas = questionRecords.map(record => {
+                            const testNum = record.get('Test Number');
+                            const questionNum = record.get('Question Number');
+                            return `{Original Question} = '${testNum} - ${questionNum}'`;
+                        });
+                        
+                        const filterFormula = `OR(${originalQuestionFormulas.join(',')})`;
+                        console.log('Clone filter formula:', filterFormula);
+
+                        try {
+                            const cloneRecords = await base('tblpE46FDmB0LmeTU')
+                                .select({
+                                    filterByFormula: filterFormula,
+                                    fields: [
+                                        'Corrected Clone Question LM',
+                                        'Original Question'
+                                    ]
+                                })
+                                .all();
+
+                            console.log(`Found ${cloneRecords.length} clone records`);
+
+                            const cloneQuestions = cloneRecords
+                                .filter(clone => clone.get('Corrected Clone Question LM')) // Only include clones with content
+                                .map(clone => {
+                                    const originalRef = clone.get('Original Question').split(' - ');
+                                    return {
+                                        id: clone.id,
+                                        latexMarkdown: clone.get('Corrected Clone Question LM'),
+                                        testNumber: `Clone of ${originalRef[0]}`,
+                                        questionNumber: originalRef[1],
+                                        isClone: true,
+                                        originalQuestion: clone.get('Original Question')
+                                    };
+                                });
+
+                            console.log(`Processed ${cloneQuestions.length} valid clones`);
+                            allQuestions = [...allQuestions, ...cloneQuestions];
+                        } catch (cloneError) {
+                            console.error('Error fetching clones:', cloneError);
+                            // Continue with original questions even if clone fetch fails
+                        }
                     }
 
                     // Sort all questions
                     allQuestions.sort((a, b) => {
-                        // Sort by question number first, then test number
-                        const questionCompare = parseInt(a.questionNumber) - parseInt(b.questionNumber);
-                        if (questionCompare !== 0) return questionCompare;
-                        return a.testNumber.localeCompare(b.testNumber);
+                        if (a.isClone && !b.isClone) return 1;  // Original questions first
+                        if (!a.isClone && b.isClone) return -1;
+                        // Then sort by question number
+                        return parseInt(a.questionNumber) - parseInt(b.questionNumber);
                     });
 
                     console.log(`Returning ${allQuestions.length} total questions`);
