@@ -276,58 +276,35 @@ exports.handler = async (event) => {
                         hasApiKey: !!process.env.AIRTABLE_API_KEY
                     });
                     
-                    // First try to get a single record to verify table access
-                    console.log('getSkills: Testing table access...');
-                    try {
-                        const testRecord = await base('tbl6l9Pu2uHM2XlvV')
-                            .select({
-                                maxRecords: 1,
-                                fields: ['Name']
-                            })
-                            .firstPage();
-                        
-                        console.log('getSkills: Table access test result:', {
-                            success: true,
-                            recordCount: testRecord.length,
-                            firstRecord: testRecord[0] ? {
-                                id: testRecord[0].id,
-                                hasName: !!testRecord[0].get('Name')
-                            } : null
-                        });
-                    } catch (testError) {
-                        console.error('getSkills: Table access test failed:', {
-                            error: testError.message,
-                            type: testError.type,
-                            statusCode: testError.statusCode
-                        });
-                        throw new Error(`Table access test failed: ${testError.message}`);
-                    }
-
-                    // If we get here, table access worked, now get all records
-                    console.log('getSkills: Fetching all skills...');
-                    const records = await base('tbl6l9Pu2uHM2XlvV')
+                    // Fetch from Questions table and get unique skills
+                    console.log('getSkills: Fetching from Questions table...');
+                    const records = await base('tbllwZpPeh9yHJ3fM')
                         .select({
-                            fields: ['Name']
+                            fields: ['Skills'],
+                            maxRecords: 100  // Limit for performance
                         })
-                        .all();
+                        .firstPage();
 
                     console.log(`getSkills: Fetched ${records.length} records`);
                     
-                    // Map and log each record's data
-                    const skills = records.map(record => {
-                        const name = record.get('Name');
-                        console.log('getSkills: Processing record:', {
-                            id: record.id,
-                            hasName: !!name,
-                            name: name
-                        });
-                        return name ? {
+                    // Extract all unique skills from the Skills field
+                    const skillSet = new Set();
+                    records.forEach(record => {
+                        const skills = record.get('Skills');
+                        if (Array.isArray(skills)) {
+                            skills.forEach(skill => {
+                                if (skill) skillSet.add(skill);
+                            });
+                        }
+                    });
+
+                    // Convert to required format and sort
+                    const skills = Array.from(skillSet)
+                        .map(name => ({
                             id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
                             name: name
-                        } : null;
-                    })
-                    .filter(Boolean)
-                    .sort((a, b) => a.name.localeCompare(b.name));
+                        }))
+                        .sort((a, b) => a.name.localeCompare(b.name));
 
                     console.log('getSkills: Processed skills:', {
                         totalSkills: skills.length,
@@ -338,7 +315,7 @@ exports.handler = async (event) => {
                         console.warn('getSkills: No skills found in records');
                         return formatResponse(404, { 
                             error: 'No skills found',
-                            details: 'The Skills table exists but contains no valid skill names'
+                            details: 'No skills found in the Questions table'
                         });
                     }
                     
