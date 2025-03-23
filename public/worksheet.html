@@ -198,6 +198,11 @@
                 <option value="">Loading skills...</option>
             </select>
         </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="includeClones"> Include Clone Questions
+            </label>
+        </div>
         <div class="button-group">
             <button onclick="loadQuestions()">Load Questions</button>
             <button id="generatePdf" onclick="generatePdf()" style="display: none;">Generate PDF</button>
@@ -237,6 +242,7 @@
 
         async function loadQuestions() {
             const skillId = document.getElementById('skillSelect').value;
+            const includeClones = document.getElementById('includeClones').checked;
             const loading = document.getElementById('loading');
             const worksheet = document.getElementById('worksheet');
             const generatePdfButton = document.getElementById('generatePdf');
@@ -253,7 +259,7 @@
             selectionControls.style.display = 'none';
 
             try {
-                const response = await fetch(`/.netlify/functions/airtable?action=getWorksheetQuestions&skillId=${encodeURIComponent(skillId)}`);
+                const response = await fetch(`/.netlify/functions/airtable?action=getWorksheetQuestions&skillId=${encodeURIComponent(skillId)}&includeClones=${includeClones}`);
                 if (!response.ok) throw new Error('Failed to fetch questions');
                 const data = await response.json();
                 allQuestions = data.questions;
@@ -263,13 +269,19 @@
                     <h2>Question Selection for ${skillName}</h2>
                     <p>Select the questions you want to include in your worksheet:</p>
                     ${allQuestions.map((q, index) => `
-                        <div class="question" id="question-${q.id}">
+                        <div class="question ${q.isClone ? 'clone-question' : ''}" id="question-${q.id}">
                             <input type="checkbox" 
                                    class="question-checkbox" 
                                    id="checkbox-${q.id}" 
                                    onchange="updateSelection()"
                                    data-index="${index}">
-                            <p><strong>Test ${q.testNumber}, #${q.questionNumber}</strong></p>
+                            <p>
+                                <strong>
+                                    ${q.isClone 
+                                        ? `Clone Question (Original: Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]})` 
+                                        : `Test ${q.testNumber}, #${q.questionNumber}`}
+                                </strong>
+                            </p>
                             ${q.photo ? 
                                 q.photo.length === 2 ? 
                                     `<div class="photo-container">
@@ -281,6 +293,16 @@
                         </div>
                     `).join('')}
                 `;
+
+                // Add styles for clone questions
+                const style = document.createElement('style');
+                style.textContent = `
+                    .clone-question {
+                        border-left: 4px solid #28a745;
+                        background-color: #f8fff9;
+                    }
+                `;
+                document.head.appendChild(style);
 
                 // Render math expressions
                 if (window.MathJax) {
@@ -342,8 +364,13 @@
                 <p><strong>Date:</strong> ${currentDate}</p>
                 <hr>
                 ${selectedQuestions.map((q, index) => `
-                    <div class="question">
-                        <p><strong>Question ${index + 1}</strong> (Source: Test ${q.testNumber}, #${q.questionNumber})</p>
+                    <div class="question ${q.isClone ? 'clone-question' : ''}">
+                        <p>
+                            <strong>Question ${index + 1}</strong>
+                            (Source: ${q.isClone 
+                                ? `Clone of Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]}` 
+                                : `Test ${q.testNumber}, #${q.questionNumber}`})
+                        </p>
                         ${q.photo ? 
                             q.photo.length === 2 ? 
                                 `<div class="photo-container">

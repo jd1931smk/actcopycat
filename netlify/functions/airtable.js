@@ -306,8 +306,8 @@ exports.handler = async (event) => {
                 }
 
             case 'getWorksheetQuestions':
-                const { skillId } = event.queryStringParameters;
-                console.log('Received parameters:', { skillId });
+                const { skillId, includeClones } = event.queryStringParameters;
+                console.log('Received parameters:', { skillId, includeClones });
 
                 if (!skillId) {
                     console.log('Missing required parameter: skillId');
@@ -350,37 +350,86 @@ exports.handler = async (event) => {
                                 'LatexMarkdown',
                                 'Test Number', 
                                 'Question Number',
-                                'Answer'  // Also get the correct answer
+                                'Answer'
                             ]
                         })
                         .all();
 
                     console.log(`Found ${records.length} matching questions`);
 
-                    // Format all questions
-                    const questions = records.map(record => ({
-                        id: record.id,  // Include record ID for unique identification
+                    let allQuestions = records.map(record => ({
+                        id: record.id,
                         photo: record.get('Photo'),
                         latexMarkdown: record.get('LatexMarkdown'),
                         testNumber: record.get('Test Number'),
                         questionNumber: record.get('Question Number'),
-                        answer: record.get('Answer')
-                    })).sort((a, b) => {
+                        answer: record.get('Answer'),
+                        isClone: false
+                    }));
+
+                    // If includeClones is true, fetch and add clone questions
+                    if (includeClones === 'true') {
+                        console.log('Fetching clone questions...');
+                        const clonePromises = records.map(async record => {
+                            const testNumber = record.get('Test Number');
+                            const questionNumber = record.get('Question Number');
+                            
+                            try {
+                                const cloneRecords = await base('CopyCats')
+                                    .select({
+                                        filterByFormula: `{Original Question} = '${testNumber} - ${questionNumber}'`,
+                                        fields: [
+                                            'Photo',
+                                            'LatexMarkdown',
+                                            'Test Number',
+                                            'Question Number',
+                                            'Answer',
+                                            'Original Question'
+                                        ]
+                                    })
+                                    .all();
+
+                                return cloneRecords.map(clone => ({
+                                    id: clone.id,
+                                    photo: clone.get('Photo'),
+                                    latexMarkdown: clone.get('LatexMarkdown'),
+                                    testNumber: clone.get('Test Number') || `Clone of ${testNumber}`,
+                                    questionNumber: clone.get('Question Number') || questionNumber,
+                                    answer: clone.get('Answer'),
+                                    isClone: true,
+                                    originalQuestion: clone.get('Original Question')
+                                }));
+                            } catch (error) {
+                                console.error(`Error fetching clones for ${testNumber}-${questionNumber}:`, error);
+                                return [];
+                            }
+                        });
+
+                        const cloneResults = await Promise.all(clonePromises);
+                        const cloneQuestions = cloneResults.flat();
+                        console.log(`Found ${cloneQuestions.length} clone questions`);
+                        
+                        // Add clone questions to the main questions array
+                        allQuestions = [...allQuestions, ...cloneQuestions];
+                    }
+
+                    // Sort all questions
+                    allQuestions.sort((a, b) => {
                         // Sort by question number first, then test number
                         const questionCompare = parseInt(a.questionNumber) - parseInt(b.questionNumber);
                         if (questionCompare !== 0) return questionCompare;
                         return a.testNumber.localeCompare(b.testNumber);
                     });
 
-                    console.log(`Returning ${questions.length} questions`);
-                    if (questions.length === 0) {
+                    console.log(`Returning ${allQuestions.length} total questions`);
+                    if (allQuestions.length === 0) {
                         console.log('No questions found matching criteria.');
                         return formatResponse(404, { error: 'No questions found matching the selected skill.' });
                     }
                     
                     return formatResponse(200, {
                         skillName,
-                        questions
+                        questions: allQuestions
                     });
                 } catch (error) {
                     console.error('Error in getWorksheetQuestions:', error);
