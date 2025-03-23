@@ -288,7 +288,7 @@ exports.handler = async (event) => {
                     try {
                         records = await base('tbllwZpPeh9yHJ3fM')  // Questions table ID
                             .select({
-                                fields: ['Skills'],
+                                fields: ['Skill', 'Skills'],  // Try both field names
                                 maxRecords: 100  // Start with a smaller number for testing
                             })
                             .all();
@@ -312,21 +312,36 @@ exports.handler = async (event) => {
                     records.forEach((record, index) => {
                         try {
                             console.log(`Processing record ${index + 1}/${records.length}`);
-                            const skills = record.get('Skills');
-                            console.log('Skills value:', skills);
-                            console.log('Skills type:', typeof skills);
+                            // Try both field names
+                            const skillField = record.get('Skill');
+                            const skillsField = record.get('Skills');
                             
-                            if (skills) {
-                                if (Array.isArray(skills)) {
-                                    console.log('Skills is array of length:', skills.length);
-                                    skills.forEach(skill => {
-                                        if (skill && typeof skill === 'string') {
-                                            skillsSet.add(skill.trim());
-                                        }
+                            console.log('Record fields:', {
+                                skill: skillField,
+                                skills: skillsField,
+                                skillType: typeof skillField,
+                                skillsType: typeof skillsField
+                            });
+                            
+                            // Process Skill field
+                            if (skillField) {
+                                if (Array.isArray(skillField)) {
+                                    skillField.forEach(s => {
+                                        if (s && typeof s === 'string') skillsSet.add(s.trim());
                                     });
-                                } else if (typeof skills === 'string') {
-                                    console.log('Skills is string');
-                                    skillsSet.add(skills.trim());
+                                } else if (typeof skillField === 'string') {
+                                    skillsSet.add(skillField.trim());
+                                }
+                            }
+                            
+                            // Process Skills field
+                            if (skillsField) {
+                                if (Array.isArray(skillsField)) {
+                                    skillsField.forEach(s => {
+                                        if (s && typeof s === 'string') skillsSet.add(s.trim());
+                                    });
+                                } else if (typeof skillsField === 'string') {
+                                    skillsSet.add(skillsField.trim());
                                 }
                             }
                         } catch (err) {
