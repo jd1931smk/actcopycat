@@ -286,7 +286,7 @@ exports.handler = async (event) => {
                     console.log('getSkills: Attempting to fetch from Questions table...');
                     let records;
                     try {
-                        records = await base('Questions')
+                        records = await base('tbllwZpPeh9yHJ3fM')  // Questions table ID
                             .select({
                                 fields: ['Skills'],
                                 maxRecords: 100  // Start with a smaller number for testing
@@ -383,7 +383,7 @@ exports.handler = async (event) => {
                     ).join(' ');
                     
                     // Get all questions that have this skill
-                    const questionRecords = await base('Questions')  // Use 'Questions' instead of the record ID
+                    const questionRecords = await base('tbllwZpPeh9yHJ3fM')  // Questions table ID
                         .select({
                             filterByFormula: `FIND("${skillName}", ARRAYJOIN({Skills})) > 0`,
                             fields: [
@@ -416,7 +416,7 @@ exports.handler = async (event) => {
                             const questionNumber = record.get('Question Number');
                             
                             try {
-                                const cloneRecords = await base('CopyCats')  // Use 'CopyCats' instead of the record ID
+                                const cloneRecords = await base('tblpE46FDmB0LmeTU')  // CopyCats table ID
                                     .select({
                                         filterByFormula: `{Original Question} = '${testNumber} - ${questionNumber}'`,
                                         fields: [
