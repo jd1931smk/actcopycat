@@ -401,79 +401,77 @@ exports.handler = async (event) => {
                         isClone: false
                     }));
 
-                    // If includeClones is true and we have original questions, fetch first page of clones
-                    if (includeClones === 'true' && questionRecords.length > 0) {
-                        console.log('Fetching clone questions...');
-                        
-                        // Create an OR formula for all original questions
-                        const originalQuestionFormulas = questionRecords.map(record => {
-                            const testNum = record.get('Test Number');
-                            const questionNum = record.get('Question Number');
-                            return `{Original Question} = '${testNum} - ${questionNum}'`;
+                    // Return immediately if we don't need clones or have no original questions
+                    if (includeClones !== 'true' || questionRecords.length === 0) {
+                        return formatResponse(200, {
+                            skillName,
+                            questions: allQuestions,
+                            hasMoreQuestions: true // Indicate that clones can be loaded separately
                         });
-                        
-                        const filterFormula = `OR(${originalQuestionFormulas.join(',')})`;
-                        console.log('Clone filter formula:', filterFormula);
-
-                        try {
-                            const cloneRecords = await base('tblpE46FDmB0LmeTU')
-                                .select({
-                                    maxRecords: 10,
-                                    filterByFormula: filterFormula,
-                                    fields: [
-                                        'Corrected Clone Question LM',
-                                        'Original Question'
-                                    ]
-                                })
-                                .firstPage();
-
-                            console.log(`Found ${cloneRecords.length} clone records`);
-
-                            const cloneQuestions = cloneRecords
-                                .filter(clone => clone.get('Corrected Clone Question LM')) // Only include clones with content
-                                .map(clone => {
-                                    const originalRef = clone.get('Original Question').split(' - ');
-                                    return {
-                                        id: clone.id,
-                                        latexMarkdown: clone.get('Corrected Clone Question LM'),
-                                        testNumber: `Clone of ${originalRef[0]}`,
-                                        questionNumber: originalRef[1],
-                                        isClone: true,
-                                        originalQuestion: clone.get('Original Question')
-                                    };
-                                });
-
-                            console.log(`Processed ${cloneQuestions.length} valid clones`);
-                            allQuestions = [...allQuestions, ...cloneQuestions];
-                        } catch (cloneError) {
-                            console.error('Error fetching clones:', cloneError);
-                            // Continue with original questions even if clone fetch fails
-                        }
                     }
 
-                    // Sort all questions
-                    allQuestions.sort((a, b) => {
-                        if (a.isClone && !b.isClone) return 1;  // Original questions first
-                        if (!a.isClone && b.isClone) return -1;
-                        // Then sort by question number
-                        return parseInt(a.questionNumber) - parseInt(b.questionNumber);
-                    });
-
-                    console.log(`Returning ${allQuestions.length} total questions`);
-                    if (allQuestions.length === 0) {
-                        console.log('No questions found matching criteria.');
-                        return formatResponse(404, { error: 'No questions found matching the selected skill.' });
-                    }
-                    
                     return formatResponse(200, {
                         skillName,
-                        questions: allQuestions
+                        questions: allQuestions,
+                        hasMoreQuestions: true // Indicate that clones can be loaded separately
                     });
                 } catch (error) {
                     console.error('Error in getWorksheetQuestions:', error);
                     console.error('Error details:', error.message);
                     if (error.stack) console.error('Stack trace:', error.stack);
                     return formatResponse(500, { error: `Failed to fetch questions: ${error.message}` });
+                }
+
+            case 'getWorksheetClones':
+                const { testNumbersJson } = event.queryStringParameters;
+                if (!testNumbersJson) {
+                    return formatResponse(400, { error: 'Test numbers are required' });
+                }
+
+                try {
+                    const testNumbersList = JSON.parse(testNumbersJson);
+                    console.log('Fetching clones for test numbers:', testNumbersList);
+
+                    // Create an OR formula for all original questions
+                    const originalQuestionFormulas = testNumbersList.map(({ testNum, questionNum }) => 
+                        `{Original Question} = '${testNum} - ${questionNum}'`
+                    );
+                    
+                    const filterFormula = `OR(${originalQuestionFormulas.join(',')})`;
+                    console.log('Clone filter formula:', filterFormula);
+
+                    const cloneRecords = await base('tblpE46FDmB0LmeTU')
+                        .select({
+                            maxRecords: 10,
+                            filterByFormula: filterFormula,
+                            fields: [
+                                'Corrected Clone Question LM',
+                                'Original Question'
+                            ]
+                        })
+                        .firstPage();
+
+                    console.log(`Found ${cloneRecords.length} clone records`);
+
+                    const cloneQuestions = cloneRecords
+                        .filter(clone => clone.get('Corrected Clone Question LM'))
+                        .map(clone => {
+                            const originalRef = clone.get('Original Question').split(' - ');
+                            return {
+                                id: clone.id,
+                                latexMarkdown: clone.get('Corrected Clone Question LM'),
+                                testNumber: `Clone of ${originalRef[0]}`,
+                                questionNumber: originalRef[1],
+                                isClone: true,
+                                originalQuestion: clone.get('Original Question')
+                            };
+                        });
+
+                    console.log(`Processed ${cloneQuestions.length} valid clones`);
+                    return formatResponse(200, { questions: cloneQuestions });
+                } catch (error) {
+                    console.error('Error fetching clones:', error);
+                    return formatResponse(500, { error: error.message });
                 }
 
             default:
