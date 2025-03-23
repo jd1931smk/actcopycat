@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#007bff">
+    <meta name="theme-color" content="#28a745">
     <meta name="apple-mobile-web-app-title" content="ACT Math">
     <meta name="mobile-web-app-capable" content="yes">
     <!-- PWA manifest -->
     <link rel="manifest" href="/manifest.json">
-    <title>ACT Math Worksheet Generator</title>
+    <title>ACT Math Clone Worksheet Generator</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         :root {
-            --app-bg-color: #007bff;
+            --app-bg-color: #28a745;
         }
         html {
             background-color: var(--app-bg-color);
@@ -52,6 +52,17 @@
                 --safe-area-inset-right: env(safe-area-inset-right);
             }
         }
+        .nav-links {
+            margin-bottom: 20px;
+        }
+        .nav-links a {
+            color: #28a745;
+            text-decoration: none;
+            margin-right: 15px;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
         .controls {
             background-color: white;
             padding: 20px;
@@ -75,7 +86,7 @@
             margin-bottom: 10px;
         }
         button {
-            background-color: #007bff;
+            background-color: #28a745;
             color: white;
             border: none;
             padding: 10px 20px;
@@ -85,7 +96,7 @@
             margin-right: 10px;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: #218838;
         }
         button:disabled {
             background-color: #ccc;
@@ -95,12 +106,6 @@
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
-        }
-        #downloadPdf {
-            background-color: #28a745;
-        }
-        #downloadPdf:hover {
-            background-color: #218838;
         }
         .worksheet {
             background-color: white;
@@ -118,8 +123,8 @@
             position: relative;
         }
         .question.selected {
-            background-color: #f8f9fa;
-            border-color: #007bff;
+            background-color: #f8fff9;
+            border-color: #28a745;
         }
         .question img {
             max-width: 100%;
@@ -133,7 +138,7 @@
             align-items: center;
         }
         .photo-container img {
-            max-width: 45%;  /* Leave some space between images */
+            max-width: 45%;
             object-fit: contain;
         }
         .question-checkbox {
@@ -149,7 +154,7 @@
             border-radius: 4px;
         }
         @media print {
-            .controls, .button-group, .selection-controls, .question-checkbox {
+            .controls, .button-group, .selection-controls, .question-checkbox, .nav-links {
                 display: none !important;
             }
             .worksheet {
@@ -196,7 +201,7 @@
     </div>
 
     <div class="controls">
-        <h1>ACT Math Worksheet Generator</h1>
+        <h1>ACT Math Clone Worksheet Generator</h1>
         <div class="form-group">
             <label for="skillSelect">Select Skill:</label>
             <select id="skillSelect">
@@ -204,7 +209,7 @@
             </select>
         </div>
         <div class="button-group">
-            <button onclick="loadQuestions()">Load Questions</button>
+            <button onclick="loadQuestions()">Load Clone Questions</button>
             <button id="generatePdf" onclick="generatePdf()" style="display: none;">Generate PDF</button>
         </div>
     </div>
@@ -258,28 +263,31 @@
             selectionControls.style.display = 'none';
 
             try {
-                const response = await fetch(`/.netlify/functions/airtable?action=getWorksheetQuestions&skillId=${encodeURIComponent(skillId)}&includeClones=false`);
+                const response = await fetch(`/.netlify/functions/airtable?action=getWorksheetQuestions&skillId=${encodeURIComponent(skillId)}&includeClones=true`);
                 if (!response.ok) throw new Error('Failed to fetch questions');
                 const data = await response.json();
-                allQuestions = data.questions.filter(q => !q.isClone); // Filter out any clone questions
+                
+                // Filter to only include clone questions
+                allQuestions = data.questions.filter(q => q.isClone);
                 skillName = data.skillName;
 
+                if (allQuestions.length === 0) {
+                    worksheet.innerHTML = '<p>No clone questions found for this skill.</p>';
+                    return;
+                }
+
                 worksheet.innerHTML = `
-                    <h2>Question Selection for ${skillName}</h2>
-                    <p>Select the questions you want to include in your worksheet:</p>
+                    <h2>Clone Question Selection for ${skillName}</h2>
+                    <p>Select the clone questions you want to include in your worksheet:</p>
                     ${allQuestions.map((q, index) => `
-                        <div class="question ${q.isClone ? 'clone-question' : ''}" id="question-${q.id}">
+                        <div class="question" id="question-${q.id}">
                             <input type="checkbox" 
                                    class="question-checkbox" 
                                    id="checkbox-${q.id}" 
                                    onchange="updateSelection()"
                                    data-index="${index}">
                             <p>
-                                <strong>
-                                    ${q.isClone 
-                                        ? `Clone Question (Original: Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]})` 
-                                        : `Test ${q.testNumber}, #${q.questionNumber}`}
-                                </strong>
+                                <strong>Clone of Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]}</strong>
                             </p>
                             ${q.photo ? 
                                 q.photo.length === 2 ? 
@@ -288,20 +296,10 @@
                                         <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right">
                                     </div>` :
                                     q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('')
-                                : q.latexMarkdown}
+                                : `<div class="latex-content">${q.latexMarkdown}</div>`}
                         </div>
                     `).join('')}
                 `;
-
-                // Add styles for clone questions
-                const style = document.createElement('style');
-                style.textContent = `
-                    .clone-question {
-                        border-left: 4px solid #28a745;
-                        background-color: #f8fff9;
-                    }
-                `;
-                document.head.appendChild(style);
 
                 // Render math expressions
                 if (window.MathJax) {
@@ -358,17 +356,15 @@
             const worksheet = document.getElementById('worksheet');
             
             worksheet.innerHTML = `
-                <h2>ACT Math Practice Worksheet</h2>
+                <h2>ACT Math Clone Practice Worksheet</h2>
                 <p><strong>Skill:</strong> ${skillName}</p>
                 <p><strong>Date:</strong> ${currentDate}</p>
                 <hr>
                 ${selectedQuestions.map((q, index) => `
-                    <div class="question ${q.isClone ? 'clone-question' : ''}">
+                    <div class="question">
                         <p>
                             <strong>Question ${index + 1}</strong>
-                            (Source: ${q.isClone 
-                                ? `Clone of Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]}` 
-                                : `Test ${q.testNumber}, #${q.questionNumber}`})
+                            (Clone of Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]})
                         </p>
                         ${q.photo ? 
                             q.photo.length === 2 ? 
@@ -377,7 +373,7 @@
                                     <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right">
                                 </div>` :
                                 q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('')
-                            : q.latexMarkdown}
+                            : `<div class="latex-content">${q.latexMarkdown}</div>`}
                         <div style="margin: 20px 0; border-bottom: 1px dashed #ccc;"></div>
                     </div>
                 `).join('')}
