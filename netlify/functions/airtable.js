@@ -270,18 +270,23 @@ exports.handler = async (event) => {
 
             case 'getSkills':
                 try {
-                    console.log('Fetching skills from Skills table...');
-                    console.log('Using BASE_ID:', process.env.BASE_ID);
+                    console.log('getSkills: Starting to fetch skills...');
+                    console.log('getSkills: Environment variables:', {
+                        hasApiKey: !!process.env.AIRTABLE_API_KEY,
+                        hasBaseId: !!process.env.BASE_ID,
+                        baseId: process.env.BASE_ID
+                    });
                     
                     // Get all records from Skills table using the correct table ID
+                    console.log('getSkills: Attempting to fetch from Skills table...');
                     const records = await base('tbl6l9Pu2uHM2XlvV')
                         .select({
                             fields: ['Name']  // Just get the name field
                         })
                         .all();
 
-                    console.log(`Found ${records.length} skills`);
-                    console.log('Raw records:', records.map(r => ({ 
+                    console.log(`getSkills: Successfully fetched ${records.length} skills`);
+                    console.log('getSkills: Raw records:', records.map(r => ({ 
                         id: r.id, 
                         name: r.get('Name'),
                         fields: r.fields 
@@ -295,7 +300,7 @@ exports.handler = async (event) => {
                         }))
                         .sort((a, b) => a.name.localeCompare(b.name));
 
-                    console.log('Formatted skills:', skills);
+                    console.log('getSkills: Formatted and sorted skills:', skills);
                     
                     return formatResponse(200, skills);
                 } catch (error) {
