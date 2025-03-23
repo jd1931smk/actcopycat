@@ -281,7 +281,7 @@ exports.handler = async (event) => {
                     console.log('getSkills: Attempting to fetch from Questions table...');
                     const records = await base('tbllwZpPeh9yHJ3fM')
                         .select({
-                            fields: ['Skill']  // Changed from 'Skills' to 'Skill'
+                            fields: ['Skills']  // Changed back to 'Skills' to be consistent
                         })
                         .all();
 
@@ -291,21 +291,21 @@ exports.handler = async (event) => {
                     console.log('getSkills: Sample records:', records.slice(0, 3).map(r => ({
                         id: r.id,
                         fields: r.fields,
-                        skill: r.get('Skill')
+                        skills: r.get('Skills')
                     })));
                     
                     // Extract unique skills from all records
                     const skillsSet = new Set();
                     records.forEach(record => {
-                        const skill = record.get('Skill');
-                        console.log('getSkills: Processing record skill:', skill);
-                        if (skill) {
-                            if (Array.isArray(skill)) {
-                                skill.forEach(s => {
+                        const skills = record.get('Skills');
+                        console.log('getSkills: Processing record skills:', skills);
+                        if (skills) {
+                            if (Array.isArray(skills)) {
+                                skills.forEach(s => {
                                     if (s) skillsSet.add(s);
                                 });
                             } else {
-                                skillsSet.add(skill);
+                                skillsSet.add(skills);
                             }
                         }
                     });
