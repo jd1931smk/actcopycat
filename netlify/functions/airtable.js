@@ -271,53 +271,71 @@ exports.handler = async (event) => {
             case 'getSkills':
                 try {
                     console.log('getSkills: Starting to fetch skills...');
-                    console.log('getSkills: Environment variables:', {
-                        hasApiKey: !!process.env.AIRTABLE_API_KEY,
-                        hasBaseId: !!process.env.BASE_ID
-                    });
+                    
+                    // Check environment variables
+                    if (!process.env.AIRTABLE_API_KEY) {
+                        console.error('getSkills: Missing AIRTABLE_API_KEY');
+                        return formatResponse(500, { error: 'Missing Airtable API Key' });
+                    }
+                    if (!process.env.BASE_ID) {
+                        console.error('getSkills: Missing BASE_ID');
+                        return formatResponse(500, { error: 'Missing Airtable Base ID' });
+                    }
                     
                     // Get all records from Questions table
                     console.log('getSkills: Attempting to fetch from Questions table...');
-                    const records = await base('Questions')
-                        .select({
-                            fields: ['Skills'],
-                            filterByFormula: 'NOT({Skills} = "")'  // Only get records with non-empty Skills
-                        })
-                        .all();
+                    let records;
+                    try {
+                        records = await base('Questions')
+                            .select({
+                                fields: ['Skills'],
+                                maxRecords: 100  // Start with a smaller number for testing
+                            })
+                            .all();
+                    } catch (fetchError) {
+                        console.error('getSkills: Error fetching records:', fetchError);
+                        console.error('getSkills: Error details:', {
+                            message: fetchError.message,
+                            error: fetchError.error,
+                            statusCode: fetchError.statusCode
+                        });
+                        return formatResponse(500, { 
+                            error: `Failed to fetch records: ${fetchError.message}`,
+                            details: fetchError.error || 'No additional details'
+                        });
+                    }
 
                     console.log(`getSkills: Successfully fetched ${records.length} records`);
-                    console.log('getSkills: First few records:', records.slice(0, 3).map(r => ({
-                        id: r.id,
-                        skills: r.get('Skills')
-                    })));
                     
                     // Extract unique skills from all records
                     const skillsSet = new Set();
-                    records.forEach(record => {
+                    records.forEach((record, index) => {
                         try {
+                            console.log(`Processing record ${index + 1}/${records.length}`);
                             const skills = record.get('Skills');
-                            console.log('Processing skills:', skills);
+                            console.log('Skills value:', skills);
+                            console.log('Skills type:', typeof skills);
                             
                             if (skills) {
-                                // Handle both array and string cases
                                 if (Array.isArray(skills)) {
+                                    console.log('Skills is array of length:', skills.length);
                                     skills.forEach(skill => {
                                         if (skill && typeof skill === 'string') {
                                             skillsSet.add(skill.trim());
                                         }
                                     });
                                 } else if (typeof skills === 'string') {
+                                    console.log('Skills is string');
                                     skillsSet.add(skills.trim());
                                 }
                             }
                         } catch (err) {
-                            console.error('Error processing record:', record.id, err);
+                            console.error(`Error processing record ${index + 1}:`, err);
                         }
                     });
 
-                    // Convert to array and format
                     const skills = Array.from(skillsSet)
-                        .filter(skill => skill && skill.length > 0)  // Remove empty strings
+                        .filter(skill => skill && skill.length > 0)
                         .map(name => ({
                             id: name.replace(/\s+/g, '-').toLowerCase(),
                             name: name
@@ -334,9 +352,17 @@ exports.handler = async (event) => {
                     return formatResponse(200, skills);
                 } catch (error) {
                     console.error('Error in getSkills:', error);
-                    console.error('Error details:', error.message);
-                    if (error.stack) console.error('Stack trace:', error.stack);
-                    return formatResponse(500, { error: `Failed to fetch skills: ${error.message}` });
+                    console.error('Error details:', {
+                        message: error.message,
+                        stack: error.stack,
+                        type: error.type,
+                        code: error.code
+                    });
+                    return formatResponse(500, { 
+                        error: `Failed to fetch skills: ${error.message}`,
+                        type: error.type || 'Unknown',
+                        code: error.code || 'Unknown'
+                    });
                 }
 
             case 'getWorksheetQuestions':
