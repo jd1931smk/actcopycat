@@ -272,60 +272,31 @@ exports.handler = async (event) => {
                 try {
                     console.log('getSkills: Starting to fetch skills...');
                     
-                    // Get all records from Questions table without specifying fields
-                    console.log('getSkills: Attempting to fetch from Questions table...');
+                    // Get all records from Skills table
+                    console.log('getSkills: Attempting to fetch from Skills table...');
                     let records;
                     try {
-                        records = await base('tbllwZpPeh9yHJ3fM')
+                        records = await base('tbl6l9Pu2uHM2XlvV')  // Skills table ID
                             .select({
-                                maxRecords: 10  // Just get a few records to see what fields exist
+                                fields: ['Name']  // Get the Name field from Skills table
                             })
                             .all();
 
-                        // Log the first record's fields
-                        if (records.length > 0) {
-                            console.log('First record fields:', {
-                                id: records[0].id,
-                                fields: records[0].fields,
-                                fieldNames: Object.keys(records[0].fields)
-                            });
-                        } else {
-                            console.log('No records found');
-                            return formatResponse(404, { error: 'No records found in the database' });
-                        }
-
-                        // Try to find any field that might contain skills
-                        const skillFields = Object.keys(records[0].fields).filter(field => 
-                            field.toLowerCase().includes('skill') || 
-                            field.toLowerCase().includes('topic') ||
-                            field.toLowerCase().includes('category')
-                        );
-                        console.log('Potential skill fields:', skillFields);
-
-                        // Extract unique skills from all records
-                        const skillsSet = new Set();
-                        records.forEach(record => {
-                            skillFields.forEach(field => {
-                                const value = record.get(field);
-                                if (value) {
-                                    if (Array.isArray(value)) {
-                                        value.forEach(v => v && skillsSet.add(v.trim()));
-                                    } else if (typeof value === 'string') {
-                                        skillsSet.add(value.trim());
-                                    }
-                                }
-                            });
-                        });
-
-                        const skills = Array.from(skillsSet)
-                            .filter(skill => skill && skill.length > 0)
-                            .map(name => ({
-                                id: name.replace(/\s+/g, '-').toLowerCase(),
-                                name: name
-                            }))
+                        console.log(`getSkills: Successfully fetched ${records.length} records`);
+                        
+                        // Convert records to skills array
+                        const skills = records
+                            .map(record => {
+                                const name = record.get('Name');
+                                return name ? {
+                                    id: name.replace(/\s+/g, '-').toLowerCase(),
+                                    name: name
+                                } : null;
+                            })
+                            .filter(Boolean)
                             .sort((a, b) => a.name.localeCompare(b.name));
 
-                        console.log('getSkills: Found unique skills:', skills);
+                        console.log('getSkills: Found skills:', skills);
                         
                         if (skills.length === 0) {
                             console.error('No skills found in any records');
