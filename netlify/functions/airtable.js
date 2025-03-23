@@ -271,31 +271,53 @@ exports.handler = async (event) => {
             case 'getSkills':
                 try {
                     console.log('getSkills: Starting to fetch skills...');
+                    console.log('getSkills: Environment variables:', {
+                        hasApiKey: !!process.env.AIRTABLE_API_KEY,
+                        hasBaseId: !!process.env.BASE_ID
+                    });
                     
                     // Get all records from Questions table
                     console.log('getSkills: Attempting to fetch from Questions table...');
-                    const records = await base('Questions')  // Use 'Questions' instead of the record ID
+                    const records = await base('Questions')
                         .select({
-                            fields: ['Skills']
+                            fields: ['Skills'],
+                            filterByFormula: 'NOT({Skills} = "")'  // Only get records with non-empty Skills
                         })
                         .all();
 
                     console.log(`getSkills: Successfully fetched ${records.length} records`);
+                    console.log('getSkills: First few records:', records.slice(0, 3).map(r => ({
+                        id: r.id,
+                        skills: r.get('Skills')
+                    })));
                     
                     // Extract unique skills from all records
                     const skillsSet = new Set();
                     records.forEach(record => {
-                        const skills = record.get('Skills');
-                        if (skills && Array.isArray(skills)) {
-                            skills.forEach(skill => {
-                                if (skill) skillsSet.add(skill);
-                            });
+                        try {
+                            const skills = record.get('Skills');
+                            console.log('Processing skills:', skills);
+                            
+                            if (skills) {
+                                // Handle both array and string cases
+                                if (Array.isArray(skills)) {
+                                    skills.forEach(skill => {
+                                        if (skill && typeof skill === 'string') {
+                                            skillsSet.add(skill.trim());
+                                        }
+                                    });
+                                } else if (typeof skills === 'string') {
+                                    skillsSet.add(skills.trim());
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Error processing record:', record.id, err);
                         }
                     });
 
                     // Convert to array and format
                     const skills = Array.from(skillsSet)
-                        .filter(Boolean)
+                        .filter(skill => skill && skill.length > 0)  // Remove empty strings
                         .map(name => ({
                             id: name.replace(/\s+/g, '-').toLowerCase(),
                             name: name
@@ -304,9 +326,16 @@ exports.handler = async (event) => {
 
                     console.log('getSkills: Found unique skills:', skills);
                     
+                    if (skills.length === 0) {
+                        console.error('No skills found in any records');
+                        return formatResponse(404, { error: 'No skills found in the database' });
+                    }
+                    
                     return formatResponse(200, skills);
                 } catch (error) {
                     console.error('Error in getSkills:', error);
+                    console.error('Error details:', error.message);
+                    if (error.stack) console.error('Stack trace:', error.stack);
                     return formatResponse(500, { error: `Failed to fetch skills: ${error.message}` });
                 }
 
