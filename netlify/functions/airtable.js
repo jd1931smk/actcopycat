@@ -280,17 +280,17 @@ exports.handler = async (event) => {
                     console.log('getSkills: Fetching from Questions table...');
                     const records = await base('tbllwZpPeh9yHJ3fM')
                         .select({
-                            fields: ['Skills'],
+                            fields: ['Skill'],
                             maxRecords: 100  // Limit for performance
                         })
                         .firstPage();
 
                     console.log(`getSkills: Fetched ${records.length} records`);
                     
-                    // Extract all unique skills from the Skills field
+                    // Extract all unique skills from the Skill field
                     const skillSet = new Set();
                     records.forEach(record => {
-                        const skills = record.get('Skills');
+                        const skills = record.get('Skill');
                         if (Array.isArray(skills)) {
                             skills.forEach(skill => {
                                 if (skill) skillSet.add(skill);
@@ -355,7 +355,7 @@ exports.handler = async (event) => {
                     const questionRecords = await base('tbllwZpPeh9yHJ3fM')
                         .select({
                             maxRecords: 5,
-                            filterByFormula: `FIND("${skillName}", ARRAYJOIN({Skills})) > 0`,
+                            filterByFormula: `FIND("${skillName}", ARRAYJOIN({Skill})) > 0`,
                             fields: [
                                 'Photo', 
                                 'LatexMarkdown',
