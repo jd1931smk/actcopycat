@@ -272,24 +272,27 @@ exports.handler = async (event) => {
                 try {
                     console.log('getSkills: Starting to fetch skills...');
                     
-                    // Check environment variables
-                    if (!process.env.AIRTABLE_API_KEY) {
-                        console.error('getSkills: Missing AIRTABLE_API_KEY');
-                        return formatResponse(500, { error: 'Missing Airtable API Key' });
-                    }
-                    if (!process.env.BASE_ID) {
-                        console.error('getSkills: Missing BASE_ID');
-                        return formatResponse(500, { error: 'Missing Airtable Base ID' });
+                    // First, let's get the base schema to see the field names
+                    try {
+                        const schemaResponse = await fetch(`https://api.airtable.com/v0/meta/bases/${process.env.BASE_ID}/tables`, {
+                            headers: {
+                                'Authorization': `Bearer ${process.env.AIRTABLE_API_KEY}`
+                            }
+                        });
+                        const schema = await schemaResponse.json();
+                        console.log('Base schema:', JSON.stringify(schema, null, 2));
+                    } catch (schemaError) {
+                        console.error('Error fetching schema:', schemaError);
                     }
                     
                     // Get all records from Questions table
                     console.log('getSkills: Attempting to fetch from Questions table...');
                     let records;
                     try {
-                        records = await base('tbllwZpPeh9yHJ3fM')  // Questions table ID
+                        records = await base('tbllwZpPeh9yHJ3fM')
                             .select({
-                                fields: ['Skill', 'Skills'],  // Try both field names
-                                maxRecords: 100  // Start with a smaller number for testing
+                                fields: ['Skill', 'Skills', 'Topic', 'Topics'],  // Try common variations
+                                maxRecords: 100
                             })
                             .all();
                     } catch (fetchError) {
@@ -306,6 +309,7 @@ exports.handler = async (event) => {
                     }
 
                     console.log(`getSkills: Successfully fetched ${records.length} records`);
+                    console.log('Sample record fields:', records[0] ? records[0].fields : 'No records');
                     
                     // Extract unique skills from all records
                     const skillsSet = new Set();
