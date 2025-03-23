@@ -374,9 +374,10 @@ exports.handler = async (event) => {
                         word.charAt(0).toUpperCase() + word.slice(1)
                     ).join(' ');
                     
-                    // Get all questions that have this skill
+                    // Get questions that have this skill, limit to first 5 for performance
                     const questionRecords = await base('tbllwZpPeh9yHJ3fM')
                         .select({
+                            maxRecords: 5,
                             filterByFormula: `FIND("${skillName}", ARRAYJOIN({Skills})) > 0`,
                             fields: [
                                 'Photo', 
@@ -386,7 +387,7 @@ exports.handler = async (event) => {
                                 'Answer'
                             ]
                         })
-                        .all();
+                        .firstPage();
 
                     console.log(`Found ${questionRecords.length} questions with skill: ${skillName}`);
 
@@ -400,7 +401,7 @@ exports.handler = async (event) => {
                         isClone: false
                     }));
 
-                    // If includeClones is true, fetch clone questions for each original question
+                    // If includeClones is true and we have original questions, fetch first page of clones
                     if (includeClones === 'true' && questionRecords.length > 0) {
                         console.log('Fetching clone questions...');
                         
@@ -417,13 +418,14 @@ exports.handler = async (event) => {
                         try {
                             const cloneRecords = await base('tblpE46FDmB0LmeTU')
                                 .select({
+                                    maxRecords: 10,
                                     filterByFormula: filterFormula,
                                     fields: [
                                         'Corrected Clone Question LM',
                                         'Original Question'
                                     ]
                                 })
-                                .all();
+                                .firstPage();
 
                             console.log(`Found ${cloneRecords.length} clone records`);
 
