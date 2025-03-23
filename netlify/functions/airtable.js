@@ -281,23 +281,38 @@ exports.handler = async (event) => {
                     console.log('getSkills: Attempting to fetch from Questions table...');
                     const records = await base('tbllwZpPeh9yHJ3fM')
                         .select({
-                            fields: ['Skills']  // Get the Skills field
+                            fields: ['Skill']  // Changed from 'Skills' to 'Skill'
                         })
                         .all();
 
                     console.log(`getSkills: Successfully fetched ${records.length} records`);
                     
+                    // Log a few records to see their structure
+                    console.log('getSkills: Sample records:', records.slice(0, 3).map(r => ({
+                        id: r.id,
+                        fields: r.fields,
+                        skill: r.get('Skill')
+                    })));
+                    
                     // Extract unique skills from all records
                     const skillsSet = new Set();
                     records.forEach(record => {
-                        const skills = record.get('Skills');
-                        if (Array.isArray(skills)) {
-                            skills.forEach(skill => skillsSet.add(skill));
+                        const skill = record.get('Skill');
+                        console.log('getSkills: Processing record skill:', skill);
+                        if (skill) {
+                            if (Array.isArray(skill)) {
+                                skill.forEach(s => {
+                                    if (s) skillsSet.add(s);
+                                });
+                            } else {
+                                skillsSet.add(skill);
+                            }
                         }
                     });
 
                     // Convert to array and format
                     const skills = Array.from(skillsSet)
+                        .filter(Boolean) // Remove any null/undefined values
                         .map(name => ({
                             id: name.replace(/\s+/g, '-').toLowerCase(), // Create an ID from the name
                             name: name
