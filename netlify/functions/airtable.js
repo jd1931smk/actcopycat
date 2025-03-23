@@ -271,50 +271,33 @@ exports.handler = async (event) => {
             case 'getSkills':
                 try {
                     console.log('getSkills: Starting to fetch skills...');
-                    console.log('getSkills: Environment variables:', {
-                        hasApiKey: !!process.env.AIRTABLE_API_KEY,
-                        hasBaseId: !!process.env.BASE_ID,
-                        baseId: process.env.BASE_ID
-                    });
                     
                     // Get all records from Questions table
                     console.log('getSkills: Attempting to fetch from Questions table...');
-                    const records = await base('tbllwZpPeh9yHJ3fM')
+                    const records = await base('Questions')  // Use 'Questions' instead of the record ID
                         .select({
-                            fields: ['Skills']  // Changed back to 'Skills' to be consistent
+                            fields: ['Skills']
                         })
                         .all();
 
                     console.log(`getSkills: Successfully fetched ${records.length} records`);
                     
-                    // Log a few records to see their structure
-                    console.log('getSkills: Sample records:', records.slice(0, 3).map(r => ({
-                        id: r.id,
-                        fields: r.fields,
-                        skills: r.get('Skills')
-                    })));
-                    
                     // Extract unique skills from all records
                     const skillsSet = new Set();
                     records.forEach(record => {
                         const skills = record.get('Skills');
-                        console.log('getSkills: Processing record skills:', skills);
-                        if (skills) {
-                            if (Array.isArray(skills)) {
-                                skills.forEach(s => {
-                                    if (s) skillsSet.add(s);
-                                });
-                            } else {
-                                skillsSet.add(skills);
-                            }
+                        if (skills && Array.isArray(skills)) {
+                            skills.forEach(skill => {
+                                if (skill) skillsSet.add(skill);
+                            });
                         }
                     });
 
                     // Convert to array and format
                     const skills = Array.from(skillsSet)
-                        .filter(Boolean) // Remove any null/undefined values
+                        .filter(Boolean)
                         .map(name => ({
-                            id: name.replace(/\s+/g, '-').toLowerCase(), // Create an ID from the name
+                            id: name.replace(/\s+/g, '-').toLowerCase(),
                             name: name
                         }))
                         .sort((a, b) => a.name.localeCompare(b.name));
@@ -324,8 +307,6 @@ exports.handler = async (event) => {
                     return formatResponse(200, skills);
                 } catch (error) {
                     console.error('Error in getSkills:', error);
-                    console.error('Error details:', error.message);
-                    if (error.stack) console.error('Stack trace:', error.stack);
                     return formatResponse(500, { error: `Failed to fetch skills: ${error.message}` });
                 }
 
@@ -347,7 +328,7 @@ exports.handler = async (event) => {
                     ).join(' ');
                     
                     // Get all questions that have this skill
-                    const questionRecords = await base('tbllwZpPeh9yHJ3fM')
+                    const questionRecords = await base('Questions')  // Use 'Questions' instead of the record ID
                         .select({
                             filterByFormula: `FIND("${skillName}", ARRAYJOIN({Skills})) > 0`,
                             fields: [
@@ -380,7 +361,7 @@ exports.handler = async (event) => {
                             const questionNumber = record.get('Question Number');
                             
                             try {
-                                const cloneRecords = await base('tblpE46FDmB0LmeTU')
+                                const cloneRecords = await base('CopyCats')  // Use 'CopyCats' instead of the record ID
                                     .select({
                                         filterByFormula: `{Original Question} = '${testNumber} - ${questionNumber}'`,
                                         fields: [
