@@ -99,12 +99,24 @@ exports.handler = async (event) => {
                         fields: ['Photo', 'Record ID', 'LatexMarkdown clean', 'Diagrams']
                     })
                     .firstPage()
-                    .then(records => records[0] ? {
-                        id: records[0].get('Record ID'),
-                        photo: records[0].get('Photo'),
-                        latex: records[0].get('LatexMarkdown clean'),
-                        diagrams: records[0].get('Diagrams')
-                    } : null);
+                    .then(records => {
+                        if (!records[0]) return null;
+                        
+                        let latex = records[0].get('LatexMarkdown clean');
+                        // Add line breaks between multiple choice answers
+                        if (latex) {
+                            latex = latex.replace(/([A-E]\.\s)/g, '\n$1\n');  // Add line break before and after each answer letter
+                            latex = latex.replace(/\n{3,}/g, '\n\n');  // Replace multiple line breaks with double line break
+                            latex = latex.trim();  // Remove any leading/trailing whitespace
+                        }
+                        
+                        return {
+                            id: records[0].get('Record ID'),
+                            photo: records[0].get('Photo'),
+                            latex: latex,
+                            diagrams: records[0].get('Diagrams')
+                        };
+                    });
                 if (!question) return formatResponse(404, 'Question not found');
                 return formatResponse(200, question);
 
