@@ -80,15 +80,29 @@ exports.handler = async (event) => {
                     testNumber.replace(/^B/, 'B0')   // Convert B2 to B02
                 ];
                 
+                console.log('Trying test formats:', testFormats);
+                
+                const filterFormula = `OR(${testFormats.map(t => 
+                    `AND({Test Number} = '${t}', {Question Number} = ${questionNumber})`
+                ).join(',')})`;
+                
+                console.log('Using filter formula:', filterFormula);
+                
                 const question = await base('Questions')
                     .select({
-                        filterByFormula: `OR(${testFormats.map(t => 
-                            `AND({Test Number} = '${t}', {Question Number} = '${questionNumber}')`
-                        ).join(',')})`,
-                        fields: ['Photo', 'Record ID', 'LatexMarkdown clean', 'Diagrams']
+                        filterByFormula: filterFormula,
+                        fields: ['Photo', 'Record ID', 'LatexMarkdown clean', 'Diagrams', 'Test Number', 'Question Number']
                     })
                     .firstPage()
                     .then(records => {
+                        console.log('Found records:', records ? records.length : 0);
+                        if (records && records.length > 0) {
+                            console.log('First record fields:', {
+                                testNumber: records[0].get('Test Number'),
+                                questionNumber: records[0].get('Question Number')
+                            });
+                        }
+                        
                         if (!records[0]) return null;
                         
                         let mathjaxContent = records[0].get('LatexMarkdown clean');
