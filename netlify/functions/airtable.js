@@ -61,41 +61,30 @@ exports.handler = async (event) => {
 
             case 'getQuestionNumbers':
                 if (!testNumber) return formatResponse(400, 'Missing testNumber');
-                console.log(`Fetching Question Numbers for Test: ${testNumber}`);
+                console.log(`Generating question numbers 1-60 for test: ${testNumber}`);
                 
-                const questionNumbers = await base('Questions')
-                    .select({ 
-                        filterByFormula: `{Test Number} = '${testNumber}'`,
-                        fields: ['Question Number']
-                    })
-                    .all()
-                    .then(records => {
-                        return records
-                            .map(r => r.get('Question Number'))
-                            .filter(Boolean)
-                            .sort((a, b) => {
-                                // Try to parse as numbers first
-                                const numA = parseInt(a);
-                                const numB = parseInt(b);
-                                
-                                // If both are valid numbers, compare numerically
-                                if (!isNaN(numA) && !isNaN(numB)) {
-                                    return numA - numB;
-                                }
-                                
-                                // Otherwise, use string comparison
-                                return String(a).localeCompare(String(b));
-                            });
-                    });
-
+                // Generate array of numbers 1-60
+                const questionNumbers = Array.from({length: 60}, (_, i) => (i + 1).toString());
+                console.log(`Returning ${questionNumbers.length} question numbers`);
+                
                 return formatResponse(200, questionNumbers);
 
             case 'getQuestionDetails':
                 if (!testNumber || !questionNumber) return formatResponse(400, 'Missing testNumber or questionNumber');
                 console.log(`Fetching Question Details for Test: ${testNumber}, Question: ${questionNumber}`);
+                
+                // Create an array of possible test number formats
+                const testFormats = [
+                    testNumber,
+                    testNumber.replace(/^B0/, 'B'),  // Convert B02 to B2
+                    testNumber.replace(/^B/, 'B0')   // Convert B2 to B02
+                ];
+                
                 const question = await base('Questions')
                     .select({
-                        filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
+                        filterByFormula: `OR(${testFormats.map(t => 
+                            `AND({Test Number} = '${t}', {Question Number} = ${questionNumber})`
+                        ).join(',')})`,
                         fields: ['Photo', 'Record ID', 'LatexMarkdown clean', 'Diagrams']
                     })
                     .firstPage()
@@ -103,17 +92,30 @@ exports.handler = async (event) => {
                         if (!records[0]) return null;
                         
                         let mathjaxContent = records[0].get('LatexMarkdown clean');
-                        // Add line breaks between multiple choice answers
                         if (mathjaxContent) {
-                            // First, ensure there's a space after each answer letter
-                            mathjaxContent = mathjaxContent.replace(/([A-E]\.(?!\s))/g, '$1 ');
-                            // Add double line breaks before each answer
-                            mathjaxContent = mathjaxContent.replace(/([A-E]\.)/g, '\n\n$1');
-                            // Add line break after the question text (before first answer)
-                            mathjaxContent = mathjaxContent.replace(/(\?|\.)([A-E]\.)/g, '$1\n\n$2');
-                            // Clean up any excessive line breaks
-                            mathjaxContent = mathjaxContent.replace(/\n{3,}/g, '\n\n');
-                            mathjaxContent = mathjaxContent.trim();
+                            mathjaxContent = mathjaxContent
+                                .split('\n')  // Split into lines
+                                .map(line => {
+                                    // For answer choices (lines starting with A.-E.)
+                                    if (/^[A-E]\./.test(line)) {
+                                        return line.replace(/^([A-E]\.) (.*)/, '$1 \\($2\\)');
+                                    }
+                                    // For lines containing math expressions in the question text
+                                    if (line.includes('\\frac') || line.includes('\\')) {
+                                        // Find all math expressions and wrap them
+                                        return line.replace(/\\frac\{\d+\}\{\d+\}|\\[a-zA-Z]+(?:\{[^}]*\})*|\\\(.*?\\\)/g, match => {
+                                            // If already wrapped in \(...\), leave as is
+                                            if (match.startsWith('\\(') && match.endsWith('\\)')) {
+                                                return match;
+                                            }
+                                            // Otherwise wrap in \(...\)
+                                            return `\\(${match}\\)`;
+                                        });
+                                    }
+                                    return line;
+                                })
+                                .join('\n')  // Join lines back together
+                                .trim();
                         }
                         
                         return {
