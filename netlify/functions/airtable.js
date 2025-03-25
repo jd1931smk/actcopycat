@@ -105,9 +105,15 @@ exports.handler = async (event) => {
                         let latex = records[0].get('LatexMarkdown clean');
                         // Add line breaks between multiple choice answers
                         if (latex) {
-                            latex = latex.replace(/([A-E]\.\s)/g, '\n$1\n');  // Add line break before and after each answer letter
-                            latex = latex.replace(/\n{3,}/g, '\n\n');  // Replace multiple line breaks with double line break
-                            latex = latex.trim();  // Remove any leading/trailing whitespace
+                            // First, ensure there's a space after each answer letter
+                            latex = latex.replace(/([A-E]\.(?!\s))/g, '$1 ');
+                            // Add double line breaks before each answer
+                            latex = latex.replace(/([A-E]\.)/g, '\n\n$1');
+                            // Add line break after the question text (before first answer)
+                            latex = latex.replace(/(\?|\.)([A-E]\.)/g, '$1\n\n$2');
+                            // Clean up any excessive line breaks
+                            latex = latex.replace(/\n{3,}/g, '\n\n');
+                            latex = latex.trim();
                         }
                         
                         return {
