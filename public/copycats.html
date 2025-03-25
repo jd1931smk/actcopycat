@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Corrected Clone Question LM Renderer</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+            }
+        };
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body { 
@@ -418,7 +431,12 @@
                     const mathjaxContent = document.createElement('div');
                     mathjaxContent.className = 'mathjax-content';
                     mathjaxContent.style.whiteSpace = 'pre-wrap';
-                    mathjaxContent.innerHTML = questionData.mathjax;
+                    // Ensure MathJax processes the content
+                    mathjaxContent.innerHTML = questionData.mathjax
+                        .replace(/\\\\/g, '\\')  // Fix double backslashes
+                        .replace(/\\frac\{(\d+)\}\{(\d+)\}/g, '\\frac{$1}{$2}')  // Fix fractions
+                        .replace(/\s*\\n\s*/g, '\n')  // Clean up newlines
+                        .trim();
                     mathjaxSection.appendChild(mathjaxContent);
                     originalQuestion.appendChild(mathjaxSection);
                 }
