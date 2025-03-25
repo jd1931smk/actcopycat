@@ -436,6 +436,15 @@
                         .replace(/\\\\/g, '\\')  // Fix double backslashes
                         .replace(/\\frac\{(\d+)\}\{(\d+)\}/g, '\\frac{$1}{$2}')  // Fix fractions
                         .replace(/\s*\\n\s*/g, '\n')  // Clean up newlines
+                        .split('\n')  // Split into lines
+                        .map(line => {
+                            // If line contains math expressions, wrap them in MathJax delimiters
+                            if (line.includes('\\frac') || line.includes('\\')) {
+                                return line.replace(/([A-E]\.\s*)(.*)/g, '$1\\($2\\)');
+                            }
+                            return line;
+                        })
+                        .join('\n')  // Join lines back together
                         .trim();
                     mathjaxSection.appendChild(mathjaxContent);
                     originalQuestion.appendChild(mathjaxSection);
