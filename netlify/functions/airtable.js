@@ -83,7 +83,7 @@ exports.handler = async (event) => {
                 const question = await base('Questions')
                     .select({
                         filterByFormula: `OR(${testFormats.map(t => 
-                            `AND({Test Number} = '${t}', {Question Number} = ${questionNumber})`
+                            `AND({Test Number} = '${t}', {Question Number} = '${questionNumber}')`
                         ).join(',')})`,
                         fields: ['Photo', 'Record ID', 'LatexMarkdown clean', 'Diagrams']
                     })
