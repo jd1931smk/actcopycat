@@ -102,24 +102,24 @@ exports.handler = async (event) => {
                     .then(records => {
                         if (!records[0]) return null;
                         
-                        let latex = records[0].get('LatexMarkdown clean');
+                        let mathjaxContent = records[0].get('LatexMarkdown clean');
                         // Add line breaks between multiple choice answers
-                        if (latex) {
+                        if (mathjaxContent) {
                             // First, ensure there's a space after each answer letter
-                            latex = latex.replace(/([A-E]\.(?!\s))/g, '$1 ');
+                            mathjaxContent = mathjaxContent.replace(/([A-E]\.(?!\s))/g, '$1 ');
                             // Add double line breaks before each answer
-                            latex = latex.replace(/([A-E]\.)/g, '\n\n$1');
+                            mathjaxContent = mathjaxContent.replace(/([A-E]\.)/g, '\n\n$1');
                             // Add line break after the question text (before first answer)
-                            latex = latex.replace(/(\?|\.)([A-E]\.)/g, '$1\n\n$2');
+                            mathjaxContent = mathjaxContent.replace(/(\?|\.)([A-E]\.)/g, '$1\n\n$2');
                             // Clean up any excessive line breaks
-                            latex = latex.replace(/\n{3,}/g, '\n\n');
-                            latex = latex.trim();
+                            mathjaxContent = mathjaxContent.replace(/\n{3,}/g, '\n\n');
+                            mathjaxContent = mathjaxContent.trim();
                         }
                         
                         return {
                             id: records[0].get('Record ID'),
                             photo: records[0].get('Photo'),
-                            latex: latex,
+                            mathjax: mathjaxContent,
                             diagrams: records[0].get('Diagrams')
                         };
                     });

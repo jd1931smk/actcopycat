@@ -221,6 +221,32 @@
             50% { opacity: 1; }
             100% { opacity: 0.6; }
         }
+
+        .photo-section, .mathjax-section, .diagrams-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .mathjax-section h4, .diagrams-section h4 {
+            color: #1e8fb9;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .mathjax-content {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            font-family: monospace;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -369,18 +395,48 @@
                 originalHeader.textContent = `Original Question (Test ${testNumber}, Question ${questionNumber})`;
                 originalQuestion.appendChild(originalHeader);
                 
+                // Display photo if available
                 if (questionData.photo && questionData.photo.length > 0) {
+                    const photoSection = document.createElement('div');
+                    photoSection.className = 'photo-section';
                     questionData.photo.forEach(photo => {
                         const img = document.createElement('img');
                         img.src = photo.url;
                         img.alt = 'Question image';
-                        originalQuestion.appendChild(img);
+                        photoSection.appendChild(img);
                     });
-                } else if (questionData.latex) {
-                    const latexContent = document.createElement('div');
-                    latexContent.className = 'latex-content';
-                    latexContent.innerHTML = questionData.latex;
-                    originalQuestion.appendChild(latexContent);
+                    originalQuestion.appendChild(photoSection);
+                }
+
+                // Display MathJax content
+                if (questionData.mathjax) {
+                    const mathjaxSection = document.createElement('div');
+                    mathjaxSection.className = 'mathjax-section';
+                    const mathjaxHeader = document.createElement('h4');
+                    mathjaxHeader.textContent = 'Clean Version:';
+                    mathjaxSection.appendChild(mathjaxHeader);
+                    const mathjaxContent = document.createElement('div');
+                    mathjaxContent.className = 'mathjax-content';
+                    mathjaxContent.style.whiteSpace = 'pre-wrap';
+                    mathjaxContent.innerHTML = questionData.mathjax;
+                    mathjaxSection.appendChild(mathjaxContent);
+                    originalQuestion.appendChild(mathjaxSection);
+                }
+
+                // Display Diagrams if available
+                if (questionData.diagrams && questionData.diagrams.length > 0) {
+                    const diagramsSection = document.createElement('div');
+                    diagramsSection.className = 'diagrams-section';
+                    const diagramsHeader = document.createElement('h4');
+                    diagramsHeader.textContent = 'Additional Diagrams:';
+                    diagramsSection.appendChild(diagramsHeader);
+                    questionData.diagrams.forEach(diagram => {
+                        const img = document.createElement('img');
+                        img.src = diagram.url;
+                        img.alt = 'Additional diagram';
+                        diagramsSection.appendChild(img);
+                    });
+                    originalQuestion.appendChild(diagramsSection);
                 }
                 
                 questionsContainer.appendChild(originalQuestion);
