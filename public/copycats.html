@@ -296,41 +296,32 @@
         let currentTestNumber = '';
         let currentQuestionNumber = '';
         
-        // Static test numbers - strictly alphabetized
-        const staticTestNumbers = [
-            '1MC', '2MC', '3MC', '4MC', '5MC',
-            '52C', '52D', '52F', '52G',
-            '67A', '67B', '67C', '67D', '67E', '67F',
-            '71C', '71E', '71H',
-            '72C', '72E', '72F', '72G', '72H',
-            '73C', '73E', '73G', '73H',
-            '74C', '74D', '74E', '74F', '74G', '74H',
-            '75A', '75D', '75E', '75F',
-            'A9', 'A10', 'A11',
-            'B02', 'B04', 'B05',
-            'C01', 'C02', 'C03-2',
-            'D03', 'D06',
-            'F12',
-            'MC1', 'MC2', 'MC3', 'MC4', 'MC5',
-            'Red Book 1', 'Red Book 2', 'Red Book 3',
-            'SATX',
-            'Z04', 'Z15'
-        ];
-        
         // Function to populate test numbers dropdown
-        function populateTestNumbers() {
+        async function populateTestNumbers() {
             const dropdown = document.getElementById('testNumberDropdown');
             dropdown.innerHTML = '<option value="">Select a test number</option>';
+            document.getElementById('testLoadingSpinner').style.display = 'inline-block';
             
-            // Add the pre-sorted test numbers
-            staticTestNumbers.forEach(testNumber => {
-                const option = document.createElement('option');
-                option.value = testNumber;
-                option.textContent = testNumber;
-                dropdown.appendChild(option);
-            });
-            
-            document.getElementById('testLoadingSpinner').style.display = 'none';
+            try {
+                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const testNumbers = await response.json();
+                
+                // Add the test numbers to the dropdown
+                testNumbers.forEach(testNumber => {
+                    const option = document.createElement('option');
+                    option.value = testNumber;
+                    option.textContent = testNumber;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching test numbers:', error);
+                alert('Error loading test numbers. Please refresh the page to try again.');
+            } finally {
+                document.getElementById('testLoadingSpinner').style.display = 'none';
+            }
         }
         
         // Function to populate question numbers dropdown
