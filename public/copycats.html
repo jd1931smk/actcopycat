@@ -673,8 +673,8 @@
         
         document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
         
-        // Initial population of test numbers
-        populateTestNumbers();
+        // Call populateTestNumbers when the page loads
+        window.addEventListener('load', populateTestNumbers);
     </script>
 </body>
 </html> 
