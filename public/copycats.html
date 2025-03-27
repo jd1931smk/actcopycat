@@ -6,7 +6,7 @@
     <title>Corrected Clone Question LM Renderer</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="initKaTeX()"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -91,19 +91,33 @@
             margin-top: 20px;
         }
         
+        .photo-section, .katex-section {
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .photo-section img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 10px auto;
+        }
+        
         .katex-content {
             background-color: white;
             padding: 15px;
             border-radius: 4px;
             white-space: pre-wrap;
-            margin-top: 10px;
+            font-size: 1.1em;
+            line-height: 1.6;
         }
         
-        img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 4px;
-            margin: 10px 0;
+        h4 {
+            color: #1e8fb9;
+            margin: 0 0 15px 0;
+            font-size: 1.1em;
         }
         
         #spinner {
@@ -128,27 +142,6 @@
             gap: 10px;
             justify-content: center;
         }
-        
-        h4 {
-            color: #1e8fb9;
-            margin: 15px 0 10px 0;
-        }
-        
-        .select-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .spinner {
-            display: none;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-top: 3px solid #fff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
     </style>
 </head>
 <body>
@@ -162,23 +155,17 @@
     
     <div class="selection-area">
         <div class="form-group">
-            <div class="select-container">
-                <label for="testNumberDropdown">Test Number:</label>
-                <select id="testNumberDropdown">
-                    <option value="">Select a test number</option>
-                </select>
-                <div id="testLoadingSpinner" class="spinner"></div>
-            </div>
+            <label for="testNumberDropdown">Test Number:</label>
+            <select id="testNumberDropdown">
+                <option value="">Select a test number</option>
+            </select>
         </div>
         
         <div class="form-group">
-            <div class="select-container">
-                <label for="questionNumberDropdown">Question Number:</label>
-                <select id="questionNumberDropdown">
-                    <option value="">Select a question number</option>
-                </select>
-                <div id="questionLoadingSpinner" class="spinner"></div>
-            </div>
+            <label for="questionNumberDropdown">Question Number:</label>
+            <select id="questionNumberDropdown">
+                <option value="">Select a question number</option>
+            </select>
         </div>
         
         <button id="fetchButton">Fetch and Render</button>
@@ -196,26 +183,29 @@
         let currentTestNumber = '';
         let currentQuestionNumber = '';
 
-        function initKaTeX() {
-            // Wait for both KaTeX and auto-render to be loaded
-            if (typeof renderMathInElement === 'undefined') {
-                setTimeout(initKaTeX, 100);
-                return;
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize KaTeX
+            if (typeof renderMathInElement === 'function') {
+                initializeEventListeners();
+                populateTestNumbers();
+            } else {
+                // Wait for KaTeX to load
+                const checkKaTeX = setInterval(function() {
+                    if (typeof renderMathInElement === 'function') {
+                        clearInterval(checkKaTeX);
+                        initializeEventListeners();
+                        populateTestNumbers();
+                    }
+                }, 100);
             }
-
-            // Initialize event listeners
-            initializeEventListeners();
-            
-            // Call populateTestNumbers when initialized
-            populateTestNumbers();
-        }
+        });
 
         function initializeEventListeners() {
             document.getElementById('testNumberDropdown').addEventListener('change', function() {
                 const selectedTest = this.value;
                 if (selectedTest) {
                     currentTestNumber = selectedTest;
-                    currentQuestionNumber = ''; // Reset question number when test changes
+                    currentQuestionNumber = '';
                     populateQuestionNumbers(selectedTest);
                 }
             });
@@ -230,31 +220,6 @@
             });
             
             document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
-            
-            // Add navigation button event listeners
-            document.getElementById('previousButton').addEventListener('click', () => navigateQuestion('prev'));
-            document.getElementById('nextButton').addEventListener('click', () => navigateQuestion('next'));
-        }
-
-        // Function to safely render math in an element
-        function renderMathInContainer(element) {
-            if (!element || typeof renderMathInElement !== 'function') return;
-            
-            try {
-                renderMathInElement(element, {
-                    delimiters: [
-                        {left: "$$", right: "$$", display: true},
-                        {left: "$", right: "$", display: false},
-                        {left: "\\(", right: "\\)", display: false},
-                        {left: "\\[", right: "\\]", display: true}
-                    ],
-                    throwOnError: false,
-                    errorColor: '#cc0000',
-                    strict: false
-                });
-            } catch (error) {
-                console.error('Error rendering math:', error);
-            }
         }
 
         async function fetchAndDisplayQuestion() {
@@ -268,66 +233,84 @@
                 return;
             }
 
-            spinner.style.display = 'inline-block';
-            resultContainer.innerHTML = 'Loading...';
+            spinner.style.display = 'block';
+            resultContainer.innerHTML = '';
 
             try {
                 const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
-                const questionData = await response.json();
+                const data = await response.json();
 
-                if (!questionData || response.status === 404) {
+                if (!data || response.status === 404) {
                     resultContainer.innerHTML = 'Question not found';
-                    spinner.style.display = 'none';
                     return;
                 }
 
-                const questionsContainer = document.createElement('div');
-                questionsContainer.className = 'questions-container';
+                const container = document.createElement('div');
+                container.className = 'questions-container';
 
-                const originalQuestion = document.createElement('div');
-                originalQuestion.className = 'original-question';
-
-                // Display photo if available
-                if (questionData.photo && questionData.photo.length > 0) {
+                // Display original image if available
+                if (data.photo && data.photo.length > 0) {
                     const photoSection = document.createElement('div');
                     photoSection.className = 'photo-section';
                     const photoHeader = document.createElement('h4');
                     photoHeader.textContent = 'Original Image:';
                     photoSection.appendChild(photoHeader);
-                    questionData.photo.forEach(url => {
+                    
+                    data.photo.forEach(photo => {
                         const img = document.createElement('img');
-                        img.src = url;
+                        img.src = photo.url;
                         img.alt = 'Question Image';
                         photoSection.appendChild(img);
                     });
-                    originalQuestion.appendChild(photoSection);
+                    container.appendChild(photoSection);
                 }
 
                 // Display KaTeX content
-                if (questionData.katex) {
+                if (data.katex) {
                     const katexSection = document.createElement('div');
                     katexSection.className = 'katex-section';
                     const katexHeader = document.createElement('h4');
                     katexHeader.textContent = 'Clean Version:';
                     katexSection.appendChild(katexHeader);
+                    
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
-                    katexContent.style.whiteSpace = 'pre-wrap';
-                    katexContent.textContent = questionData.katex;
+                    katexContent.textContent = data.katex;
                     katexSection.appendChild(katexContent);
-                    originalQuestion.appendChild(katexSection);
+                    container.appendChild(katexSection);
                 }
 
-                questionsContainer.appendChild(originalQuestion);
-                resultContainer.innerHTML = '';
-                resultContainer.appendChild(questionsContainer);
+                // Display diagrams if available
+                if (data.diagrams && data.diagrams.length > 0) {
+                    const diagramsSection = document.createElement('div');
+                    diagramsSection.className = 'photo-section';
+                    const diagramsHeader = document.createElement('h4');
+                    diagramsHeader.textContent = 'Diagrams:';
+                    diagramsSection.appendChild(diagramsHeader);
+                    
+                    data.diagrams.forEach(url => {
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.alt = 'Diagram';
+                        diagramsSection.appendChild(img);
+                    });
+                    container.appendChild(diagramsSection);
+                }
 
-                // Render math in the container after it's added to the DOM
-                if (questionData.katex) {
-                    const katexContent = resultContainer.querySelector('.katex-content');
-                    if (katexContent) {
-                        renderMathInContainer(katexContent);
-                    }
+                resultContainer.appendChild(container);
+
+                // Render KaTeX after adding to DOM
+                if (data.katex) {
+                    renderMathInElement(document.querySelector('.katex-content'), {
+                        delimiters: [
+                            {left: "$$", right: "$$", display: true},
+                            {left: "$", right: "$", display: false},
+                            {left: "\\(", right: "\\)", display: false},
+                            {left: "\\[", right: "\\]", display: true}
+                        ],
+                        throwOnError: false,
+                        output: 'html'
+                    });
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -341,8 +324,6 @@
         async function populateTestNumbers() {
             const dropdown = document.getElementById('testNumberDropdown');
             dropdown.innerHTML = '<option value="">Select a test number</option>';
-            const spinner = document.getElementById('testLoadingSpinner');
-            if (spinner) spinner.style.display = 'inline-block';
             
             try {
                 const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
@@ -361,8 +342,6 @@
             } catch (error) {
                 console.error('Error fetching test numbers:', error);
                 alert('Error loading test numbers. Please refresh the page to try again.');
-            } finally {
-                if (spinner) spinner.style.display = 'none';
             }
         }
         
@@ -371,7 +350,6 @@
             if (!testNumber) return;
             
             try {
-                document.getElementById('questionLoadingSpinner').style.display = 'inline-block';
                 const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -403,8 +381,6 @@
             } catch (error) {
                 console.error('Error fetching question numbers:', error);
                 alert('Error loading question numbers. Please try selecting a different test number.');
-            } finally {
-                document.getElementById('questionLoadingSpinner').style.display = 'none';
             }
         }
         
