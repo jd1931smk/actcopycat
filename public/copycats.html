@@ -381,9 +381,17 @@
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
                     
-                    // Simply add a newline before each answer choice letter
-                    let formattedKatex = data.katex.replace(/([ABCDEFGHJK]\.)/g, '\n$1');
-                    katexContent.textContent = formattedKatex;
+                    // Split into question and answers
+                    let parts = data.katex.split(/(?=[FGHJK]\.|[ABCDE]\.)/);
+                    
+                    // First part is the question
+                    let question = parts[0];
+                    // Rest are answers
+                    let answers = parts.slice(1);
+                    
+                    // Format with proper spacing
+                    let formattedContent = question + '\n\n' + answers.join('\n');
+                    katexContent.textContent = formattedContent;
                     
                     katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
