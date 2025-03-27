@@ -6,9 +6,9 @@
     <title>Corrected Clone Question LM Renderer</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="initKaTeX()"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        function initKaTeX() {
             window.renderMathInElement = function(element) {
                 renderMathInElement(element, {
                     delimiters: [
@@ -22,7 +22,35 @@
                     strict: false
                 });
             };
-        });
+
+            // Initialize event listeners after KaTeX is loaded
+            initializeEventListeners();
+        }
+
+        function initializeEventListeners() {
+            // Event Listeners
+            document.getElementById('testNumberDropdown').addEventListener('change', function() {
+                const selectedTest = this.value;
+                if (selectedTest) {
+                    currentTestNumber = selectedTest;
+                    currentQuestionNumber = ''; // Reset question number when test changes
+                    populateQuestionNumbers(selectedTest);
+                }
+            });
+            
+            document.getElementById('questionNumberDropdown').addEventListener('change', function() {
+                const selectedQuestion = this.value;
+                if (selectedQuestion) {
+                    currentQuestionNumber = selectedQuestion;
+                    fetchAndDisplayQuestion();
+                }
+            });
+            
+            document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
+            
+            // Call populateTestNumbers when initialized
+            populateTestNumbers();
+        }
 
         async function fetchAndDisplayQuestion() {
             const testNumber = document.getElementById('testNumberDropdown').value;
@@ -230,29 +258,6 @@
             
             fetchAndDisplayQuestion();
         }
-        
-        // Event Listeners
-        document.getElementById('testNumberDropdown').addEventListener('change', function() {
-            const selectedTest = this.value;
-            if (selectedTest) {
-                currentTestNumber = selectedTest;
-                currentQuestionNumber = ''; // Reset question number when test changes
-                populateQuestionNumbers(selectedTest);
-            }
-        });
-        
-        document.getElementById('questionNumberDropdown').addEventListener('change', function() {
-            const selectedQuestion = this.value;
-            if (selectedQuestion) {
-                currentQuestionNumber = selectedQuestion;
-                fetchAndDisplayQuestion();
-            }
-        });
-        
-        document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
-        
-        // Call populateTestNumbers when the page loads
-        window.addEventListener('load', populateTestNumbers);
     </script>
     <style>
         body { 
