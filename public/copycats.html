@@ -10,174 +10,225 @@
     <style>
         body { 
             font-family: Arial, sans-serif; 
-            background-color: #ffffff; 
+            background-color: #f0f2f5;
+            margin: 0;
             padding: 20px;
+        }
+
+        .container {
             max-width: 1200px;
             margin: 0 auto;
-        }
-        
-        .nav-links {
-            margin-bottom: 20px;
-            padding: 10px;
-            background-color: #f8f9fa;
+            background-color: white;
+            padding: 20px;
             border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .nav-links {
+            background-color: #1e8fb9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
             text-align: center;
         }
-        
+
         .nav-links a {
-            color: #1e8fb9;
+            color: white;
             text-decoration: none;
             margin: 0 15px;
-            padding: 5px 10px;
+            padding: 8px 15px;
             border-radius: 4px;
             transition: background-color 0.2s;
         }
-        
+
         .nav-links a:hover {
-            background-color: #e9ecef;
+            background-color: rgba(255,255,255,0.2);
         }
-        
+
+        h1 {
+            color: #1e8fb9;
+            text-align: center;
+            margin: 0 0 30px 0;
+            font-size: 2em;
+        }
+
         .selection-area {
             background-color: #1e8fb9;
-            padding: 20px;
+            padding: 25px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             margin-bottom: 30px;
-            border: 1px solid #177294;
             color: white;
         }
-        
-        h1 { 
-            color: #333;
+
+        .form-group {
             margin-bottom: 20px;
         }
-        
-        .form-group {
-            margin-bottom: 15px;
+
+        .form-group:last-child {
+            margin-bottom: 0;
         }
-        
+
         .form-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            font-weight: bold;
             color: white;
         }
-        
-        select, button { 
-            margin: 5px 0; 
-            padding: 8px;
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
             border-radius: 4px;
-            border: 1px solid #ccc;
             background-color: white;
             color: #333;
+            font-size: 16px;
         }
-        
+
         button {
             background-color: #177294;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 25px;
+            border-radius: 4px;
             cursor: pointer;
+            font-size: 16px;
             transition: background-color 0.2s;
+            width: 100%;
         }
-        
-        button:hover {
+
+        button:hover:not(:disabled) {
             background-color: #1e8fb9;
         }
-        
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
         .questions-container {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        
-        .photo-section, .katex-section {
             background-color: white;
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
+            border-radius: 8px;
+            padding: 25px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        
-        .photo-section img {
+
+        .section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section h4 {
+            color: #1e8fb9;
+            margin: 0 0 15px 0;
+            font-size: 1.2em;
+            border-bottom: 2px solid #1e8fb9;
+            padding-bottom: 8px;
+        }
+
+        .section img {
             max-width: 100%;
             height: auto;
             display: block;
             margin: 10px auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        
+
         .katex-content {
             background-color: white;
-            padding: 15px;
+            padding: 20px;
             border-radius: 4px;
-            white-space: pre-wrap;
             font-size: 1.1em;
             line-height: 1.6;
+            border: 1px solid #e9ecef;
         }
-        
-        h4 {
-            color: #1e8fb9;
-            margin: 0 0 15px 0;
-            font-size: 1.1em;
-        }
-        
+
         #spinner {
             display: none;
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(0,0,0,0.1);
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #1e8fb9;
             border-radius: 50%;
-            border-top: 4px solid #1e8fb9;
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
+
         .nav-buttons {
-            margin-top: 20px;
             display: flex;
-            gap: 10px;
-            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .nav-buttons button {
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .selection-area {
+                padding: 20px;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="nav-links">
-        <a href="index.html">Home</a>
-        <a href="worksheet.html">Generate Worksheet</a>
-        <a href="explain.html">Explain Questions</a>
+    <div class="container">
+        <nav class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="worksheet.html">Generate Worksheet</a>
+            <a href="explain.html">Explain Questions</a>
+        </nav>
+
+        <h1>Corrected Clone Question LM Renderer</h1>
+
+        <div class="selection-area">
+            <div class="form-group">
+                <label for="testNumberDropdown">Test Number:</label>
+                <select id="testNumberDropdown">
+                    <option value="">Select a test number</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="questionNumberDropdown">Question Number:</label>
+                <select id="questionNumberDropdown">
+                    <option value="">Select a question number</option>
+                </select>
+            </div>
+
+            <button id="fetchButton">Fetch and Render</button>
+
+            <div class="nav-buttons">
+                <button id="previousButton" onclick="navigateQuestion('prev')" disabled>Previous</button>
+                <button id="nextButton" onclick="navigateQuestion('next')" disabled>Next</button>
+            </div>
+        </div>
+
+        <div id="spinner"></div>
+        <div id="resultContainer"></div>
     </div>
-    
-    <h1>Corrected Clone Question LM Renderer</h1>
-    
-    <div class="selection-area">
-        <div class="form-group">
-            <label for="testNumberDropdown">Test Number:</label>
-            <select id="testNumberDropdown">
-                <option value="">Select a test number</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label for="questionNumberDropdown">Question Number:</label>
-            <select id="questionNumberDropdown">
-                <option value="">Select a question number</option>
-            </select>
-        </div>
-        
-        <button id="fetchButton">Fetch and Render</button>
-        
-        <div class="nav-buttons">
-            <button id="previousButton" onclick="navigateQuestion('prev')" disabled>Previous</button>
-            <button id="nextButton" onclick="navigateQuestion('next')" disabled>Next</button>
-        </div>
-    </div>
-    
-    <div id="spinner"></div>
-    <div id="resultContainer"></div>
 
     <script>
         let currentTestNumber = '';
@@ -251,9 +302,9 @@
                 // Display original image if available
                 if (data.photo && data.photo.length > 0) {
                     const photoSection = document.createElement('div');
-                    photoSection.className = 'photo-section';
+                    photoSection.className = 'section';
                     const photoHeader = document.createElement('h4');
-                    photoHeader.textContent = 'Original Image:';
+                    photoHeader.textContent = 'Original Image';
                     photoSection.appendChild(photoHeader);
                     
                     data.photo.forEach(photo => {
@@ -268,9 +319,9 @@
                 // Display KaTeX content
                 if (data.katex) {
                     const katexSection = document.createElement('div');
-                    katexSection.className = 'katex-section';
+                    katexSection.className = 'section';
                     const katexHeader = document.createElement('h4');
-                    katexHeader.textContent = 'Clean Version:';
+                    katexHeader.textContent = 'Clean Version';
                     katexSection.appendChild(katexHeader);
                     
                     const katexContent = document.createElement('div');
@@ -283,14 +334,14 @@
                 // Display diagrams if available
                 if (data.diagrams && data.diagrams.length > 0) {
                     const diagramsSection = document.createElement('div');
-                    diagramsSection.className = 'photo-section';
+                    diagramsSection.className = 'section';
                     const diagramsHeader = document.createElement('h4');
-                    diagramsHeader.textContent = 'Diagrams:';
+                    diagramsHeader.textContent = 'Diagrams';
                     diagramsSection.appendChild(diagramsHeader);
                     
-                    data.diagrams.forEach(url => {
+                    data.diagrams.forEach(diagram => {
                         const img = document.createElement('img');
-                        img.src = url;
+                        img.src = diagram.url || diagram; // Handle both object and string formats
                         img.alt = 'Diagram';
                         diagramsSection.appendChild(img);
                     });
