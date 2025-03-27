@@ -129,7 +129,7 @@ exports.handler = async (event) => {
                         return {
                             id: records[0].get('Record ID'),
                             photo: records[0].get('Photo'),
-                            mathjax: katexContent,
+                            katex: katexContent,
                             diagrams: records[0].get('Diagrams')
                         };
                     });

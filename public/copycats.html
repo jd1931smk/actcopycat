@@ -422,8 +422,8 @@
                     const mathjaxContent = document.createElement('div');
                     mathjaxContent.className = 'mathjax-content';
                     mathjaxContent.style.whiteSpace = 'pre-wrap';
-                    // Ensure MathJax processes the content
-                    mathjaxContent.innerHTML = questionData.mathjax
+                    // Use KaTeX to render the content
+                    mathjaxContent.innerHTML = questionData.katex
                         .replace(/\\\\/g, '\\')  // Fix double backslashes
                         .split('\n')  // Split into lines
                         .map(line => {
@@ -449,6 +449,9 @@
                         .trim();
                     mathjaxSection.appendChild(mathjaxContent);
                     originalQuestion.appendChild(mathjaxSection);
+
+                    // Render math in this section
+                    renderMathInElement(mathjaxContent);
                 }
 
                 // Display Diagrams if available
@@ -471,7 +474,8 @@
                 resultContainer.innerHTML = '';
                 resultContainer.appendChild(questionsContainer);
                 
-                await MathJax.typesetPromise([resultContainer]);
+                // Render any math in the result container
+                renderMathInElement(resultContainer);
 
                 // Create a placeholder for clones
                 const clonesPlaceholder = document.createElement('div');
@@ -517,6 +521,8 @@
                             cloneCard.appendChild(questionText);
 
                             clonesPlaceholder.appendChild(cloneCard);
+                            // Render math in the clone card
+                            renderMathInElement(cloneCard);
                         }
                     });
                 } else {
@@ -592,7 +598,8 @@
                                     cloneCard.appendChild(questionText);
 
                                     clonesPlaceholder.appendChild(cloneCard);
-                                    await MathJax.typesetPromise([cloneCard]);
+                                    // Render math in the clone card
+                                    renderMathInElement(cloneCard);
                                 } else if (checkData.status === 'error') {
                                     generatingDiv.innerHTML = `Error generating clone: ${checkData.error}`;
                                     generatingDiv.style.color = '#dc3545';
