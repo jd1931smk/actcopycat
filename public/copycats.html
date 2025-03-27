@@ -138,6 +138,8 @@
             line-height: 1.6;
             color: #f0f0f0;
             margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: inherit;
         }
         
         /* KaTeX Styling */
@@ -381,17 +383,20 @@
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
                     
-                    // Split into question and answers
-                    let parts = data.katex.split(/(?=[FGHJK]\.|[ABCDE]\.)/);
-                    
-                    // First part is the question
-                    let question = parts[0];
-                    // Rest are answers
-                    let answers = parts.slice(1);
-                    
-                    // Format with proper spacing
-                    let formattedContent = question + '\n\n' + answers.join('\n');
-                    katexContent.textContent = formattedContent;
+                    // First find the question number and text
+                    const questionMatch = data.katex.match(/(\d+\.)(.*?)(?=[ABCDEFGHJK]\.)/s);
+                    if (questionMatch) {
+                        const questionText = questionMatch[0];
+                        const remainingText = data.katex.slice(questionMatch[0].length);
+                        
+                        // Split answer choices and format them
+                        const answers = remainingText.match(/[ABCDEFGHJK]\..+?(?=[ABCDEFGHJK]\.|$)/g) || [];
+                        
+                        // Combine with proper spacing
+                        katexContent.textContent = questionText + '\n\n' + answers.join('\n');
+                    } else {
+                        katexContent.textContent = data.katex;
+                    }
                     
                     katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
