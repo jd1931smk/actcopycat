@@ -44,10 +44,10 @@ exports.handler = async (event) => {
                     'A9',
                     'A10',
                     'A11',
-                    'B2',
-                    'B4',
-                    'D6',
-                    'Z4',
+                    'B02',
+                    'B04',
+                    'D06',
+                    'Z04',
                     'Z15'
                 ];
                 console.log("Final sorted test numbers:", testNumbers);
