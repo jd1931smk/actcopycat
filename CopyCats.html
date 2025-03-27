@@ -138,6 +138,7 @@
             line-height: 1.6;
             color: #f0f0f0;
             margin-top: 10px;
+            white-space: pre-wrap;
         }
         
         /* KaTeX Styling */
@@ -161,6 +162,29 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        /* Answer Choices */
+        .answer-choice {
+            display: block;
+            margin: 10px 0;
+            padding: 8px;
+            background-color: #383838;
+            border-radius: 4px;
+            border: 1px solid #444;
+        }
+
+        /* Diagrams Section */
+        .diagram-section {
+            margin-top: 20px;
+        }
+
+        .diagram-image {
+            max-width: 100%;
+            height: auto;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #444;
         }
     </style>
 </head>
@@ -352,7 +376,13 @@
                     
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
-                    katexContent.textContent = data.katex;
+                    
+                    // Format the KaTeX content to put answer choices on separate lines
+                    let formattedKatex = data.katex;
+                    formattedKatex = formattedKatex.replace(/([A-E]\.)(?!\n)/g, '\n$1');  // Add newline before each answer choice
+                    formattedKatex = formattedKatex.replace(/\s*\n\s*/g, '\n');  // Clean up extra spaces around newlines
+                    katexContent.textContent = formattedKatex;
+                    
                     katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
 
@@ -369,6 +399,25 @@
                         strict: false,
                         trust: true
                     });
+                }
+
+                // Diagrams Section
+                if (data.diagrams && data.diagrams.length > 0) {
+                    const diagramsSection = document.createElement('div');
+                    diagramsSection.className = 'section';
+                    const diagramsHeader = document.createElement('h4');
+                    diagramsHeader.textContent = 'Diagrams';
+                    diagramsSection.appendChild(diagramsHeader);
+                    
+                    data.diagrams.forEach(diagram => {
+                        const img = document.createElement('img');
+                        img.src = diagram.url;
+                        img.alt = 'Question Diagram';
+                        img.className = 'diagram-image';
+                        diagramsSection.appendChild(img);
+                    });
+                    
+                    container.appendChild(diagramsSection);
                 }
 
                 resultContainer.appendChild(container);
