@@ -93,31 +93,12 @@ exports.handler = async (event) => {
                         if (!records[0]) return null;
                         
                         let katexContent = records[0].get('KatexMarkdown');
-                        console.log('KaTeX content:', katexContent ? 'present' : 'missing');
+                        console.log('Raw KaTeX content:', katexContent);
                         
                         if (katexContent) {
+                            // Simple cleanup - don't try to wrap math expressions
                             katexContent = katexContent
-                                .split('\n')  // Split into lines
-                                .map(line => {
-                                    // For answer choices (lines starting with A.-E.)
-                                    if (/^[A-E]\./.test(line)) {
-                                        return line.replace(/^([A-E]\.) (.*)/, '$1 \\($2\\)');
-                                    }
-                                    // For lines containing math expressions in the question text
-                                    if (line.includes('\\frac') || line.includes('\\')) {
-                                        // Find all math expressions and wrap them
-                                        return line.replace(/\\frac\{\d+\}\{\d+\}|\\[a-zA-Z]+(?:\{[^}]*\})*|\\\(.*?\\\)/g, match => {
-                                            // If already wrapped in \(...\), leave as is
-                                            if (match.startsWith('\\(') && match.endsWith('\\)')) {
-                                                return match;
-                                            }
-                                            // Otherwise wrap in \(...\)
-                                            return `\\(${match}\\)`;
-                                        });
-                                    }
-                                    return line;
-                                })
-                                .join('\n')  // Join lines back together
+                                .replace(/\\\\/g, '\\')  // Fix double backslashes
                                 .trim();
                         }
                         
