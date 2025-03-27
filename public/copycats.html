@@ -388,16 +388,20 @@
                     
                     let formattedKatex = data.katex;
                     
-                    // Split the content into question and answers
-                    const questionMatch = formattedKatex.match(/(\d+\.\s*.*?)(?=[A-E]\.|[FGHJK]\.)/s);
+                    // First, find the question number and text
+                    const questionMatch = formattedKatex.match(/(\d+\.)([^?]*\?)/);
                     if (questionMatch) {
                         // Set the question text
-                        questionContent.textContent = questionMatch[1].trim();
+                        questionContent.textContent = questionMatch[0].trim();
                         
-                        // Extract and format answer choices
-                        const answerMatches = formattedKatex.match(/([A-E]\.|[FGHJK]\.)[^A-E^F-K]*/g);
-                        if (answerMatches) {
-                            answerMatches.forEach(answer => {
+                        // Remove the question text from the content to process answers
+                        formattedKatex = formattedKatex.substring(formattedKatex.indexOf(questionMatch[0]) + questionMatch[0].length);
+                        
+                        // Split remaining content into answer choices
+                        // This pattern matches F. x^8 or A. is positive style answers
+                        const answers = formattedKatex.match(/([A-E]\.|[FGHJK]\.)[^A-E^F-K]*((?=[A-E]\.|[FGHJK]\.|$))/g);
+                        if (answers) {
+                            answers.forEach(answer => {
                                 const answerDiv = document.createElement('div');
                                 answerDiv.className = 'answer-choice';
                                 answerDiv.textContent = answer.trim();
@@ -425,7 +429,8 @@
                             throwOnError: false,
                             errorColor: '#ff6b6b',
                             strict: false,
-                            trust: true
+                            trust: true,
+                            output: 'html'
                         });
                     });
                 }
