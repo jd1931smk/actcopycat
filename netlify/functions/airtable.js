@@ -67,11 +67,14 @@ exports.handler = async (event) => {
                 if (!testNumber || !questionNumber) return formatResponse(400, 'Missing testNumber or questionNumber');
                 console.log(`Fetching Question Details for Test: ${testNumber}, Question: ${questionNumber}`);
                 
+                // Format test number consistently (e.g., A9 -> A09)
+                const formattedTestNumber = testNumber.replace(/^([A-Z])(\d)$/, '$10$2');
+                console.log('Formatted test number:', formattedTestNumber);
+                
                 // Create an array of possible test number formats
                 const testFormats = [
-                    testNumber,
-                    testNumber.replace(/^B0/, 'B'),  // Convert B02 to B2
-                    testNumber.replace(/^B/, 'B0')   // Convert B2 to B02
+                    formattedTestNumber,
+                    formattedTestNumber.replace(/^([A-Z])0/, '$1')  // Convert A09 to A9
                 ];
                 
                 console.log('Trying test formats:', testFormats);
@@ -93,13 +96,16 @@ exports.handler = async (event) => {
                         if (records && records.length > 0) {
                             console.log('First record fields:', {
                                 testNumber: records[0].get('Test Number'),
-                                questionNumber: records[0].get('Question Number')
+                                questionNumber: records[0].get('Question Number'),
+                                katex: records[0].get('KatexMarkdown') ? 'present' : 'missing'
                             });
                         }
                         
                         if (!records[0]) return null;
                         
                         let katexContent = records[0].get('KatexMarkdown');
+                        console.log('KaTeX content:', katexContent ? 'present' : 'missing');
+                        
                         if (katexContent) {
                             katexContent = katexContent
                                 .split('\n')  // Split into lines
@@ -126,12 +132,14 @@ exports.handler = async (event) => {
                                 .trim();
                         }
                         
-                        return {
+                        const response = {
                             id: records[0].get('Record ID'),
                             photo: records[0].get('Photo'),
                             katex: katexContent,
                             diagrams: records[0].get('Diagrams')
                         };
+                        console.log('Sending response:', response);
+                        return response;
                     });
                 if (!question) return formatResponse(404, 'Question not found');
                 return formatResponse(200, question);

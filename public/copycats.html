@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Corrected Clone Question LM Renderer</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAYQHy+YWzauPeYPzGZg/zV8+8LhiNE7WP/Xqm/hK/2ykU4yJHGR" crossorigin="anonymous"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             renderMathInElement(document.body, {
@@ -413,7 +413,7 @@
                 }
 
                 // Display MathJax content
-                if (questionData.mathjax) {
+                if (questionData.katex) {
                     const mathjaxSection = document.createElement('div');
                     mathjaxSection.className = 'mathjax-section';
                     const mathjaxHeader = document.createElement('h4');
@@ -422,7 +422,6 @@
                     const mathjaxContent = document.createElement('div');
                     mathjaxContent.className = 'mathjax-content';
                     mathjaxContent.style.whiteSpace = 'pre-wrap';
-                    // Use KaTeX to render the content
                     mathjaxContent.innerHTML = questionData.katex
                         .replace(/\\\\/g, '\\')  // Fix double backslashes
                         .split('\n')  // Split into lines
