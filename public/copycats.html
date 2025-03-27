@@ -133,6 +133,22 @@
             color: #1e8fb9;
             margin: 15px 0 10px 0;
         }
+        
+        .select-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body>
@@ -146,24 +162,30 @@
     
     <div class="selection-area">
         <div class="form-group">
-            <label for="testNumberDropdown">Test Number:</label>
-            <select id="testNumberDropdown">
-                <option value="">Select a test number</option>
-            </select>
+            <div class="select-container">
+                <label for="testNumberDropdown">Test Number:</label>
+                <select id="testNumberDropdown">
+                    <option value="">Select a test number</option>
+                </select>
+                <div id="testLoadingSpinner" class="spinner"></div>
+            </div>
         </div>
         
         <div class="form-group">
-            <label for="questionNumberDropdown">Question Number:</label>
-            <select id="questionNumberDropdown">
-                <option value="">Select a question number</option>
-            </select>
+            <div class="select-container">
+                <label for="questionNumberDropdown">Question Number:</label>
+                <select id="questionNumberDropdown">
+                    <option value="">Select a question number</option>
+                </select>
+                <div id="questionLoadingSpinner" class="spinner"></div>
+            </div>
         </div>
         
         <button id="fetchButton">Fetch and Render</button>
         
         <div class="nav-buttons">
-            <button id="previousButton">Previous</button>
-            <button id="nextButton">Next</button>
+            <button id="previousButton" onclick="navigateQuestion('prev')" disabled>Previous</button>
+            <button id="nextButton" onclick="navigateQuestion('next')" disabled>Next</button>
         </div>
     </div>
     
@@ -202,11 +224,16 @@
                 const selectedQuestion = this.value;
                 if (selectedQuestion) {
                     currentQuestionNumber = selectedQuestion;
+                    updateNavigationButtons();
                     fetchAndDisplayQuestion();
                 }
             });
             
             document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
+            
+            // Add navigation button event listeners
+            document.getElementById('previousButton').addEventListener('click', () => navigateQuestion('prev'));
+            document.getElementById('nextButton').addEventListener('click', () => navigateQuestion('next'));
         }
 
         // Function to safely render math in an element
