@@ -378,60 +378,29 @@
                     katexHeader.textContent = 'Clean Version';
                     katexSection.appendChild(katexHeader);
                     
-                    // Create a div for the question text
-                    const questionContent = document.createElement('div');
-                    questionContent.className = 'katex-content question-text';
+                    const katexContent = document.createElement('div');
+                    katexContent.className = 'katex-content';
                     
-                    // Create a div for answer choices
-                    const answersContent = document.createElement('div');
-                    answersContent.className = 'answer-choices';
+                    // Simply add a newline before each answer choice letter
+                    let formattedKatex = data.katex.replace(/([ABCDEFGHJK]\.)/g, '\n$1');
+                    katexContent.textContent = formattedKatex;
                     
-                    let formattedKatex = data.katex;
-                    
-                    // First, find the question number and text
-                    const questionMatch = formattedKatex.match(/(\d+\.)([^?]*\?)/);
-                    if (questionMatch) {
-                        // Set the question text
-                        questionContent.textContent = questionMatch[0].trim();
-                        
-                        // Remove the question text from the content to process answers
-                        formattedKatex = formattedKatex.substring(formattedKatex.indexOf(questionMatch[0]) + questionMatch[0].length);
-                        
-                        // Split remaining content into answer choices
-                        // This pattern matches F. x^8 or A. is positive style answers
-                        const answers = formattedKatex.match(/([A-E]\.|[FGHJK]\.)[^A-E^F-K]*((?=[A-E]\.|[FGHJK]\.|$))/g);
-                        if (answers) {
-                            answers.forEach(answer => {
-                                const answerDiv = document.createElement('div');
-                                answerDiv.className = 'answer-choice';
-                                answerDiv.textContent = answer.trim();
-                                answersContent.appendChild(answerDiv);
-                            });
-                        }
-                    } else {
-                        // Fallback if pattern doesn't match
-                        questionContent.textContent = formattedKatex;
-                    }
-                    
-                    katexSection.appendChild(questionContent);
-                    katexSection.appendChild(answersContent);
+                    katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
 
-                    // Initialize KaTeX rendering for both question and answers
-                    [questionContent, ...answersContent.children].forEach(element => {
-                        renderMathInElement(element, {
-                            delimiters: [
-                                {left: "$$", right: "$$", display: true},
-                                {left: "$", right: "$", display: false},
-                                {left: "\\(", right: "\\)", display: false},
-                                {left: "\\[", right: "\\]", display: true}
-                            ],
-                            throwOnError: false,
-                            errorColor: '#ff6b6b',
-                            strict: false,
-                            trust: true,
-                            output: 'html'
-                        });
+                    // Initialize KaTeX rendering
+                    renderMathInElement(katexContent, {
+                        delimiters: [
+                            {left: "$$", right: "$$", display: true},
+                            {left: "$", right: "$", display: false},
+                            {left: "\\(", right: "\\)", display: false},
+                            {left: "\\[", right: "\\]", display: true}
+                        ],
+                        throwOnError: false,
+                        errorColor: '#ff6b6b',
+                        strict: false,
+                        trust: true,
+                        output: 'html'
                     });
                 }
 
