@@ -85,7 +85,7 @@ exports.handler = async (event) => {
                 const question = await base('Questions')
                     .select({
                         filterByFormula: filterFormula,
-                        fields: ['Photo', 'Record ID', 'LatexMarkdown clean', 'Diagrams', 'Test Number', 'Question Number']
+                        fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
                     })
                     .firstPage()
                     .then(records => {
@@ -99,9 +99,9 @@ exports.handler = async (event) => {
                         
                         if (!records[0]) return null;
                         
-                        let mathjaxContent = records[0].get('LatexMarkdown clean');
-                        if (mathjaxContent) {
-                            mathjaxContent = mathjaxContent
+                        let katexContent = records[0].get('KatexMarkdown');
+                        if (katexContent) {
+                            katexContent = katexContent
                                 .split('\n')  // Split into lines
                                 .map(line => {
                                     // For answer choices (lines starting with A.-E.)
@@ -129,7 +129,7 @@ exports.handler = async (event) => {
                         return {
                             id: records[0].get('Record ID'),
                             photo: records[0].get('Photo'),
-                            mathjax: mathjaxContent,
+                            mathjax: katexContent,
                             diagrams: records[0].get('Diagrams')
                         };
                     });
@@ -387,7 +387,7 @@ exports.handler = async (event) => {
                             filterByFormula: `FIND("${skillName}", ARRAYJOIN({Skill})) > 0`,
                             fields: [
                                 'Photo', 
-                                'LatexMarkdown',
+                                'KatexMarkdown',
                                 'Test Number', 
                                 'Question Number',
                                 'Answer'
@@ -400,7 +400,7 @@ exports.handler = async (event) => {
                     let allQuestions = questionRecords.map(record => ({
                         id: record.id,
                         photo: record.get('Photo'),
-                        latexMarkdown: record.get('LatexMarkdown'),
+                        latexMarkdown: record.get('KatexMarkdown'),
                         testNumber: record.get('Test Number'),
                         questionNumber: record.get('Question Number'),
                         answer: record.get('Answer'),
