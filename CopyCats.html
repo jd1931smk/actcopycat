@@ -186,6 +186,34 @@
             border-radius: 4px;
             border: 1px solid #444;
         }
+
+        /* Update styles */
+        .question-text {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #333;
+            border-radius: 4px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+        
+        .answer-choices {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .answer-choice {
+            background-color: #383838;
+            padding: 12px 15px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            font-size: 1.1em;
+        }
+        
+        .answer-choice:hover {
+            background-color: #404040;
+        }
     </style>
 </head>
 <body>
@@ -374,51 +402,55 @@
                     katexHeader.textContent = 'Clean Version';
                     katexSection.appendChild(katexHeader);
                     
-                    const katexContent = document.createElement('div');
-                    katexContent.className = 'katex-content';
+                    // Create a div for the question text
+                    const questionContent = document.createElement('div');
+                    questionContent.className = 'katex-content question-text';
                     
-                    // Format the KaTeX content to put answer choices on separate lines
+                    // Create a div for answer choices
+                    const answersContent = document.createElement('div');
+                    answersContent.className = 'answer-choices';
+                    
                     let formattedKatex = data.katex;
                     
-                    // Handle both A-E and F-K answer choices
-                    formattedKatex = formattedKatex.replace(/([A-E]\.|[FGHJK]\.)/g, '\n$1');  // Add newline before each answer choice
+                    // Split the content into question and answers
+                    const questionMatch = formattedKatex.match(/(\d+\.\s*.*?)(?=[A-E]\.|[FGHJK]\.)/s);
+                    if (questionMatch) {
+                        // Set the question text
+                        questionContent.textContent = questionMatch[1].trim();
+                        
+                        // Extract and format answer choices
+                        const answerMatches = formattedKatex.match(/([A-E]\.|[FGHJK]\.)[^A-E^F-K]*/g);
+                        if (answerMatches) {
+                            answerMatches.forEach(answer => {
+                                const answerDiv = document.createElement('div');
+                                answerDiv.className = 'answer-choice';
+                                answerDiv.textContent = answer.trim();
+                                answersContent.appendChild(answerDiv);
+                            });
+                        }
+                    } else {
+                        // Fallback if pattern doesn't match
+                        questionContent.textContent = formattedKatex;
+                    }
                     
-                    // Clean up any multiple spaces or newlines
-                    formattedKatex = formattedKatex
-                        .split(/\n+/)
-                        .map(line => line.trim())
-                        .filter(line => line)  // Remove empty lines
-                        .join('\n');
-                    
-                    // Add extra spacing after the question text
-                    formattedKatex = formattedKatex.replace(/(\d+\.)([^\n]+)/, '$1$2\n');
-                    
-                    katexContent.textContent = formattedKatex;
-                    
-                    katexSection.appendChild(katexContent);
+                    katexSection.appendChild(questionContent);
+                    katexSection.appendChild(answersContent);
                     container.appendChild(katexSection);
 
-                    // Initialize KaTeX rendering with all possible delimiters
-                    renderMathInElement(katexContent, {
-                        delimiters: [
-                            {left: "$$", right: "$$", display: true},
-                            {left: "$", right: "$", display: false},
-                            {left: "\\(", right: "\\)", display: false},
-                            {left: "\\[", right: "\\]", display: true},
-                            {left: "\\begin{equation}", right: "\\end{equation}", display: true},
-                            {left: "\\begin{align}", right: "\\end{align}", display: true},
-                            {left: "\\begin{alignat}", right: "\\end{alignat}", display: true},
-                            {left: "\\begin{gather}", right: "\\end{gather}", display: true},
-                            {left: "\\begin{CD}", right: "\\end{CD}", display: true}
-                        ],
-                        throwOnError: false,
-                        errorColor: '#ff6b6b',
-                        strict: false,
-                        trust: true,
-                        macros: {
-                            "\\f": "f(#1)",
-                            "\\degree": "^\\circ"
-                        }
+                    // Initialize KaTeX rendering for both question and answers
+                    [questionContent, ...answersContent.children].forEach(element => {
+                        renderMathInElement(element, {
+                            delimiters: [
+                                {left: "$$", right: "$$", display: true},
+                                {left: "$", right: "$", display: false},
+                                {left: "\\(", right: "\\)", display: false},
+                                {left: "\\[", right: "\\]", display: true}
+                            ],
+                            throwOnError: false,
+                            errorColor: '#ff6b6b',
+                            strict: false,
+                            trust: true
+                        });
                     });
                 }
 
