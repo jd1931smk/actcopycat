@@ -8,117 +8,111 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="initKaTeX()"></script>
     <style>
-        /* Base Styles */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #1e1e1e;
-            color: #f0f0f0;
-            margin: 0;
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #ffffff; 
             padding: 20px;
-        }
-        
-        .container {
-            max-width: 900px;
+            max-width: 1200px;
             margin: 0 auto;
         }
         
-        h1 {
+        .nav-links {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
             text-align: center;
-            color: #fff;
-            margin-bottom: 30px;
         }
         
-        /* Control Panel */
-        .control-panel {
-            background-color: #2d2d2d;
-            border-radius: 8px;
+        .nav-links a {
+            color: #1e8fb9;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .nav-links a:hover {
+            background-color: #e9ecef;
+        }
+        
+        .selection-area {
+            background-color: #1e8fb9;
             padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             margin-bottom: 30px;
+            border: 1px solid #177294;
+            color: white;
+        }
+        
+        h1 { 
+            color: #333;
+            margin-bottom: 20px;
         }
         
         .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
             margin-bottom: 15px;
         }
         
         .form-group label {
-            font-weight: bold;
-            color: #f0f0f0;
+            display: block;
+            margin-bottom: 5px;
+            color: white;
         }
         
-        select, button {
-            background-color: #333;
-            border: 1px solid #444;
-            color: #f0f0f0;
-            padding: 8px 12px;
+        select, button { 
+            margin: 5px 0; 
+            padding: 8px;
             border-radius: 4px;
-            font-size: 16px;
+            border: 1px solid #ccc;
+            background-color: white;
+            color: #333;
         }
         
         button {
-            background-color: #6557ed;
+            background-color: #177294;
+            color: white;
             border: none;
+            padding: 10px 20px;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: background-color 0.2s;
         }
         
         button:hover {
-            background-color: #7466ff;
+            background-color: #1e8fb9;
         }
         
-        /* Question Display */
         .questions-container {
-            background-color: #2b2b2b;
+            background-color: #f8f9fa;
             border-radius: 8px;
-            margin-bottom: 20px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            margin-top: 20px;
         }
         
-        .original-question {
-            margin-bottom: 30px;
-        }
-        
-        .photo-section, .katex-section {
-            margin-bottom: 20px;
-        }
-        
-        h4 {
-            color: #fff;
-            margin-bottom: 15px;
+        .katex-content {
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            margin-top: 10px;
         }
         
         img {
             max-width: 100%;
             height: auto;
             border-radius: 4px;
-            margin-bottom: 10px;
+            margin: 10px 0;
         }
         
-        .katex-content {
-            background-color: #333;
-            padding: 15px;
-            border-radius: 4px;
-            white-space: pre-wrap;
-        }
-        
-        /* Navigation Buttons */
-        .nav-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        
-        /* Loading Spinner */
         #spinner {
             display: none;
             width: 40px;
             height: 40px;
-            border: 4px solid rgba(255,255,255,0.1);
+            border: 4px solid rgba(0,0,0,0.1);
             border-radius: 50%;
-            border-top: 4px solid #6557ed;
+            border-top: 4px solid #1e8fb9;
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
@@ -127,38 +121,54 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .nav-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        h4 {
+            color: #1e8fb9;
+            margin: 15px 0 10px 0;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Corrected Clone Question LM Renderer</h1>
-        
-        <div class="control-panel">
-            <div class="form-group">
-                <label for="testNumberDropdown">Test Number:</label>
-                <select id="testNumberDropdown">
-                    <option value="">Select a test number</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="questionNumberDropdown">Question Number:</label>
-                <select id="questionNumberDropdown">
-                    <option value="">Select a question number</option>
-                </select>
-            </div>
-            
-            <button id="fetchButton">Fetch and Render</button>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="worksheet.html">Generate Worksheet</a>
+        <a href="explain.html">Explain Questions</a>
+    </div>
+    
+    <h1>Corrected Clone Question LM Renderer</h1>
+    
+    <div class="selection-area">
+        <div class="form-group">
+            <label for="testNumberDropdown">Test Number:</label>
+            <select id="testNumberDropdown">
+                <option value="">Select a test number</option>
+            </select>
         </div>
         
-        <div id="spinner"></div>
-        <div id="resultContainer"></div>
+        <div class="form-group">
+            <label for="questionNumberDropdown">Question Number:</label>
+            <select id="questionNumberDropdown">
+                <option value="">Select a question number</option>
+            </select>
+        </div>
+        
+        <button id="fetchButton">Fetch and Render</button>
         
         <div class="nav-buttons">
             <button id="previousButton">Previous</button>
             <button id="nextButton">Next</button>
         </div>
     </div>
+    
+    <div id="spinner"></div>
+    <div id="resultContainer"></div>
 
     <script>
         let currentTestNumber = '';
