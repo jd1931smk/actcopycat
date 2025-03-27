@@ -380,8 +380,8 @@
                     // Format the KaTeX content to put answer choices on separate lines
                     let formattedKatex = data.katex;
                     
-                    // First, ensure the question and answer choices are properly separated
-                    formattedKatex = formattedKatex.replace(/([FGHJK]\.)/g, '\n$1');  // Add newline before each answer choice
+                    // Handle both A-E and F-K answer choices
+                    formattedKatex = formattedKatex.replace(/([A-E]\.|[FGHJK]\.)/g, '\n$1');  // Add newline before each answer choice
                     
                     // Clean up any multiple spaces or newlines
                     formattedKatex = formattedKatex
@@ -389,6 +389,9 @@
                         .map(line => line.trim())
                         .filter(line => line)  // Remove empty lines
                         .join('\n');
+                    
+                    // Add extra spacing after the question text
+                    formattedKatex = formattedKatex.replace(/(\d+\.)([^\n]+)/, '$1$2\n');
                     
                     katexContent.textContent = formattedKatex;
                     
