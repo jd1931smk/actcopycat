@@ -41,13 +41,13 @@ exports.handler = async (event) => {
             case 'getTestNumbers':
                 console.log("Returning hardcoded test numbers...");
                 const testNumbers = [
-                    'A09',
+                    'A9',
                     'A10',
                     'A11',
-                    'B02',
-                    'B04',
-                    'D06',
-                    'Z04',
+                    'B2',
+                    'B4',
+                    'D6',
+                    'Z4',
                     'Z15'
                 ];
                 console.log("Final sorted test numbers:", testNumbers);
@@ -67,22 +67,11 @@ exports.handler = async (event) => {
                 if (!testNumber || !questionNumber) return formatResponse(400, 'Missing testNumber or questionNumber');
                 console.log(`Fetching Question Details for Test: ${testNumber}, Question: ${questionNumber}`);
                 
-                // Format test number consistently (e.g., A9 -> A09)
-                const formattedTestNumber = testNumber.replace(/^([A-Z])(\d)$/, '$10$2');
-                console.log('Formatted test number:', formattedTestNumber);
-                
                 // Create an array of possible test number formats
-                const testFormats = [
-                    formattedTestNumber,
-                    formattedTestNumber.replace(/^([A-Z])0/, '$1')  // Convert A09 to A9
-                ];
+                const testFormats = [testNumber];
+                console.log('Using test format:', testFormats);
                 
-                console.log('Trying test formats:', testFormats);
-                
-                const filterFormula = `OR(${testFormats.map(t => 
-                    `AND({Test Number} = '${t}', {Question Number} = ${questionNumber})`
-                ).join(',')})`;
-                
+                const filterFormula = `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`;
                 console.log('Using filter formula:', filterFormula);
                 
                 const question = await base('Questions')
