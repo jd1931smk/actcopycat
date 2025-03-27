@@ -39,50 +39,18 @@ exports.handler = async (event) => {
     try {
         switch (action) {
             case 'getTestNumbers':
-                console.log("Fetching Test Numbers...");
-                const testNumbers = await base('Questions')
-                    .select({
-                        fields: ['Test Number'],
-                        filterByFormula: "NOT({Test Number} = '')",
-                        sort: [{ field: 'Test Number', direction: 'asc' }]
-                    })
-                    .all()
-                    .then(records => {
-                        console.log("Raw Records:", records.map(r => r.fields));
-                        // Get all test numbers and remove duplicates
-                        const uniqueTestNumbers = [...new Set(records.map(r => {
-                            const testNum = r.get('Test Number');
-                            return testNum ? testNum.trim() : null;
-                        }).filter(Boolean))];
-                        
-                        console.log("Unique Test Numbers before sorting:", uniqueTestNumbers);
-                        
-                        // Custom sorting function for test numbers
-                        const sortedTestNumbers = uniqueTestNumbers.sort((a, b) => {
-                            // Extract numeric and letter parts
-                            const aMatch = a.match(/^(\d+)([A-Z]*)$/);
-                            const bMatch = b.match(/^(\d+)([A-Z]*)$/);
-                            
-                            if (!aMatch || !bMatch) {
-                                return a.localeCompare(b);
-                            }
-                            
-                            const [, aNum, aLetter] = aMatch;
-                            const [, bNum, bLetter] = bMatch;
-                            
-                            // Compare numeric parts first
-                            const numDiff = parseInt(aNum) - parseInt(bNum);
-                            if (numDiff !== 0) {
-                                return numDiff;
-                            }
-                            
-                            // If numbers are equal, compare letter parts
-                            return aLetter.localeCompare(bLetter);
-                        });
-                        
-                        console.log("Final sorted test numbers:", sortedTestNumbers);
-                        return sortedTestNumbers;
-                    });
+                console.log("Returning hardcoded test numbers...");
+                const testNumbers = [
+                    'A09',
+                    'A10',
+                    'A11',
+                    'B02',
+                    'B04',
+                    'D06',
+                    'Z04',
+                    'Z15'
+                ];
+                console.log("Final sorted test numbers:", testNumbers);
                 return formatResponse(200, testNumbers);
 
             case 'getQuestionNumbers':
