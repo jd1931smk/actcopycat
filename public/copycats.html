@@ -6,14 +6,26 @@
     <title>Corrected Clone Question LM Renderer</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="initKaTeX()"></script>
     <script>
         let currentTestNumber = '';
         let currentQuestionNumber = '';
-        let renderMathInElementFn = null;
 
-        document.addEventListener('DOMContentLoaded', function() {
+        function initKaTeX() {
+            // Wait for both KaTeX and auto-render to be loaded
+            if (typeof renderMathInElement === 'undefined') {
+                setTimeout(initKaTeX, 100);
+                return;
+            }
+
             // Initialize event listeners
+            initializeEventListeners();
+            
+            // Call populateTestNumbers when initialized
+            populateTestNumbers();
+        }
+
+        function initializeEventListeners() {
             document.getElementById('testNumberDropdown').addEventListener('change', function() {
                 const selectedTest = this.value;
                 if (selectedTest) {
@@ -32,9 +44,13 @@
             });
             
             document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
+        }
+
+        // Function to safely render math in an element
+        function renderMathInContainer(element) {
+            if (!element || typeof renderMathInElement !== 'function') return;
             
-            // Initialize KaTeX
-            renderMathInElementFn = function(element) {
+            try {
                 renderMathInElement(element, {
                     delimiters: [
                         {left: "$$", right: "$$", display: true},
@@ -46,11 +62,10 @@
                     errorColor: '#cc0000',
                     strict: false
                 });
-            };
-
-            // Call populateTestNumbers when initialized
-            populateTestNumbers();
-        });
+            } catch (error) {
+                console.error('Error rendering math:', error);
+            }
+        }
 
         async function fetchAndDisplayQuestion() {
             const testNumber = document.getElementById('testNumberDropdown').value;
@@ -108,47 +123,22 @@
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
                     katexContent.style.whiteSpace = 'pre-wrap';
-                    
-                    // Process the content line by line
-                    const lines = questionData.katex.split('\n');
-                    const processedLines = lines.map(line => {
-                        // For answer choices (lines starting with A.-E.)
-                        if (/^[A-E]\./.test(line)) {
-                            return line.replace(/^([A-E]\.) (.*)/, '$1 $2');
-                        }
-                        return line;
-                    });
-                    
-                    katexContent.textContent = processedLines.join('\n');
+                    katexContent.textContent = questionData.katex;
                     katexSection.appendChild(katexContent);
                     originalQuestion.appendChild(katexSection);
-
-                    // Render math in this section
-                    renderMathInElementFn(katexContent);
-                }
-
-                // Display diagrams if available
-                if (questionData.diagrams && questionData.diagrams.length > 0) {
-                    const diagramsSection = document.createElement('div');
-                    diagramsSection.className = 'diagrams-section';
-                    const diagramsHeader = document.createElement('h4');
-                    diagramsHeader.textContent = 'Diagrams:';
-                    diagramsSection.appendChild(diagramsHeader);
-                    questionData.diagrams.forEach(url => {
-                        const img = document.createElement('img');
-                        img.src = url;
-                        img.alt = 'Diagram';
-                        diagramsSection.appendChild(img);
-                    });
-                    originalQuestion.appendChild(diagramsSection);
                 }
 
                 questionsContainer.appendChild(originalQuestion);
                 resultContainer.innerHTML = '';
                 resultContainer.appendChild(questionsContainer);
 
-                // Render any math in the result container
-                renderMathInElementFn(resultContainer);
+                // Render math in the container after it's added to the DOM
+                if (questionData.katex) {
+                    const katexContent = resultContainer.querySelector('.katex-content');
+                    if (katexContent) {
+                        renderMathInContainer(katexContent);
+                    }
+                }
             } catch (error) {
                 console.error('Error:', error);
                 resultContainer.innerHTML = `Error: ${error.message}`;
