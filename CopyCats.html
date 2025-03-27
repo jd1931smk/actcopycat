@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Corrected Clone Question LM Renderer</title>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -292,59 +293,83 @@
     </style>
 </head>
 <body>
-    <h1>Corrected Clone Question LM Renderer</h1>
-    <div class="selection-area">
-        <div class="select-container">
-            <label for="testNumberDropdown">Test Number:</label>
-            <select id="testNumberDropdown">
-                <option value="">Select a test number</option>
-            </select>
-            <div id="testLoadingSpinner" class="spinner"></div>
+    <div class="container">
+        <nav class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="worksheet.html">Generate Worksheet</a>
+            <a href="explain.html">Explain Questions</a>
+        </nav>
+
+        <h1>Corrected Clone Question LM Renderer</h1>
+
+        <div class="selection-area">
+            <div class="form-group">
+                <label for="testNumberDropdown">Test Number:</label>
+                <select id="testNumberDropdown">
+                    <option value="">Select a test number</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="questionNumberDropdown">Question Number:</label>
+                <select id="questionNumberDropdown">
+                    <option value="">Select a question number</option>
+                </select>
+            </div>
+
+            <button id="fetchButton">Fetch and Render</button>
+
+            <div class="nav-buttons">
+                <button id="previousButton" onclick="navigateQuestion('prev')" disabled>Previous</button>
+                <button id="nextButton" onclick="navigateQuestion('next')" disabled>Next</button>
+            </div>
         </div>
-        <div class="select-container">
-            <label for="questionNumberDropdown">Question Number:</label>
-            <select id="questionNumberDropdown">
-                <option value="">Select a question number</option>
-            </select>
-            <div id="questionLoadingSpinner" class="spinner"></div>
-        </div>
-        <button id="fetchButton">Fetch and Render</button>
-        <div class="navigation-buttons">
-            <button id="prevButton" class="nav-button" onclick="navigateQuestion('prev')" disabled>Previous</button>
-            <button id="nextButton" class="nav-button" onclick="navigateQuestion('next')" disabled>Next</button>
-        </div>
+
+        <div id="spinner"></div>
+        <div id="resultContainer"></div>
     </div>
-    <div id="resultContainer"></div>
 
     <script>
-        let currentQuestionNumbers = [];
-        let currentQuestionIndex = -1;
+        let currentTestNumber = '';
+        let currentQuestionNumber = '';
 
-        // Show/hide loading spinner functions
-        function showTestSpinner() {
-            document.getElementById('testLoadingSpinner').style.display = 'inline-block';
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+            populateTestNumbers();
+        });
+
+        function initializeEventListeners() {
+            document.getElementById('testNumberDropdown').addEventListener('change', function() {
+                const selectedTest = this.value;
+                if (selectedTest) {
+                    currentTestNumber = selectedTest;
+                    currentQuestionNumber = '';
+                    populateQuestionNumbers(selectedTest);
+                }
+            });
+            
+            document.getElementById('questionNumberDropdown').addEventListener('change', function() {
+                const selectedQuestion = this.value;
+                if (selectedQuestion) {
+                    currentQuestionNumber = selectedQuestion;
+                    updateNavigationButtons();
+                }
+            });
+            
+            document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
         }
 
-        function hideTestSpinner() {
-            document.getElementById('testLoadingSpinner').style.display = 'none';
-        }
-
-        function showQuestionSpinner() {
-            document.getElementById('questionLoadingSpinner').style.display = 'inline-block';
-        }
-
-        function hideQuestionSpinner() {
-            document.getElementById('questionLoadingSpinner').style.display = 'none';
-        }
-
-        // Modify populateTestNumbers to use spinner
         async function populateTestNumbers() {
-            showTestSpinner();
+            const dropdown = document.getElementById('testNumberDropdown');
+            dropdown.innerHTML = '<option value="">Select a test number</option>';
+            
             try {
                 const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const testNumbers = await response.json();
-                const dropdown = document.getElementById('testNumberDropdown');
+                
                 testNumbers.forEach(testNumber => {
                     const option = document.createElement('option');
                     option.value = testNumber;
@@ -353,256 +378,136 @@
                 });
             } catch (error) {
                 console.error('Error fetching test numbers:', error);
-                alert('Failed to load test numbers. Check console.');
-            } finally {
-                hideTestSpinner();
+                alert('Error loading test numbers. Please refresh the page to try again.');
             }
         }
 
-        async function fetchQuestionNumbers(testNumber) {
-            try {
-                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${testNumber}`);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                currentQuestionNumbers = data.sort((a, b) => parseInt(a) - parseInt(b));
-                return currentQuestionNumbers;
-            } catch (error) {
-                console.error('Error fetching question numbers:', error);
-                return [];
-            }
-        }
-
-        async function updateNavigationState() {
-            const prevButton = document.getElementById('prevButton');
-            const nextButton = document.getElementById('nextButton');
-            
-            prevButton.disabled = currentQuestionIndex <= 0;
-            nextButton.disabled = currentQuestionIndex >= currentQuestionNumbers.length - 1;
-        }
-
-        async function navigateQuestion(direction) {
-            const questionSelect = document.getElementById('questionNumberDropdown');
-            
-            if (direction === 'next' && currentQuestionIndex < currentQuestionNumbers.length - 1) {
-                currentQuestionIndex++;
-            } else if (direction === 'prev' && currentQuestionIndex > 0) {
-                currentQuestionIndex--;
-            }
-            
-            questionSelect.value = currentQuestionNumbers[currentQuestionIndex];
-            
-            // Automatically fetch and render the new question
-            const testNumber = document.getElementById('testNumberDropdown').value;
-            const questionNumber = currentQuestionNumbers[currentQuestionIndex];
-            const container = document.getElementById('resultContainer');
-            container.innerHTML = '<p>Loading...</p>';
-
-            try {
-                // Get question details
-                const questionResponse = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
-                if (!questionResponse.ok) throw new Error(`HTTP ${questionResponse.status}`);
-                const questionData = await questionResponse.json();
-                if (!questionData) throw new Error('Question not found');
-                const photoUrl = questionData.photo ? questionData.photo[0].url : null;
-
-                // Get clone questions
-                const clonesResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}&field=Corrected Clone Question LM`);
-                if (!clonesResponse.ok) throw new Error(`HTTP ${clonesResponse.status}`);
-                const clones = await clonesResponse.json();
-
-                // Render content
-                container.innerHTML = '';
-                
-                // Create questions container
-                const questionsContainer = document.createElement('div');
-                questionsContainer.className = 'questions-container';
-                container.appendChild(questionsContainer);
-
-                // Create columns
-                const leftColumn = document.createElement('div');
-                leftColumn.className = 'question-column';
-                const rightColumn = document.createElement('div');
-                rightColumn.className = 'question-column';
-                questionsContainer.appendChild(leftColumn);
-                questionsContainer.appendChild(rightColumn);
-
-                // Create array of all questions (original + clones)
-                const allQuestions = [];
-
-                // Add original question
-                const originalQuestionCard = document.createElement('div');
-                originalQuestionCard.className = 'question-card';
-                originalQuestionCard.innerHTML = '<h2>Original Question</h2>';
-                if (photoUrl) {
-                    const img = document.createElement('img');
-                    img.src = photoUrl;
-                    img.alt = 'Original Question Photo';
-                    originalQuestionCard.appendChild(img);
-                } else {
-                    originalQuestionCard.innerHTML += '<p>No photo available.</p>';
-                }
-                allQuestions.push(originalQuestionCard);
-
-                // Add clone questions
-                if (clones && clones.length > 0) {
-                    clones.forEach(item => {
-                        const cloneCard = document.createElement('div');
-                        cloneCard.className = 'question-card clone-card';
-                        
-                        const modelHeader = document.createElement('h3');
-                        modelHeader.textContent = item.model || 'No Model';
-                        cloneCard.appendChild(modelHeader);
-
-                        const questionText = document.createElement('div');
-                        questionText.innerHTML = item.clone ? item.clone.replace(/(\r\n|\n|\r)/g, '<br>') : 'No clone available';
-                        cloneCard.appendChild(questionText);
-
-                        allQuestions.push(cloneCard);
-                    });
-
-                    // Distribute questions evenly between columns
-                    const midpoint = Math.ceil(allQuestions.length / 2);
-                    allQuestions.slice(0, midpoint).forEach(card => leftColumn.appendChild(card));
-                    allQuestions.slice(midpoint).forEach(card => rightColumn.appendChild(card));
-
-                    MathJax.typesetPromise([container]).catch(err => console.error("MathJax Error:", err));
-                } else {
-                    container.innerHTML = '<p>No clone questions found.</p>';
-                }
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                container.innerHTML = `<p>Error: ${error.message}. Check console for details.</p>`;
-            }
-            
-            updateNavigationState();
-        }
-
-        // Modify test number change handler to use spinner
-        document.getElementById('testNumberDropdown').addEventListener('change', async () => {
-            const testNumber = document.getElementById('testNumberDropdown').value;
+        async function populateQuestionNumbers(testNumber) {
             const dropdown = document.getElementById('questionNumberDropdown');
             dropdown.innerHTML = '<option value="">Select a question number</option>';
-            if (!testNumber) return;
-
-            showQuestionSpinner();
+            
             try {
-                currentQuestionNumbers = await fetchQuestionNumbers(testNumber);
-                currentQuestionIndex = -1;
+                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const questionNumbers = await response.json();
                 
-                currentQuestionNumbers.forEach(qn => {
+                questionNumbers.forEach(number => {
                     const option = document.createElement('option');
-                    option.value = qn;
-                    option.textContent = qn;
+                    option.value = number;
+                    option.textContent = number;
                     dropdown.appendChild(option);
                 });
-                
-                updateNavigationState();
             } catch (error) {
                 console.error('Error fetching question numbers:', error);
-                alert('Failed to load question numbers. Check console.');
-            } finally {
-                hideQuestionSpinner();
+                alert('Error loading question numbers. Please try selecting a different test number.');
             }
-        });
+        }
 
-        // Modify the existing questionNumber onchange handler
-        document.getElementById('questionNumberDropdown').addEventListener('change', function() {
-            currentQuestionIndex = currentQuestionNumbers.indexOf(this.value);
-            updateNavigationState();
-        });
+        function updateNavigationButtons() {
+            const questionDropdown = document.getElementById('questionNumberDropdown');
+            const prevButton = document.getElementById('previousButton');
+            const nextButton = document.getElementById('nextButton');
+            
+            const currentIndex = Array.from(questionDropdown.options).findIndex(option => option.value === currentQuestionNumber);
+            
+            prevButton.disabled = currentIndex <= 1;
+            nextButton.disabled = currentIndex === -1 || currentIndex === questionDropdown.options.length - 1;
+        }
 
-        // Fetch and Render Data
-        document.getElementById('fetchButton').addEventListener('click', async () => {
+        function navigateQuestion(direction) {
+            const questionDropdown = document.getElementById('questionNumberDropdown');
+            const currentIndex = Array.from(questionDropdown.options).findIndex(option => option.value === currentQuestionNumber);
+            
+            if (currentIndex === -1) return;
+            
+            const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+            if (newIndex > 0 && newIndex < questionDropdown.options.length) {
+                questionDropdown.value = questionDropdown.options[newIndex].value;
+                currentQuestionNumber = questionDropdown.value;
+                updateNavigationButtons();
+                fetchAndDisplayQuestion();
+            }
+        }
+
+        async function fetchAndDisplayQuestion() {
             const testNumber = document.getElementById('testNumberDropdown').value;
             const questionNumber = document.getElementById('questionNumberDropdown').value;
-            const container = document.getElementById('resultContainer');
-            container.innerHTML = '<p>Loading...</p>';
+            const resultContainer = document.getElementById('resultContainer');
+            const spinner = document.getElementById('spinner');
 
             if (!testNumber || !questionNumber) {
-                container.innerHTML = '<p>Please select both a test number and question number.</p>';
+                alert('Please select both a test number and question number.');
                 return;
             }
 
+            spinner.style.display = 'block';
+            resultContainer.innerHTML = '';
+
             try {
-                // Get question details
-                const questionResponse = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
-                if (!questionResponse.ok) throw new Error(`HTTP ${questionResponse.status}`);
-                const questionData = await questionResponse.json();
-                if (!questionData) throw new Error('Question not found');
-                const photoUrl = questionData.photo ? questionData.photo[0].url : null;
+                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                const data = await response.json();
 
-                // Get clone questions
-                const clonesResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}&field=Corrected Clone Question LM`);
-                if (!clonesResponse.ok) throw new Error(`HTTP ${clonesResponse.status}`);
-                const clones = await clonesResponse.json();
-
-                // Render content
-                container.innerHTML = '';
-                
-                // Create questions container
-                const questionsContainer = document.createElement('div');
-                questionsContainer.className = 'questions-container';
-                container.appendChild(questionsContainer);
-
-                // Create columns
-                const leftColumn = document.createElement('div');
-                leftColumn.className = 'question-column';
-                const rightColumn = document.createElement('div');
-                rightColumn.className = 'question-column';
-                questionsContainer.appendChild(leftColumn);
-                questionsContainer.appendChild(rightColumn);
-
-                // Create array of all questions (original + clones)
-                const allQuestions = [];
-
-                // Add original question
-                const originalQuestionCard = document.createElement('div');
-                originalQuestionCard.className = 'question-card';
-                originalQuestionCard.innerHTML = '<h2>Original Question</h2>';
-                if (photoUrl) {
-                    const img = document.createElement('img');
-                    img.src = photoUrl;
-                    img.alt = 'Original Question Photo';
-                    originalQuestionCard.appendChild(img);
-                } else {
-                    originalQuestionCard.innerHTML += '<p>No photo available.</p>';
+                if (!data || response.status === 404) {
+                    resultContainer.innerHTML = 'Question not found';
+                    return;
                 }
-                allQuestions.push(originalQuestionCard);
 
-                // Add clone questions
-                if (clones && clones.length > 0) {
-                    clones.forEach(item => {
-                        const cloneCard = document.createElement('div');
-                        cloneCard.className = 'question-card clone-card';
-                        
-                        const modelHeader = document.createElement('h3');
-                        modelHeader.textContent = item.model || 'No Model';
-                        cloneCard.appendChild(modelHeader);
+                const container = document.createElement('div');
+                container.className = 'questions-container';
 
-                        const questionText = document.createElement('div');
-                        questionText.innerHTML = item.clone ? item.clone.replace(/(\r\n|\n|\r)/g, '<br>') : 'No clone available';
-                        cloneCard.appendChild(questionText);
-
-                        allQuestions.push(cloneCard);
+                if (data.photo && data.photo.length > 0) {
+                    const photoSection = document.createElement('div');
+                    photoSection.className = 'section';
+                    const photoHeader = document.createElement('h4');
+                    photoHeader.textContent = 'Original Image';
+                    photoSection.appendChild(photoHeader);
+                    
+                    data.photo.forEach(photo => {
+                        const img = document.createElement('img');
+                        img.src = photo.url;
+                        img.alt = 'Question Image';
+                        photoSection.appendChild(img);
                     });
-
-                    // Distribute questions evenly between columns
-                    const midpoint = Math.ceil(allQuestions.length / 2);
-                    allQuestions.slice(0, midpoint).forEach(card => leftColumn.appendChild(card));
-                    allQuestions.slice(midpoint).forEach(card => rightColumn.appendChild(card));
-
-                    MathJax.typesetPromise([container]).catch(err => console.error("MathJax Error:", err));
-                } else {
-                    container.innerHTML = '<p>No clone questions found.</p>';
+                    container.appendChild(photoSection);
                 }
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                container.innerHTML = `<p>Error: ${error.message}. Check console for details.</p>`;
-            }
-        });
 
-        // Call populateTestNumbers when the page loads
-        window.addEventListener('load', populateTestNumbers);
+                if (data.katex) {
+                    const katexSection = document.createElement('div');
+                    katexSection.className = 'section';
+                    const katexHeader = document.createElement('h4');
+                    katexHeader.textContent = 'Clean Version';
+                    katexSection.appendChild(katexHeader);
+                    
+                    const katexContent = document.createElement('div');
+                    katexContent.className = 'katex-content';
+                    katexContent.textContent = data.katex;
+                    katexSection.appendChild(katexContent);
+                    container.appendChild(katexSection);
+
+                    // Initialize KaTeX rendering with all possible delimiters
+                    renderMathInElement(katexContent, {
+                        delimiters: [
+                            {left: "$$", right: "$$", display: true},
+                            {left: "$", right: "$", display: false},
+                            {left: "\\(", right: "\\)", display: false},
+                            {left: "\\[", right: "\\]", display: true}
+                        ],
+                        throwOnError: false,
+                        output: 'html',
+                        strict: false
+                    });
+                }
+
+                resultContainer.appendChild(container);
+            } catch (error) {
+                console.error('Error:', error);
+                resultContainer.innerHTML = `Error: ${error.message}`;
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>
