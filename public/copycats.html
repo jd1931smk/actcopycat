@@ -9,23 +9,16 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <style>
         body { 
-            font-family: Arial, sans-serif; 
-            background-color: #f0f2f5;
-            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #2f3437;
+            color: #e8e6e3;
             padding: 20px;
-        }
-
-        .container {
             max-width: 1200px;
             margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .nav-links {
-            background-color: #1e8fb9;
+            background-color: #3b4043;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
@@ -33,7 +26,7 @@
         }
 
         .nav-links a {
-            color: white;
+            color: #e8e6e3;
             text-decoration: none;
             margin: 0 15px;
             padding: 8px 15px;
@@ -42,22 +35,22 @@
         }
 
         .nav-links a:hover {
-            background-color: rgba(255,255,255,0.2);
+            background-color: #4a4f52;
         }
 
         h1 {
-            color: #1e8fb9;
+            color: #e8e6e3;
             text-align: center;
             margin: 0 0 30px 0;
             font-size: 2em;
         }
 
         .selection-area {
-            background-color: #1e8fb9;
+            background-color: #3b4043;
             padding: 25px;
             border-radius: 8px;
             margin-bottom: 30px;
-            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .form-group {
@@ -72,22 +65,22 @@
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
-            color: white;
+            color: #e8e6e3;
         }
 
         select {
             width: 100%;
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #4a4f52;
             border-radius: 4px;
-            background-color: white;
-            color: #333;
+            background-color: #2f3437;
+            color: #e8e6e3;
             font-size: 16px;
         }
 
         button {
-            background-color: #177294;
-            color: white;
+            background-color: #4a4f52;
+            color: #e8e6e3;
             border: none;
             padding: 12px 25px;
             border-radius: 4px;
@@ -98,28 +91,28 @@
         }
 
         button:hover:not(:disabled) {
-            background-color: #1e8fb9;
+            background-color: #5a5f62;
         }
 
         button:disabled {
-            background-color: #cccccc;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
         .questions-container {
-            background-color: white;
+            background-color: #3b4043;
             border-radius: 8px;
             padding: 25px;
             margin-top: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .section {
-            background-color: #f8f9fa;
+            background-color: #4a4f52;
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
-            border: 1px solid #e9ecef;
+            border: 1px solid #5a5f62;
         }
 
         .section:last-child {
@@ -127,10 +120,10 @@
         }
 
         .section h4 {
-            color: #1e8fb9;
+            color: #e8e6e3;
             margin: 0 0 15px 0;
             font-size: 1.2em;
-            border-bottom: 2px solid #1e8fb9;
+            border-bottom: 2px solid #5a5f62;
             padding-bottom: 8px;
         }
 
@@ -140,24 +133,25 @@
             display: block;
             margin: 10px auto;
             border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .katex-content {
-            background-color: white;
+            background-color: #4a4f52;
             padding: 20px;
             border-radius: 4px;
             font-size: 1.1em;
             line-height: 1.6;
-            border: 1px solid #e9ecef;
+            border: 1px solid #5a5f62;
+            color: #e8e6e3;
         }
 
         #spinner {
             display: none;
             width: 50px;
             height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #1e8fb9;
+            border: 5px solid #3b4043;
+            border-top: 5px solid #5a5f62;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 20px auto;
@@ -194,61 +188,47 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <nav class="nav-links">
-            <a href="index.html">Home</a>
-            <a href="worksheet.html">Generate Worksheet</a>
-            <a href="explain.html">Explain Questions</a>
-        </nav>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="worksheet.html">Generate Worksheet</a>
+        <a href="explain.html">Explain Questions</a>
+    </div>
 
-        <h1>Corrected Clone Question LM Renderer</h1>
+    <h1>Corrected Clone Question LM Renderer</h1>
 
-        <div class="selection-area">
-            <div class="form-group">
-                <label for="testNumberDropdown">Test Number:</label>
-                <select id="testNumberDropdown">
-                    <option value="">Select a test number</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="questionNumberDropdown">Question Number:</label>
-                <select id="questionNumberDropdown">
-                    <option value="">Select a question number</option>
-                </select>
-            </div>
-
-            <button id="fetchButton">Fetch and Render</button>
-
-            <div class="nav-buttons">
-                <button id="previousButton" onclick="navigateQuestion('prev')" disabled>Previous</button>
-                <button id="nextButton" onclick="navigateQuestion('next')" disabled>Next</button>
-            </div>
+    <div class="selection-area">
+        <div class="form-group">
+            <label for="testNumberDropdown">Test Number:</label>
+            <select id="testNumberDropdown">
+                <option value="">Select a test number</option>
+            </select>
         </div>
 
-        <div id="spinner"></div>
-        <div id="resultContainer"></div>
+        <div class="form-group">
+            <label for="questionNumberDropdown">Question Number:</label>
+            <select id="questionNumberDropdown">
+                <option value="">Select a question number</option>
+            </select>
+        </div>
+
+        <button id="fetchButton">Fetch and Render</button>
+
+        <div class="nav-buttons">
+            <button id="previousButton" onclick="navigateQuestion('prev')" disabled>Previous</button>
+            <button id="nextButton" onclick="navigateQuestion('next')" disabled>Next</button>
+        </div>
     </div>
+
+    <div id="spinner"></div>
+    <div id="resultContainer"></div>
 
     <script>
         let currentTestNumber = '';
         let currentQuestionNumber = '';
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize KaTeX
-            if (typeof renderMathInElement === 'function') {
-                initializeEventListeners();
-                populateTestNumbers();
-            } else {
-                // Wait for KaTeX to load
-                const checkKaTeX = setInterval(function() {
-                    if (typeof renderMathInElement === 'function') {
-                        clearInterval(checkKaTeX);
-                        initializeEventListeners();
-                        populateTestNumbers();
-                    }
-                }, 100);
-            }
+            initializeEventListeners();
+            populateTestNumbers();
         });
 
         function initializeEventListeners() {
@@ -260,17 +240,88 @@
                     populateQuestionNumbers(selectedTest);
                 }
             });
-            
+
             document.getElementById('questionNumberDropdown').addEventListener('change', function() {
                 const selectedQuestion = this.value;
                 if (selectedQuestion) {
                     currentQuestionNumber = selectedQuestion;
                     updateNavigationButtons();
-                    fetchAndDisplayQuestion();
                 }
             });
-            
+
             document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
+        }
+
+        async function populateTestNumbers() {
+            const dropdown = document.getElementById('testNumberDropdown');
+            dropdown.innerHTML = '<option value="">Select a test number</option>';
+            
+            try {
+                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const testNumbers = await response.json();
+                
+                testNumbers.forEach(testNumber => {
+                    const option = document.createElement('option');
+                    option.value = testNumber;
+                    option.textContent = testNumber;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching test numbers:', error);
+                alert('Error loading test numbers. Please refresh the page to try again.');
+            }
+        }
+
+        async function populateQuestionNumbers(testNumber) {
+            const dropdown = document.getElementById('questionNumberDropdown');
+            dropdown.innerHTML = '<option value="">Select a question number</option>';
+            
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const questionNumbers = await response.json();
+                
+                questionNumbers.forEach(number => {
+                    const option = document.createElement('option');
+                    option.value = number;
+                    option.textContent = number;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching question numbers:', error);
+                alert('Error loading question numbers. Please try selecting a different test number.');
+            }
+        }
+
+        function updateNavigationButtons() {
+            const questionDropdown = document.getElementById('questionNumberDropdown');
+            const prevButton = document.getElementById('previousButton');
+            const nextButton = document.getElementById('nextButton');
+            
+            const currentIndex = Array.from(questionDropdown.options).findIndex(option => option.value === currentQuestionNumber);
+            
+            prevButton.disabled = currentIndex <= 1;
+            nextButton.disabled = currentIndex === -1 || currentIndex === questionDropdown.options.length - 1;
+        }
+
+        function navigateQuestion(direction) {
+            const questionDropdown = document.getElementById('questionNumberDropdown');
+            const currentIndex = Array.from(questionDropdown.options).findIndex(option => option.value === currentQuestionNumber);
+            
+            if (currentIndex === -1) return;
+            
+            const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+            if (newIndex > 0 && newIndex < questionDropdown.options.length) {
+                questionDropdown.value = questionDropdown.options[newIndex].value;
+                currentQuestionNumber = questionDropdown.value;
+                updateNavigationButtons();
+                fetchAndDisplayQuestion();
+            }
         }
 
         async function fetchAndDisplayQuestion() {
@@ -299,7 +350,6 @@
                 const container = document.createElement('div');
                 container.className = 'questions-container';
 
-                // Display original image if available
                 if (data.photo && data.photo.length > 0) {
                     const photoSection = document.createElement('div');
                     photoSection.className = 'section';
@@ -316,7 +366,6 @@
                     container.appendChild(photoSection);
                 }
 
-                // Display KaTeX content
                 if (data.katex) {
                     const katexSection = document.createElement('div');
                     katexSection.className = 'section';
@@ -331,26 +380,8 @@
                     container.appendChild(katexSection);
                 }
 
-                // Display diagrams if available
-                if (data.diagrams && data.diagrams.length > 0) {
-                    const diagramsSection = document.createElement('div');
-                    diagramsSection.className = 'section';
-                    const diagramsHeader = document.createElement('h4');
-                    diagramsHeader.textContent = 'Diagrams';
-                    diagramsSection.appendChild(diagramsHeader);
-                    
-                    data.diagrams.forEach(diagram => {
-                        const img = document.createElement('img');
-                        img.src = diagram.url || diagram; // Handle both object and string formats
-                        img.alt = 'Diagram';
-                        diagramsSection.appendChild(img);
-                    });
-                    container.appendChild(diagramsSection);
-                }
-
                 resultContainer.appendChild(container);
 
-                // Render KaTeX after adding to DOM
                 if (data.katex) {
                     renderMathInElement(document.querySelector('.katex-content'), {
                         delimiters: [
@@ -369,99 +400,6 @@
             } finally {
                 spinner.style.display = 'none';
             }
-        }
-
-        // Function to populate test numbers dropdown
-        async function populateTestNumbers() {
-            const dropdown = document.getElementById('testNumberDropdown');
-            dropdown.innerHTML = '<option value="">Select a test number</option>';
-            
-            try {
-                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const testNumbers = await response.json();
-                
-                // Add the test numbers to the dropdown
-                testNumbers.forEach(testNumber => {
-                    const option = document.createElement('option');
-                    option.value = testNumber;
-                    option.textContent = testNumber;
-                    dropdown.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error fetching test numbers:', error);
-                alert('Error loading test numbers. Please refresh the page to try again.');
-            }
-        }
-        
-        // Function to populate question numbers dropdown
-        async function populateQuestionNumbers(testNumber) {
-            if (!testNumber) return;
-            
-            try {
-                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const questionNumbers = await response.json();
-                const dropdown = document.getElementById('questionNumberDropdown');
-                
-                // Clear existing options except the first one
-                dropdown.innerHTML = '<option value="">Select a question number</option>';
-                
-                // Sort question numbers numerically
-                questionNumbers.sort((a, b) => parseInt(a) - parseInt(b));
-                
-                // Add new options
-                questionNumbers.forEach(questionNumber => {
-                    const option = document.createElement('option');
-                    option.value = questionNumber;
-                    option.textContent = questionNumber;
-                    dropdown.appendChild(option);
-                });
-                
-                // If there was a previously selected question number, try to restore it
-                if (currentQuestionNumber) {
-                    dropdown.value = currentQuestionNumber;
-                }
-                
-                // Enable/disable navigation buttons
-                updateNavigationButtons();
-            } catch (error) {
-                console.error('Error fetching question numbers:', error);
-                alert('Error loading question numbers. Please try selecting a different test number.');
-            }
-        }
-        
-        // Function to update navigation buttons
-        function updateNavigationButtons() {
-            const questionDropdown = document.getElementById('questionNumberDropdown');
-            const prevButton = document.getElementById('previousButton');
-            const nextButton = document.getElementById('nextButton');
-            
-            const currentIndex = questionDropdown.selectedIndex;
-            
-            // Enable/disable previous button
-            prevButton.disabled = currentIndex <= 1;
-            
-            // Enable/disable next button
-            nextButton.disabled = currentIndex >= questionDropdown.options.length - 1;
-        }
-        
-        // Function to navigate between questions
-        function navigateQuestion(direction) {
-            const questionDropdown = document.getElementById('questionNumberDropdown');
-            const currentIndex = questionDropdown.selectedIndex;
-            
-            if (direction === 'prev' && currentIndex > 1) {
-                questionDropdown.selectedIndex = currentIndex - 1;
-            } else if (direction === 'next' && currentIndex < questionDropdown.options.length - 1) {
-                questionDropdown.selectedIndex = currentIndex + 1;
-            }
-            
-            fetchAndDisplayQuestion();
         }
     </script>
 </body>
