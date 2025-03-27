@@ -6,29 +6,14 @@
     <title>Corrected Clone Question LM Renderer</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="initKaTeX()"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script>
-        function initKaTeX() {
-            window.renderMathInElement = function(element) {
-                renderMathInElement(element, {
-                    delimiters: [
-                        {left: "$$", right: "$$", display: true},
-                        {left: "$", right: "$", display: false},
-                        {left: "\\(", right: "\\)", display: false},
-                        {left: "\\[", right: "\\]", display: true}
-                    ],
-                    throwOnError: false,
-                    errorColor: '#cc0000',
-                    strict: false
-                });
-            };
+        let currentTestNumber = '';
+        let currentQuestionNumber = '';
+        let renderMathInElementFn = null;
 
-            // Initialize event listeners after KaTeX is loaded
-            initializeEventListeners();
-        }
-
-        function initializeEventListeners() {
-            // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize event listeners
             document.getElementById('testNumberDropdown').addEventListener('change', function() {
                 const selectedTest = this.value;
                 if (selectedTest) {
@@ -48,9 +33,24 @@
             
             document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
             
+            // Initialize KaTeX
+            renderMathInElementFn = function(element) {
+                renderMathInElement(element, {
+                    delimiters: [
+                        {left: "$$", right: "$$", display: true},
+                        {left: "$", right: "$", display: false},
+                        {left: "\\(", right: "\\)", display: false},
+                        {left: "\\[", right: "\\]", display: true}
+                    ],
+                    throwOnError: false,
+                    errorColor: '#cc0000',
+                    strict: false
+                });
+            };
+
             // Call populateTestNumbers when initialized
             populateTestNumbers();
-        }
+        });
 
         async function fetchAndDisplayQuestion() {
             const testNumber = document.getElementById('testNumberDropdown').value;
@@ -124,7 +124,7 @@
                     originalQuestion.appendChild(katexSection);
 
                     // Render math in this section
-                    window.renderMathInElement(katexContent);
+                    renderMathInElementFn(katexContent);
                 }
 
                 // Display diagrams if available
@@ -148,7 +148,7 @@
                 resultContainer.appendChild(questionsContainer);
 
                 // Render any math in the result container
-                window.renderMathInElement(resultContainer);
+                renderMathInElementFn(resultContainer);
             } catch (error) {
                 console.error('Error:', error);
                 resultContainer.innerHTML = `Error: ${error.message}`;
@@ -157,14 +157,12 @@
             }
         }
 
-        let currentTestNumber = '';
-        let currentQuestionNumber = '';
-        
         // Function to populate test numbers dropdown
         async function populateTestNumbers() {
             const dropdown = document.getElementById('testNumberDropdown');
             dropdown.innerHTML = '<option value="">Select a test number</option>';
-            document.getElementById('testLoadingSpinner').style.display = 'inline-block';
+            const spinner = document.getElementById('testLoadingSpinner');
+            if (spinner) spinner.style.display = 'inline-block';
             
             try {
                 const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
@@ -184,7 +182,7 @@
                 console.error('Error fetching test numbers:', error);
                 alert('Error loading test numbers. Please refresh the page to try again.');
             } finally {
-                document.getElementById('testLoadingSpinner').style.display = 'none';
+                if (spinner) spinner.style.display = 'none';
             }
         }
         
