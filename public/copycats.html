@@ -376,8 +376,12 @@
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
                     
-                    // Split content into question and answers
+                    // Format matrices properly
                     let content = data.katex;
+                    
+                    // Convert matrix notation to proper LaTeX
+                    content = content.replace(/\[\s*(-?\d+)\s+(-?\d+)\s*\]/g, '\\begin{bmatrix}$1 & $2\\end{bmatrix}');
+                    content = content.replace(/\[\s*(-?\d+)\s+(-?\d+)\s*(-?\d+)\s+(-?\d+)\s*\]/g, '\\begin{bmatrix}$1 & $2 \\\\ $3 & $4\\end{bmatrix}');
                     
                     // First get the question text (everything up to first A. or F.)
                     const questionMatch = content.match(/^\d+\..*?(?=(?:[AF]\.)|$)/s);
@@ -403,13 +407,18 @@
                             {left: "$$", right: "$$", display: true},
                             {left: "$", right: "$", display: false},
                             {left: "\\(", right: "\\)", display: false},
-                            {left: "\\[", right: "\\]", display: true}
+                            {left: "\\[", right: "\\]", display: true},
+                            {left: "[", right: "]", display: false},
+                            {left: "\\begin{matrix}", right: "\\end{matrix}", display: true},
+                            {left: "\\begin{pmatrix}", right: "\\end{pmatrix}", display: true},
+                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                         ],
                         throwOnError: false,
                         errorColor: '#ff6b6b',
                         strict: false,
                         trust: true,
-                        output: 'html'
+                        output: 'html',
+                        displayMode: true
                     });
                 }
 
