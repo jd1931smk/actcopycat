@@ -409,25 +409,22 @@
                     const answersContainer = document.createElement('div');
                     answersContainer.className = 'answer-choices';
                     
-                    // Split content by line breaks
-                    const lines = data.katex.split('\n');
+                    // Process the content
+                    let content = data.katex;
                     
-                    // Find where answers start (usually after a line with | character)
-                    const answerStartIndex = lines.findIndex(line => line.includes('|'));
+                    // Split into question and answers
+                    const parts = content.split(/(?=[A-E]\.\s)/);
                     
-                    // Join question lines
-                    const questionContent = lines.slice(0, answerStartIndex).join('\n');
-                    questionText.textContent = questionContent;
+                    // Handle the question part (including any tables)
+                    const questionPart = parts[0].trim();
+                    questionText.innerHTML = questionPart;
                     
-                    // Process answers
-                    const answerLines = lines.slice(answerStartIndex);
-                    answerLines.forEach(line => {
-                        if (line.trim()) {
-                            const answerDiv = document.createElement('div');
-                            answerDiv.className = 'answer-choice';
-                            answerDiv.textContent = line.trim();
-                            answersContainer.appendChild(answerDiv);
-                        }
+                    // Process each answer choice
+                    parts.slice(1).forEach(answer => {
+                        const answerDiv = document.createElement('div');
+                        answerDiv.className = 'answer-choice';
+                        answerDiv.innerHTML = answer.trim();
+                        answersContainer.appendChild(answerDiv);
                     });
                     
                     // Add to page
@@ -440,12 +437,14 @@
                         delimiters: [
                             {left: "\\[", right: "\\]", display: true},
                             {left: "\\(", right: "\\)", display: false},
-                            {left: "$", right: "$", display: false}
+                            {left: "$", right: "$", display: false},
+                            {left: "\\begin{array}", right: "\\end{array}", display: true},
+                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                         ],
                         throwOnError: false,
                         output: 'html'
                     });
-                    
+
                     // Fetch and display clone questions
                     fetchAndDisplayCloneQuestions(testNumber, questionNumber);
                 } else {
@@ -464,62 +463,58 @@
             try {
                 const cloneResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
                 
-                if (cloneResponse.ok) {
-                    const cloneData = await cloneResponse.json();
+                if (!cloneResponse.ok) {
+                    throw new Error(`HTTP error! status: ${cloneResponse.status}`);
+                }
+                
+                const cloneData = await cloneResponse.json();
+                if (cloneData && cloneData.length > 0) {
+                    const cloneSection = document.createElement('div');
+                    cloneSection.className = 'clone-section';
+                    cloneSection.innerHTML = '<h4>Similar Questions</h4>';
                     
-                    if (Array.isArray(cloneData) && cloneData.length > 0) {
-                        const cloneSection = document.createElement('div');
-                        cloneSection.className = 'clone-section';
+                    cloneData.forEach(item => {
+                        const cloneContainer = document.createElement('div');
+                        cloneContainer.className = 'clone-question';
                         
-                        const cloneHeader = document.createElement('h4');
-                        cloneHeader.textContent = 'Similar Questions';
-                        cloneSection.appendChild(cloneHeader);
+                        const modelDiv = document.createElement('div');
+                        modelDiv.className = 'clone-model';
+                        modelDiv.textContent = item.model;
+                        cloneContainer.appendChild(modelDiv);
                         
-                        cloneData.forEach(item => {
-                            if (item.clone) {
-                                const cloneContainer = document.createElement('div');
-                                cloneContainer.className = 'clone-question';
-                                
-                                const modelDiv = document.createElement('div');
-                                modelDiv.className = 'clone-model';
-                                modelDiv.textContent = item.model || 'AI Generated';
-                                cloneContainer.appendChild(modelDiv);
-                                
-                                const contentDiv = document.createElement('div');
-                                contentDiv.className = 'katex-content';
-                                // Clean up the clone content and ensure proper line breaks
-                                const cleanedContent = item.clone
-                                    .replace(/\\n/g, '\n')  // Convert literal \n to newlines
-                                    .replace(/(\r\n|\n|\r)/g, '<br>')  // Convert newlines to <br>
-                                    .trim();
-                                contentDiv.innerHTML = cleanedContent;
-                                cloneContainer.appendChild(contentDiv);
-                                
-                                cloneSection.appendChild(cloneContainer);
-                            }
-                        });
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'katex-content';
                         
-                        resultContainer.appendChild(cloneSection);
+                        // Clean up the LaTeX content
+                        let cleanedContent = item.clone
+                            .replace(/\\\\/g, '\\')  // Fix double backslashes
+                            .replace(/\\n/g, '\n')   // Convert literal \n to newlines
+                            .replace(/\n+/g, '\n')   // Normalize multiple newlines
+                            .trim();
                         
-                        // Re-render KaTeX for clone questions
-                        renderMathInElement(cloneSection, {
-                            delimiters: [
-                                {left: "$", right: "$", display: false},
-                                {left: "\\[", right: "\\]", display: true},
-                                {left: "\\begin{array}", right: "\\end{array}", display: true},
-                                {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
-                            ],
-                            throwOnError: false,
-                            output: 'html',
-                            trust: true,
-                            strict: false,
-                            displayMode: true
-                        });
-                    }
+                        contentDiv.innerHTML = cleanedContent;
+                        cloneContainer.appendChild(contentDiv);
+                        cloneSection.appendChild(cloneContainer);
+                    });
+                    
+                    resultContainer.appendChild(cloneSection);
+                    
+                    // Render KaTeX in clone section
+                    renderMathInElement(cloneSection, {
+                        delimiters: [
+                            {left: "\\[", right: "\\]", display: true},
+                            {left: "\\(", right: "\\)", display: false},
+                            {left: "$", right: "$", display: false},
+                            {left: "\\begin{array}", right: "\\end{array}", display: true},
+                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+                        ],
+                        throwOnError: false,
+                        output: 'html'
+                    });
                 }
             } catch (error) {
                 console.error('Error:', error);
-                resultContainer.innerHTML = `<p>Error loading clone questions: ${error.message}</p>`;
+                console.log('Failed to load clone questions:', error);
             }
         }
     </script>
