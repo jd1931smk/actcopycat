@@ -379,19 +379,20 @@
                     // Split content into question and answers
                     let content = data.katex;
                     
-                    // First get the question text (everything up to first answer choice)
-                    const questionMatch = content.match(/^\d+\.(.*?)(?=[ABCDEFGHJK]\.)/s);
-                    let questionText = '';
-                    if (questionMatch) {
-                        questionText = questionMatch[0];
-                        content = content.slice(questionText.length);
+                    // First get the question text (everything up to first A. or F.)
+                    const questionMatch = content.match(/^\d+\..*?(?=(?:[AF]\.)|$)/s);
+                    let questionText = questionMatch ? questionMatch[0] : '';
+                    
+                    // Get all answer choices (A. through E. or F. through K.)
+                    let answers = [];
+                    const answerRegex = /([ABCDEFGHJK]\..*?)(?=[ABCDEFGHJK]\.|$)/gs;
+                    let match;
+                    while ((match = answerRegex.exec(content)) !== null) {
+                        answers.push(match[1].trim());
                     }
                     
-                    // Now get all answer choices
-                    const answerChoices = content.match(/[ABCDEFGHJK]\.[^ABCDEFGHJK]*/g) || [];
-                    
-                    // Combine with proper spacing
-                    katexContent.textContent = questionText.trim() + '\n\n' + answerChoices.map(choice => choice.trim()).join('\n');
+                    // Format the content with proper spacing
+                    katexContent.textContent = questionText.trim() + '\n\n' + answers.join('\n');
                     
                     katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
