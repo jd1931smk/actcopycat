@@ -376,12 +376,8 @@
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
                     
-                    // Format matrices properly
+                    // Split content into question and answers
                     let content = data.katex;
-                    
-                    // Convert matrix notation to proper LaTeX
-                    content = content.replace(/\[\s*(-?\d+)\s+(-?\d+)\s*\]/g, '\\begin{bmatrix}$1 & $2\\end{bmatrix}');
-                    content = content.replace(/\[\s*(-?\d+)\s+(-?\d+)\s*(-?\d+)\s+(-?\d+)\s*\]/g, '\\begin{bmatrix}$1 & $2 \\\\ $3 & $4\\end{bmatrix}');
                     
                     // First get the question text (everything up to first A. or F.)
                     const questionMatch = content.match(/^\d+\..*?(?=(?:[AF]\.)|$)/s);
@@ -395,8 +391,8 @@
                         answers.push(match[1].trim());
                     }
                     
-                    // Format the content with proper spacing
-                    katexContent.textContent = questionText.trim() + '\n\n' + answers.join('\n');
+                    // Format with proper spacing and set as innerHTML to preserve LaTeX
+                    katexContent.innerHTML = questionText.trim() + '<br><br>' + answers.join('<br>');
                     
                     katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
@@ -407,18 +403,13 @@
                             {left: "$$", right: "$$", display: true},
                             {left: "$", right: "$", display: false},
                             {left: "\\(", right: "\\)", display: false},
-                            {left: "\\[", right: "\\]", display: true},
-                            {left: "[", right: "]", display: false},
-                            {left: "\\begin{matrix}", right: "\\end{matrix}", display: true},
-                            {left: "\\begin{pmatrix}", right: "\\end{pmatrix}", display: true},
-                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+                            {left: "\\[", right: "\\]", display: true}
                         ],
                         throwOnError: false,
                         errorColor: '#ff6b6b',
                         strict: false,
                         trust: true,
-                        output: 'html',
-                        displayMode: true
+                        output: 'html'
                     });
                 }
 
