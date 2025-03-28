@@ -265,21 +265,14 @@
             const dropdown = document.getElementById('testNumberDropdown');
             dropdown.innerHTML = '<option value="">Select a test number</option>';
             
-            try {
-                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const testNumbers = await response.json();
-                
-                testNumbers.forEach(testNumber => {
-                    const option = document.createElement('option');
-                    option.value = testNumber;
-                    option.textContent = testNumber;
-                    dropdown.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error fetching test numbers:', error);
-                alert('Error loading test numbers. Please refresh the page to try again.');
-            }
+            const testNumbers = ['A11', 'B04', 'B05', 'C01', 'C02', 'C03', 'C04', 'D01', 'D02', 'D03', 'D04', 'E01', 'E02', 'E03', 'E04', 'F01', 'F02', 'F03', 'F04', 'G01', 'G02', 'H31'];
+            
+            testNumbers.forEach(testNumber => {
+                const option = document.createElement('option');
+                option.value = testNumber;
+                option.textContent = testNumber;
+                dropdown.appendChild(option);
+            });
         }
 
         async function populateQuestionNumbers(testNumber) {
