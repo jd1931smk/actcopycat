@@ -365,24 +365,24 @@
 
                     // Split content into question and answers while preserving LaTeX
                     const content = data.katex;
-                    const parts = content.split(/(?=[A-E]\.\s*(?:\$|\\left))/);
                     
                     // Create question container with LaTeX preserved
                     const questionDiv = document.createElement('div');
                     questionDiv.className = 'question-text';
-                    questionDiv.innerHTML = parts[0].trim();
+                    questionDiv.innerHTML = content.split(/(?=[A-E]\.)/).map(part => part.trim())[0];
                     
                     // Create answers container
                     const answersDiv = document.createElement('div');
                     answersDiv.className = 'answer-choices';
                     
                     // Process each answer choice while preserving LaTeX
-                    for (let i = 1; i < parts.length; i++) {
+                    const answers = content.split(/(?=[A-E]\.)/).slice(1);
+                    answers.forEach(answer => {
                         const answerDiv = document.createElement('div');
                         answerDiv.className = 'answer-choice';
-                        answerDiv.innerHTML = parts[i].trim();
+                        answerDiv.innerHTML = answer.trim();
                         answersDiv.appendChild(answerDiv);
-                    }
+                    });
                     
                     cleanSection.appendChild(questionDiv);
                     cleanSection.appendChild(answersDiv);
@@ -392,13 +392,19 @@
                     renderMathInElement(document.body, {
                         delimiters: [
                             {left: "$", right: "$", display: false},
+                            {left: "\\[", right: "\\]", display: true},
                             {left: "\\left\\begin{array}", right: "\\end{array}\\right", display: true},
-                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+                            {left: "\\begin{array}", right: "\\end{array}", display: true}
                         ],
                         throwOnError: false,
                         output: 'html',
                         trust: true,
-                        strict: false
+                        strict: false,
+                        displayMode: true,
+                        macros: {
+                            "\\array": "\\begin{array}",
+                            "\\endarray": "\\end{array}"
+                        }
                     });
                 } else {
                     resultContainer.innerHTML = '<p>No question data found.</p>';
