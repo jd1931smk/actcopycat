@@ -430,7 +430,8 @@ exports.handler = async (event) => {
                             filterByFormula: filterFormula,
                             fields: [
                                 'Corrected Clone Question LM',
-                                'Original Question'
+                                'Original Question',
+                                'Model'
                             ]
                         })
                         .firstPage();
@@ -439,17 +440,12 @@ exports.handler = async (event) => {
 
                     const cloneQuestions = cloneRecords
                         .filter(clone => clone.get('Corrected Clone Question LM'))
-                        .map(clone => {
-                            const originalRef = clone.get('Original Question').split(' - ');
-                            return {
-                                id: clone.id,
-                                latexMarkdown: clone.get('Corrected Clone Question LM'),
-                                testNumber: `Clone of ${originalRef[0]}`,
-                                questionNumber: originalRef[1],
-                                isClone: true,
-                                originalQuestion: clone.get('Original Question')
-                            };
-                        });
+                        .map(clone => ({
+                            id: clone.id,
+                            clone: clone.get('Corrected Clone Question LM'),
+                            model: clone.get('Model') || 'AI Generated',
+                            originalQuestion: clone.get('Original Question')
+                        }));
 
                     console.log(`Processed ${cloneQuestions.length} valid clones`);
                     return formatResponse(200, { questions: cloneQuestions });

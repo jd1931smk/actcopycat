@@ -468,12 +468,16 @@
                 }
                 
                 const cloneData = await cloneResponse.json();
+                console.log('Clone data received:', cloneData);
+                
                 if (cloneData && cloneData.length > 0) {
                     const cloneSection = document.createElement('div');
                     cloneSection.className = 'clone-section';
                     cloneSection.innerHTML = '<h4>Similar Questions</h4>';
                     
                     cloneData.forEach(item => {
+                        console.log('Processing clone item:', item);
+                        
                         const cloneContainer = document.createElement('div');
                         cloneContainer.className = 'clone-question';
                         
@@ -486,13 +490,31 @@
                         contentDiv.className = 'katex-content';
                         
                         // Clean up the LaTeX content
-                        let cleanedContent = item.clone
-                            .replace(/\\\\/g, '\\')  // Fix double backslashes
-                            .replace(/\\n/g, '\n')   // Convert literal \n to newlines
-                            .replace(/\n+/g, '\n')   // Normalize multiple newlines
-                            .trim();
+                        let cleanedContent = item.clone || '';
+                        console.log('Raw clone content:', cleanedContent);
                         
-                        contentDiv.innerHTML = cleanedContent;
+                        // Split into question and answers
+                        const parts = cleanedContent.split(/(?=[A-E]\.\s)/);
+                        
+                        // Process question part
+                        const questionPart = parts[0].trim();
+                        const questionDiv = document.createElement('div');
+                        questionDiv.className = 'question-text';
+                        questionDiv.innerHTML = questionPart;
+                        contentDiv.appendChild(questionDiv);
+                        
+                        // Process answers
+                        const answersDiv = document.createElement('div');
+                        answersDiv.className = 'answer-choices';
+                        
+                        parts.slice(1).forEach(answer => {
+                            const answerDiv = document.createElement('div');
+                            answerDiv.className = 'answer-choice';
+                            answerDiv.innerHTML = answer.trim();
+                            answersDiv.appendChild(answerDiv);
+                        });
+                        
+                        contentDiv.appendChild(answersDiv);
                         cloneContainer.appendChild(contentDiv);
                         cloneSection.appendChild(cloneContainer);
                     });
