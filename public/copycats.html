@@ -341,9 +341,6 @@
                 const data = await response.json();
 
                 if (data.katex) {
-                    const section = document.createElement('div');
-                    section.className = 'section';
-
                     // Create container for original image if it exists
                     if (data.photo && data.photo.length > 0) {
                         const imageSection = document.createElement('div');
@@ -360,48 +357,42 @@
                     cleanSection.className = 'section';
                     cleanSection.innerHTML = '<h4>Clean Version</h4>';
 
-                    // Process the LaTeX content
-                    let content = data.katex;
+                    // Split content into question and answers while preserving LaTeX
+                    const content = data.katex;
+                    const parts = content.split(/(?=[A-E]\.\s*(?:\$|\\left))/);
                     
-                    // Fix any double-escaped backslashes
-                    content = content.replace(/\\\\/g, '\\');
-                    
-                    // Split into question and answers if possible
-                    const parts = content.split(/([A-E]\.)/);
-                    
-                    // Create question container
+                    // Create question container with LaTeX preserved
                     const questionDiv = document.createElement('div');
                     questionDiv.className = 'question-text';
-                    questionDiv.textContent = parts[0].trim();
+                    questionDiv.innerHTML = parts[0].trim();
                     
                     // Create answers container
                     const answersDiv = document.createElement('div');
                     answersDiv.className = 'answer-choices';
                     
-                    // Process each answer choice
-                    for (let i = 1; i < parts.length; i += 2) {
-                        if (i + 1 < parts.length) {
-                            const answerDiv = document.createElement('div');
-                            answerDiv.className = 'answer-choice';
-                            answerDiv.textContent = parts[i] + ' ' + parts[i + 1].trim();
-                            answersDiv.appendChild(answerDiv);
-                        }
+                    // Process each answer choice while preserving LaTeX
+                    for (let i = 1; i < parts.length; i++) {
+                        const answerDiv = document.createElement('div');
+                        answerDiv.className = 'answer-choice';
+                        answerDiv.innerHTML = parts[i].trim();
+                        answersDiv.appendChild(answerDiv);
                     }
                     
                     cleanSection.appendChild(questionDiv);
                     cleanSection.appendChild(answersDiv);
                     resultContainer.appendChild(cleanSection);
 
-                    // Render KaTeX
+                    // Render KaTeX with appropriate delimiters
                     renderMathInElement(document.body, {
                         delimiters: [
                             {left: "$", right: "$", display: false},
-                            {left: "\\[", right: "\\]", display: true},
-                            {left: "\\begin{array}", right: "\\end{array}", display: true},
+                            {left: "\\left\\begin{array}", right: "\\end{array}\\right", display: true},
                             {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                         ],
                         throwOnError: false,
-                        output: 'html'
+                        output: 'html',
+                        trust: true,
+                        strict: false
                     });
                 }
 
