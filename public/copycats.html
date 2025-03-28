@@ -376,30 +376,45 @@
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
                     
-                    // Set the raw content directly to preserve LaTeX
-                    katexContent.textContent = data.katex;
+                    // Convert matrix notation to LaTeX
+                    let content = data.katex;
+                    
+                    // First get the question text and answer choices
+                    const parts = content.split(/(?=[A-E]\.)/);
+                    const questionText = parts[0];
+                    const answers = parts.slice(1);
+                    
+                    // Convert matrix notation in the question
+                    let formattedQuestion = questionText.replace(/\[\s*(-?\d+)\s+(-?\d+)\s*\n*\s*(-?\d+)\s+(-?\d+)\s*\]/g, 
+                        '\\begin{bmatrix}$1 & $2 \\\\ $3 & $4\\end{bmatrix}');
+                    
+                    // Convert matrix notation in each answer
+                    const formattedAnswers = answers.map(answer => {
+                        return answer.replace(/\[\s*(-?\d+)\s+(-?\d+)\s*\n*\s*(-?\d+)\s+(-?\d+)\s*\]/g,
+                            '\\begin{bmatrix}$1 & $2 \\\\ $3 & $4\\end{bmatrix}');
+                    });
+                    
+                    // Combine everything with proper spacing
+                    katexContent.innerHTML = formattedQuestion + '\n\n' + formattedAnswers.join('\n');
                     
                     katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
 
-                    // Initialize KaTeX rendering with all possible delimiters
+                    // Initialize KaTeX rendering
                     renderMathInElement(katexContent, {
                         delimiters: [
                             {left: "$$", right: "$$", display: true},
                             {left: "$", right: "$", display: false},
                             {left: "\\(", right: "\\)", display: false},
                             {left: "\\[", right: "\\]", display: true},
-                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true},
-                            {left: "\\begin{array}", right: "\\end{array}", display: true},
-                            {left: "\\left[", right: "\\right]", display: false}
+                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                         ],
                         throwOnError: false,
                         errorColor: '#ff6b6b',
                         strict: false,
                         trust: true,
                         output: 'html',
-                        displayMode: true,
-                        fleqn: true
+                        displayMode: true
                     });
                 }
 
