@@ -376,20 +376,22 @@
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
                     
-                    // First find the question number and text
-                    const questionMatch = data.katex.match(/(\d+\.)(.*?)(?=[ABCDEFGHJK]\.)/s);
+                    // Split content into question and answers
+                    let content = data.katex;
+                    
+                    // First get the question text (everything up to first answer choice)
+                    const questionMatch = content.match(/^\d+\.(.*?)(?=[ABCDEFGHJK]\.)/s);
+                    let questionText = '';
                     if (questionMatch) {
-                        const questionText = questionMatch[0];
-                        const remainingText = data.katex.slice(questionMatch[0].length);
-                        
-                        // Split answer choices and format them
-                        const answers = remainingText.match(/[ABCDEFGHJK]\..+?(?=[ABCDEFGHJK]\.|$)/g) || [];
-                        
-                        // Combine with proper spacing
-                        katexContent.textContent = questionText + '\n\n' + answers.join('\n');
-                    } else {
-                        katexContent.textContent = data.katex;
+                        questionText = questionMatch[0];
+                        content = content.slice(questionText.length);
                     }
+                    
+                    // Now get all answer choices
+                    const answerChoices = content.match(/[ABCDEFGHJK]\.[^ABCDEFGHJK]*/g) || [];
+                    
+                    // Combine with proper spacing
+                    katexContent.textContent = questionText.trim() + '\n\n' + answerChoices.map(choice => choice.trim()).join('\n');
                     
                     katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
