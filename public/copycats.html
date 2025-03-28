@@ -376,40 +376,30 @@
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
                     
-                    // Split content into question and answers
-                    let content = data.katex;
-                    
-                    // First get the question text (everything up to first A. or F.)
-                    const questionMatch = content.match(/^\d+\..*?(?=(?:[AF]\.)|$)/s);
-                    let questionText = questionMatch ? questionMatch[0] : '';
-                    
-                    // Get all answer choices (A. through E. or F. through K.)
-                    let answers = [];
-                    const answerRegex = /([ABCDEFGHJK]\..*?)(?=[ABCDEFGHJK]\.|$)/gs;
-                    let match;
-                    while ((match = answerRegex.exec(content)) !== null) {
-                        answers.push(match[1].trim());
-                    }
-                    
-                    // Format with proper spacing and set as innerHTML to preserve LaTeX
-                    katexContent.innerHTML = questionText.trim() + '<br><br>' + answers.join('<br>');
+                    // Set the raw content directly to preserve LaTeX
+                    katexContent.textContent = data.katex;
                     
                     katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
 
-                    // Initialize KaTeX rendering
+                    // Initialize KaTeX rendering with all possible delimiters
                     renderMathInElement(katexContent, {
                         delimiters: [
                             {left: "$$", right: "$$", display: true},
                             {left: "$", right: "$", display: false},
                             {left: "\\(", right: "\\)", display: false},
-                            {left: "\\[", right: "\\]", display: true}
+                            {left: "\\[", right: "\\]", display: true},
+                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true},
+                            {left: "\\begin{array}", right: "\\end{array}", display: true},
+                            {left: "\\left[", right: "\\right]", display: false}
                         ],
                         throwOnError: false,
                         errorColor: '#ff6b6b',
                         strict: false,
                         trust: true,
-                        output: 'html'
+                        output: 'html',
+                        displayMode: true,
+                        fleqn: true
                     });
                 }
 
