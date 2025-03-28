@@ -189,7 +189,7 @@
             border: 1px solid #444;
             font-size: 1.1em;
             margin-bottom: 10px;
-            white-space: normal;
+            white-space: pre-wrap;
             word-wrap: break-word;
         }
         
@@ -443,9 +443,7 @@
                     parts.slice(1).forEach(answer => {
                         const answerDiv = document.createElement('div');
                         answerDiv.className = 'answer-choice';
-                        // Ensure each answer starts on a new line
-                        answerDiv.style.display = 'block';
-                        answerDiv.innerHTML = answer.trim();
+                        answerDiv.innerHTML = answer.trim() + '\n';  // Add explicit line break
                         answersDiv.appendChild(answerDiv);
                     });
                     
@@ -493,7 +491,13 @@
                                     cloneContainer.appendChild(modelDiv);
                                     
                                     const contentDiv = document.createElement('div');
-                                    contentDiv.innerHTML = item.clone.replace(/(\r\n|\n|\r)/g, '<br>');
+                                    contentDiv.className = 'katex-content';
+                                    // Clean up the clone content and ensure proper line breaks
+                                    const cleanedContent = item.clone
+                                        .replace(/\\n/g, '\n')  // Convert literal \n to newlines
+                                        .replace(/(\r\n|\n|\r)/g, '<br>')  // Convert newlines to <br>
+                                        .trim();
+                                    contentDiv.innerHTML = cleanedContent;
                                     cloneContainer.appendChild(contentDiv);
                                     
                                     cloneSection.appendChild(cloneContainer);
