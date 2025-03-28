@@ -337,8 +337,14 @@
             resultContainer.innerHTML = '';
 
             try {
-                const response = await fetch(`https://actcopycat.netlify.app/.netlify/functions/get-question?test=${testNumber}&question=${questionNumber}`);
+                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('API Response:', data); // Debug log
 
                 if (data.katex) {
                     // Create container for original image if it exists
@@ -347,7 +353,7 @@
                         imageSection.className = 'section';
                         imageSection.innerHTML = `
                             <h4>Original Image</h4>
-                            <img src="data:image/jpeg;base64,${data.photo[0]}" alt="Question Image">
+                            <img src="${data.photo[0].url}" alt="Question Image">
                         `;
                         resultContainer.appendChild(imageSection);
                     }
@@ -394,13 +400,15 @@
                         trust: true,
                         strict: false
                     });
+                } else {
+                    resultContainer.innerHTML = '<p>No question data found.</p>';
                 }
 
                 spinner.style.display = 'none';
             } catch (error) {
                 console.error('Error:', error);
                 spinner.style.display = 'none';
-                resultContainer.innerHTML = '<p>Error loading question. Please try again.</p>';
+                resultContainer.innerHTML = `<p>Error loading question: ${error.message}</p>`;
             }
         }
     </script>
