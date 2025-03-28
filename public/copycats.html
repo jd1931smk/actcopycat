@@ -379,14 +379,20 @@
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
                     
-                    // Split into question and answers for proper spacing
-                    const parts = data.katex.split(/(?=[A-E]\.)/);
-                    const questionText = parts[0];
-                    const answers = parts.slice(1);
+                    // Pre-process the LaTeX content
+                    let processedContent = data.katex
+                        // Fix matrix formatting
+                        .replace(/\[ *(\d+) +(\d+) *(?:[-−]?\d+)? +(\d+) *\]/g, '\\begin{bmatrix}$1 & $2 \\\\ $3 & $4\\end{bmatrix}')
+                        // Fix negative signs
+                        .replace(/−/g, '-')
+                        // Add proper spacing around matrices
+                        .replace(/\+\[/g, ' + [')
+                        .replace(/\[\[/g, '[')
+                        .replace(/\]\]/g, ']')
+                        // Ensure proper spacing around answer choices
+                        .split(/(?=[A-E]\.)/).map(part => part.trim()).join('\n\n');
                     
-                    // Combine with proper spacing and fix escaping
-                    const content = questionText.trim() + '\n\n' + answers.join('\n');
-                    katexContent.innerHTML = content.replace(/\\\\/g, '\\');
+                    katexContent.textContent = processedContent;
                     
                     katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
@@ -395,17 +401,17 @@
                     renderMathInElement(katexContent, {
                         delimiters: [
                             {left: "$$", right: "$$", display: true},
-                            {left: "$", right: "$", display: false}
+                            {left: "$", right: "$", display: false},
+                            {left: "\\[", right: "\\]", display: true},
+                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                         ],
                         throwOnError: false,
                         errorColor: '#ff6b6b',
                         strict: false,
                         trust: true,
                         output: 'html',
-                        macros: {
-                            "\\begin": "\\begin",
-                            "\\end": "\\end"
-                        }
+                        displayMode: true,
+                        strict: false
                     });
                 }
 
