@@ -337,109 +337,79 @@
             resultContainer.innerHTML = '';
 
             try {
-                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                const response = await fetch(`https://actcopycat.netlify.app/.netlify/functions/get-question?test=${testNumber}&question=${questionNumber}`);
                 const data = await response.json();
 
-                if (!data || response.status === 404) {
-                    resultContainer.innerHTML = 'Question not found';
-                    return;
-                }
-
-                console.log('Raw katex data:', data.katex);
-                console.log('Full data object:', data);
-
-                const container = document.createElement('div');
-                container.className = 'questions-container';
-
-                // Original Image Section
-                if (data.photo && data.photo.length > 0) {
-                    const photoSection = document.createElement('div');
-                    photoSection.className = 'section';
-                    const photoHeader = document.createElement('h4');
-                    photoHeader.textContent = 'Original Image';
-                    photoSection.appendChild(photoHeader);
-                    
-                    data.photo.forEach(photo => {
-                        const img = document.createElement('img');
-                        img.src = photo.url;
-                        img.alt = 'Question Image';
-                        photoSection.appendChild(img);
-                    });
-                    container.appendChild(photoSection);
-                }
-
-                // Clean Version Section
                 if (data.katex) {
-                    const katexSection = document.createElement('div');
-                    katexSection.className = 'section';
-                    const katexHeader = document.createElement('h4');
-                    katexHeader.textContent = 'Clean Version';
-                    katexSection.appendChild(katexHeader);
-                    
-                    const katexContent = document.createElement('div');
-                    katexContent.className = 'katex-content';
-                    
-                    // Pre-process the LaTeX content
-                    let processedContent = data.katex
-                        // Fix matrix formatting
-                        .replace(/\[ *(\d+) +(\d+) *(?:[-−]?\d+)? +(\d+) *\]/g, '\\begin{bmatrix}$1 & $2 \\\\ $3 & $4\\end{bmatrix}')
-                        // Fix negative signs
-                        .replace(/−/g, '-')
-                        // Add proper spacing around matrices
-                        .replace(/\+\[/g, ' + [')
-                        .replace(/\[\[/g, '[')
-                        .replace(/\]\]/g, ']')
-                        // Ensure proper spacing around answer choices
-                        .split(/(?=[A-E]\.)/).map(part => part.trim()).join('\n\n');
-                    
-                    katexContent.textContent = processedContent;
-                    
-                    katexSection.appendChild(katexContent);
-                    container.appendChild(katexSection);
+                    const section = document.createElement('div');
+                    section.className = 'section';
 
-                    // Initialize KaTeX rendering
-                    renderMathInElement(katexContent, {
+                    // Create container for original image if it exists
+                    if (data.photo && data.photo.length > 0) {
+                        const imageSection = document.createElement('div');
+                        imageSection.className = 'section';
+                        imageSection.innerHTML = `
+                            <h4>Original Image</h4>
+                            <img src="data:image/jpeg;base64,${data.photo[0]}" alt="Question Image">
+                        `;
+                        resultContainer.appendChild(imageSection);
+                    }
+
+                    // Create container for clean version
+                    const cleanSection = document.createElement('div');
+                    cleanSection.className = 'section';
+                    cleanSection.innerHTML = '<h4>Clean Version</h4>';
+
+                    // Process the LaTeX content
+                    let content = data.katex;
+                    
+                    // Fix any double-escaped backslashes
+                    content = content.replace(/\\\\/g, '\\');
+                    
+                    // Split into question and answers if possible
+                    const parts = content.split(/([A-E]\.)/);
+                    
+                    // Create question container
+                    const questionDiv = document.createElement('div');
+                    questionDiv.className = 'question-text';
+                    questionDiv.textContent = parts[0].trim();
+                    
+                    // Create answers container
+                    const answersDiv = document.createElement('div');
+                    answersDiv.className = 'answer-choices';
+                    
+                    // Process each answer choice
+                    for (let i = 1; i < parts.length; i += 2) {
+                        if (i + 1 < parts.length) {
+                            const answerDiv = document.createElement('div');
+                            answerDiv.className = 'answer-choice';
+                            answerDiv.textContent = parts[i] + ' ' + parts[i + 1].trim();
+                            answersDiv.appendChild(answerDiv);
+                        }
+                    }
+                    
+                    cleanSection.appendChild(questionDiv);
+                    cleanSection.appendChild(answersDiv);
+                    resultContainer.appendChild(cleanSection);
+
+                    // Render KaTeX
+                    renderMathInElement(document.body, {
                         delimiters: [
-                            {left: "$$", right: "$$", display: true},
                             {left: "$", right: "$", display: false},
                             {left: "\\[", right: "\\]", display: true},
+                            {left: "\\begin{array}", right: "\\end{array}", display: true},
                             {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                         ],
                         throwOnError: false,
-                        errorColor: '#ff6b6b',
-                        strict: false,
-                        trust: true,
-                        output: 'html',
-                        displayMode: true,
-                        strict: false
+                        output: 'html'
                     });
                 }
 
-                // Diagrams Section
-                if (data.diagrams && data.diagrams.length > 0) {
-                    const diagramsSection = document.createElement('div');
-                    diagramsSection.className = 'section';
-                    const diagramsHeader = document.createElement('h4');
-                    diagramsHeader.textContent = 'Diagrams';
-                    diagramsSection.appendChild(diagramsHeader);
-                    
-                    data.diagrams.forEach(diagram => {
-                        const img = document.createElement('img');
-                        img.src = diagram.url;
-                        img.alt = 'Question Diagram';
-                        img.className = 'diagram-image';
-                        diagramsSection.appendChild(img);
-                    });
-                    
-                    container.appendChild(diagramsSection);
-                }
-
-                resultContainer.appendChild(container);
+                spinner.style.display = 'none';
             } catch (error) {
                 console.error('Error:', error);
-                resultContainer.innerHTML = `Error: ${error.message}`;
-            } finally {
                 spinner.style.display = 'none';
+                resultContainer.innerHTML = '<p>Error loading question. Please try again.</p>';
             }
         }
     </script>
