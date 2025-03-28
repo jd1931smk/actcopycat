@@ -405,28 +405,27 @@
                     const answersContent = document.createElement('div');
                     answersContent.className = 'answer-choices';
                     
-                    let formattedKatex = data.katex;
+                    // Process the content
+                    let content = data.katex;
                     
-                    // Split the content into question and answers
-                    const questionMatch = formattedKatex.match(/(\d+\.\s*.*?)(?=[A-E]\.|[FGHJK]\.)/s);
-                    if (questionMatch) {
-                        // Set the question text
-                        questionContent.textContent = questionMatch[1].trim();
-                        
-                        // Extract and format answer choices
-                        const answerMatches = formattedKatex.match(/([A-E]\.|[FGHJK]\.)[^A-E^F-K]*/g);
-                        if (answerMatches) {
-                            answerMatches.forEach(answer => {
-                                const answerDiv = document.createElement('div');
-                                answerDiv.className = 'answer-choice';
-                                answerDiv.textContent = answer.trim();
-                                answersContent.appendChild(answerDiv);
-                            });
-                        }
-                    } else {
-                        // Fallback if pattern doesn't match
-                        questionContent.textContent = formattedKatex;
-                    }
+                    // Split into question and answers using both A-E and F-K patterns
+                    const parts = content.split(/(?=[A-K]\.\s)/);
+                    
+                    // Handle the question part (including any tables)
+                    const questionPart = parts[0].trim();
+                    questionContent.textContent = questionPart;
+                    
+                    // Process each answer choice
+                    parts.slice(1).forEach(answer => {
+                        const answerDiv = document.createElement('div');
+                        answerDiv.className = 'answer-choice';
+                        // Clean up the answer text and ensure proper spacing
+                        const cleanAnswer = answer.trim()
+                            .replace(/([A-K]\.)\s*/, '$1 ')  // Ensure space after letter
+                            .replace(/\s+/g, ' ');  // Normalize spaces
+                        answerDiv.textContent = cleanAnswer;
+                        answersContent.appendChild(answerDiv);
+                    });
                     
                     katexSection.appendChild(questionContent);
                     katexSection.appendChild(answersContent);
