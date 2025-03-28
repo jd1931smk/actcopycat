@@ -397,131 +397,57 @@
                 console.log('Raw API Response:', data);
 
                 if (data.katex) {
-                    // Fix malformed LaTeX
-                    let content = data.katex
-                        // Fix the malformed array syntax
-                        .replace(/\\L_in{array}/g, '\\begin{array}')
-                        // Fix any double backslashes
-                        .replace(/\\\\/g, '\\')
-                        // Ensure proper matrix formatting
-                        .replace(/\[(\s*-?\d+\s+\d+\s+-?\d+\s+\d+\s*)\]/g, '\\begin{bmatrix}$1\\end{bmatrix}')
-                        // Add proper spacing
-                        .replace(/\+\s*\[/g, '+[')
-                        .replace(/\]\s*\+/g, ']+');
-
-                    console.log('Processed LaTeX:', content);
-
-                    // Create container for original image if it exists
-                    if (data.photo && data.photo.length > 0) {
-                        const imageSection = document.createElement('div');
-                        imageSection.className = 'section';
-                        imageSection.innerHTML = `
-                            <h4>Original Image</h4>
-                            <img src="${data.photo[0].url}" alt="Question Image">
-                        `;
-                        resultContainer.appendChild(imageSection);
-                    }
-
-                    // Create container for clean version
-                    const cleanSection = document.createElement('div');
-                    cleanSection.className = 'section';
-                    cleanSection.innerHTML = '<h4>Clean Version</h4>';
-
-                    // Split into question and answers
-                    const parts = content.split(/(?=[A-E]\.)/);
+                    // Create sections for question and answers
+                    const questionSection = document.createElement('div');
+                    questionSection.className = 'section';
                     
-                    // Create question container
-                    const questionDiv = document.createElement('div');
-                    questionDiv.className = 'question-text';
-                    questionDiv.innerHTML = parts[0].trim();
+                    // Create question text container
+                    const questionText = document.createElement('div');
+                    questionText.className = 'question-text';
                     
                     // Create answers container
-                    const answersDiv = document.createElement('div');
-                    answersDiv.className = 'answer-choices';
+                    const answersContainer = document.createElement('div');
+                    answersContainer.className = 'answer-choices';
                     
-                    // Process each answer choice
-                    parts.slice(1).forEach(answer => {
-                        const answerDiv = document.createElement('div');
-                        answerDiv.className = 'answer-choice';
-                        answerDiv.innerHTML = answer.trim() + '\n';  // Add explicit line break
-                        answersDiv.appendChild(answerDiv);
+                    // Split content by line breaks
+                    const lines = data.katex.split('\n');
+                    
+                    // Find where answers start (usually after a line with | character)
+                    const answerStartIndex = lines.findIndex(line => line.includes('|'));
+                    
+                    // Join question lines
+                    const questionContent = lines.slice(0, answerStartIndex).join('\n');
+                    questionText.textContent = questionContent;
+                    
+                    // Process answers
+                    const answerLines = lines.slice(answerStartIndex);
+                    answerLines.forEach(line => {
+                        if (line.trim()) {
+                            const answerDiv = document.createElement('div');
+                            answerDiv.className = 'answer-choice';
+                            answerDiv.textContent = line.trim();
+                            answersContainer.appendChild(answerDiv);
+                        }
                     });
                     
-                    cleanSection.appendChild(questionDiv);
-                    cleanSection.appendChild(answersDiv);
-                    resultContainer.appendChild(cleanSection);
-
+                    // Add to page
+                    questionSection.appendChild(questionText);
+                    questionSection.appendChild(answersContainer);
+                    resultContainer.appendChild(questionSection);
+                    
                     // Render KaTeX
-                    renderMathInElement(document.body, {
+                    renderMathInElement(resultContainer, {
                         delimiters: [
-                            {left: "$", right: "$", display: false},
                             {left: "\\[", right: "\\]", display: true},
-                            {left: "\\begin{array}", right: "\\end{array}", display: true},
-                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+                            {left: "\\(", right: "\\)", display: false},
+                            {left: "$", right: "$", display: false}
                         ],
                         throwOnError: false,
-                        output: 'html',
-                        trust: true,
-                        strict: false,
-                        displayMode: true
+                        output: 'html'
                     });
-
-                    // Fetch and display clone questions
-                    const cloneResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
                     
-                    if (cloneResponse.ok) {
-                        const cloneData = await cloneResponse.json();
-                        
-                        if (Array.isArray(cloneData) && cloneData.length > 0) {
-                            const cloneSection = document.createElement('div');
-                            cloneSection.className = 'clone-section';
-                            
-                            const cloneHeader = document.createElement('h4');
-                            cloneHeader.textContent = 'Similar Questions';
-                            cloneSection.appendChild(cloneHeader);
-                            
-                            cloneData.forEach(item => {
-                                if (item.clone) {
-                                    const cloneContainer = document.createElement('div');
-                                    cloneContainer.className = 'clone-question';
-                                    
-                                    const modelDiv = document.createElement('div');
-                                    modelDiv.className = 'clone-model';
-                                    modelDiv.textContent = item.model || 'AI Generated';
-                                    cloneContainer.appendChild(modelDiv);
-                                    
-                                    const contentDiv = document.createElement('div');
-                                    contentDiv.className = 'katex-content';
-                                    // Clean up the clone content and ensure proper line breaks
-                                    const cleanedContent = item.clone
-                                        .replace(/\\n/g, '\n')  // Convert literal \n to newlines
-                                        .replace(/(\r\n|\n|\r)/g, '<br>')  // Convert newlines to <br>
-                                        .trim();
-                                    contentDiv.innerHTML = cleanedContent;
-                                    cloneContainer.appendChild(contentDiv);
-                                    
-                                    cloneSection.appendChild(cloneContainer);
-                                }
-                            });
-                            
-                            resultContainer.appendChild(cloneSection);
-                            
-                            // Re-render KaTeX for clone questions
-                            renderMathInElement(cloneSection, {
-                                delimiters: [
-                                    {left: "$", right: "$", display: false},
-                                    {left: "\\[", right: "\\]", display: true},
-                                    {left: "\\begin{array}", right: "\\end{array}", display: true},
-                                    {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
-                                ],
-                                throwOnError: false,
-                                output: 'html',
-                                trust: true,
-                                strict: false,
-                                displayMode: true
-                            });
-                        }
-                    }
+                    // Fetch and display clone questions
+                    fetchAndDisplayCloneQuestions(testNumber, questionNumber);
                 } else {
                     resultContainer.innerHTML = '<p>No question data found.</p>';
                 }
@@ -531,6 +457,69 @@
                 console.error('Error:', error);
                 spinner.style.display = 'none';
                 resultContainer.innerHTML = `<p>Error loading question: ${error.message}</p>`;
+            }
+        }
+
+        async function fetchAndDisplayCloneQuestions(testNumber, questionNumber) {
+            try {
+                const cloneResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                
+                if (cloneResponse.ok) {
+                    const cloneData = await cloneResponse.json();
+                    
+                    if (Array.isArray(cloneData) && cloneData.length > 0) {
+                        const cloneSection = document.createElement('div');
+                        cloneSection.className = 'clone-section';
+                        
+                        const cloneHeader = document.createElement('h4');
+                        cloneHeader.textContent = 'Similar Questions';
+                        cloneSection.appendChild(cloneHeader);
+                        
+                        cloneData.forEach(item => {
+                            if (item.clone) {
+                                const cloneContainer = document.createElement('div');
+                                cloneContainer.className = 'clone-question';
+                                
+                                const modelDiv = document.createElement('div');
+                                modelDiv.className = 'clone-model';
+                                modelDiv.textContent = item.model || 'AI Generated';
+                                cloneContainer.appendChild(modelDiv);
+                                
+                                const contentDiv = document.createElement('div');
+                                contentDiv.className = 'katex-content';
+                                // Clean up the clone content and ensure proper line breaks
+                                const cleanedContent = item.clone
+                                    .replace(/\\n/g, '\n')  // Convert literal \n to newlines
+                                    .replace(/(\r\n|\n|\r)/g, '<br>')  // Convert newlines to <br>
+                                    .trim();
+                                contentDiv.innerHTML = cleanedContent;
+                                cloneContainer.appendChild(contentDiv);
+                                
+                                cloneSection.appendChild(cloneContainer);
+                            }
+                        });
+                        
+                        resultContainer.appendChild(cloneSection);
+                        
+                        // Re-render KaTeX for clone questions
+                        renderMathInElement(cloneSection, {
+                            delimiters: [
+                                {left: "$", right: "$", display: false},
+                                {left: "\\[", right: "\\]", display: true},
+                                {left: "\\begin{array}", right: "\\end{array}", display: true},
+                                {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+                            ],
+                            throwOnError: false,
+                            output: 'html',
+                            trust: true,
+                            strict: false,
+                            displayMode: true
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultContainer.innerHTML = `<p>Error loading clone questions: ${error.message}</p>`;
             }
         }
     </script>
