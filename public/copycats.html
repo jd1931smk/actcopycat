@@ -379,36 +379,33 @@
                     const katexContent = document.createElement('div');
                     katexContent.className = 'katex-content';
                     
-                    // Split into question and answers for proper spacing only
+                    // Split into question and answers for proper spacing
                     const parts = data.katex.split(/(?=[A-E]\.)/);
                     const questionText = parts[0];
                     const answers = parts.slice(1);
                     
-                    // Fix escaped backslashes and combine with proper spacing
-                    const fixedContent = (questionText.trim() + '\n\n' + answers.join('\n'))
-                        .replace(/\\\\(?:left|right|begin|end|array|rr|ll)/g, '\\$&')
-                        .replace(/\\\[/g, '[')
-                        .replace(/\\\]/g, ']');
-                    
-                    katexContent.textContent = fixedContent;
+                    // Combine with proper spacing and fix escaping
+                    const content = questionText.trim() + '\n\n' + answers.join('\n');
+                    katexContent.innerHTML = content.replace(/\\\\/g, '\\');
                     
                     katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
 
-                    // Initialize KaTeX rendering with all possible delimiters
+                    // Initialize KaTeX rendering
                     renderMathInElement(katexContent, {
                         delimiters: [
                             {left: "$$", right: "$$", display: true},
-                            {left: "$", right: "$", display: false},
-                            {left: "\\[", right: "\\]", display: true},
-                            {left: "\\begin{array}", right: "\\end{array}", display: true}
+                            {left: "$", right: "$", display: false}
                         ],
                         throwOnError: false,
                         errorColor: '#ff6b6b',
                         strict: false,
                         trust: true,
                         output: 'html',
-                        displayMode: true
+                        macros: {
+                            "\\begin": "\\begin",
+                            "\\end": "\\end"
+                        }
                     });
                 }
 
