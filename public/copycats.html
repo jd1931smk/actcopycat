@@ -412,8 +412,8 @@
                     // Process the content
                     let content = data.katex;
                     
-                    // Split into question and answers
-                    const parts = content.split(/(?=[A-E]\.\s)/);
+                    // Split into question and answers using both A-E and F-K patterns
+                    const parts = content.split(/(?=[A-K]\.\s)/);
                     
                     // Handle the question part (including any tables)
                     const questionPart = parts[0].trim();
@@ -423,7 +423,11 @@
                     parts.slice(1).forEach(answer => {
                         const answerDiv = document.createElement('div');
                         answerDiv.className = 'answer-choice';
-                        answerDiv.innerHTML = answer.trim();
+                        // Clean up the answer text and ensure proper spacing
+                        const cleanAnswer = answer.trim()
+                            .replace(/([A-K]\.)\s*/, '$1 ')  // Ensure space after letter
+                            .replace(/\s+/g, ' ');  // Normalize spaces
+                        answerDiv.innerHTML = cleanAnswer;
                         answersContainer.appendChild(answerDiv);
                     });
                     
@@ -494,7 +498,7 @@
                         console.log('Raw clone content:', cleanedContent);
                         
                         // Split into question and answers
-                        const parts = cleanedContent.split(/(?=[A-E]\.\s)/);
+                        const parts = cleanedContent.split(/(?=[A-K]\.\s)/);
                         
                         // Process question part
                         const questionPart = parts[0].trim();
@@ -510,7 +514,11 @@
                         parts.slice(1).forEach(answer => {
                             const answerDiv = document.createElement('div');
                             answerDiv.className = 'answer-choice';
-                            answerDiv.innerHTML = answer.trim();
+                            // Clean up the answer text and ensure proper spacing
+                            const cleanAnswer = answer.trim()
+                                .replace(/([A-K]\.)\s*/, '$1 ')  // Ensure space after letter
+                                .replace(/\s+/g, ' ');  // Normalize spaces
+                            answerDiv.innerHTML = cleanAnswer;
                             answersDiv.appendChild(answerDiv);
                         });
                         
