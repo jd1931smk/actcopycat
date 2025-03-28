@@ -384,23 +384,31 @@
                     const questionText = parts[0];
                     const answers = parts.slice(1);
                     
-                    // Combine with proper spacing, preserving LaTeX
-                    katexContent.innerHTML = questionText.trim() + '<br><br>' + answers.join('<br>');
+                    // Fix escaped backslashes and combine with proper spacing
+                    const fixedContent = (questionText.trim() + '\n\n' + answers.join('\n'))
+                        .replace(/\\\\(?:left|right|begin|end|array|rr|ll)/g, '\\$&')
+                        .replace(/\\\[/g, '[')
+                        .replace(/\\\]/g, ']');
+                    
+                    katexContent.textContent = fixedContent;
                     
                     katexSection.appendChild(katexContent);
                     container.appendChild(katexSection);
 
-                    // Initialize KaTeX rendering
+                    // Initialize KaTeX rendering with all possible delimiters
                     renderMathInElement(katexContent, {
                         delimiters: [
                             {left: "$$", right: "$$", display: true},
-                            {left: "$", right: "$", display: false}
+                            {left: "$", right: "$", display: false},
+                            {left: "\\[", right: "\\]", display: true},
+                            {left: "\\begin{array}", right: "\\end{array}", display: true}
                         ],
                         throwOnError: false,
                         errorColor: '#ff6b6b',
                         strict: false,
                         trust: true,
-                        output: 'html'
+                        output: 'html',
+                        displayMode: true
                     });
                 }
 
