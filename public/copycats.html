@@ -344,9 +344,23 @@
                 }
                 
                 const data = await response.json();
-                console.log('API Response:', data); // Debug log
+                console.log('Raw API Response:', data);
 
                 if (data.katex) {
+                    // Fix malformed LaTeX
+                    let content = data.katex
+                        // Fix the malformed array syntax
+                        .replace(/\\L_in{array}/g, '\\begin{array}')
+                        // Fix any double backslashes
+                        .replace(/\\\\/g, '\\')
+                        // Ensure proper matrix formatting
+                        .replace(/\[(\s*-?\d+\s+\d+\s+-?\d+\s+\d+\s*)\]/g, '\\begin{bmatrix}$1\\end{bmatrix}')
+                        // Add proper spacing
+                        .replace(/\+\s*\[/g, '+[')
+                        .replace(/\]\s*\+/g, ']+');
+
+                    console.log('Processed LaTeX:', content);
+
                     // Create container for original image if it exists
                     if (data.photo && data.photo.length > 0) {
                         const imageSection = document.createElement('div');
@@ -363,21 +377,20 @@
                     cleanSection.className = 'section';
                     cleanSection.innerHTML = '<h4>Clean Version</h4>';
 
-                    // Split content into question and answers while preserving LaTeX
-                    const content = data.katex;
+                    // Split into question and answers
+                    const parts = content.split(/(?=[A-E]\.)/);
                     
-                    // Create question container with LaTeX preserved
+                    // Create question container
                     const questionDiv = document.createElement('div');
                     questionDiv.className = 'question-text';
-                    questionDiv.innerHTML = content.split(/(?=[A-E]\.)/).map(part => part.trim())[0];
+                    questionDiv.innerHTML = parts[0].trim();
                     
                     // Create answers container
                     const answersDiv = document.createElement('div');
                     answersDiv.className = 'answer-choices';
                     
-                    // Process each answer choice while preserving LaTeX
-                    const answers = content.split(/(?=[A-E]\.)/).slice(1);
-                    answers.forEach(answer => {
+                    // Process each answer choice
+                    parts.slice(1).forEach(answer => {
                         const answerDiv = document.createElement('div');
                         answerDiv.className = 'answer-choice';
                         answerDiv.innerHTML = answer.trim();
@@ -388,23 +401,19 @@
                     cleanSection.appendChild(answersDiv);
                     resultContainer.appendChild(cleanSection);
 
-                    // Render KaTeX with appropriate delimiters
+                    // Render KaTeX
                     renderMathInElement(document.body, {
                         delimiters: [
                             {left: "$", right: "$", display: false},
                             {left: "\\[", right: "\\]", display: true},
-                            {left: "\\left\\begin{array}", right: "\\end{array}\\right", display: true},
-                            {left: "\\begin{array}", right: "\\end{array}", display: true}
+                            {left: "\\begin{array}", right: "\\end{array}", display: true},
+                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                         ],
                         throwOnError: false,
                         output: 'html',
                         trust: true,
                         strict: false,
-                        displayMode: true,
-                        macros: {
-                            "\\array": "\\begin{array}",
-                            "\\endarray": "\\end{array}"
-                        }
+                        displayMode: true
                     });
                 } else {
                     resultContainer.innerHTML = '<p>No question data found.</p>';
