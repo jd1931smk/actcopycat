@@ -211,6 +211,36 @@
             text-indent: 0;
             text-rendering: auto;
         }
+
+        /* Clone Questions Section */
+        .clone-section {
+            background-color: #2d2d2d;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+
+        .clone-section h4 {
+            color: #fff;
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+
+        .clone-question {
+            background-color: #333;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .clone-model {
+            color: #6557ed;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -356,6 +386,7 @@
             resultContainer.innerHTML = '';
 
             try {
+                // Fetch original question
                 const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
                 
                 if (!response.ok) {
@@ -436,6 +467,57 @@
                         strict: false,
                         displayMode: true
                     });
+
+                    // Fetch and display clone questions
+                    const cloneResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                    
+                    if (cloneResponse.ok) {
+                        const cloneData = await cloneResponse.json();
+                        
+                        if (Array.isArray(cloneData) && cloneData.length > 0) {
+                            const cloneSection = document.createElement('div');
+                            cloneSection.className = 'clone-section';
+                            
+                            const cloneHeader = document.createElement('h4');
+                            cloneHeader.textContent = 'Similar Questions';
+                            cloneSection.appendChild(cloneHeader);
+                            
+                            cloneData.forEach(item => {
+                                if (item.clone) {
+                                    const cloneContainer = document.createElement('div');
+                                    cloneContainer.className = 'clone-question';
+                                    
+                                    const modelDiv = document.createElement('div');
+                                    modelDiv.className = 'clone-model';
+                                    modelDiv.textContent = item.model || 'AI Generated';
+                                    cloneContainer.appendChild(modelDiv);
+                                    
+                                    const contentDiv = document.createElement('div');
+                                    contentDiv.innerHTML = item.clone.replace(/(\r\n|\n|\r)/g, '<br>');
+                                    cloneContainer.appendChild(contentDiv);
+                                    
+                                    cloneSection.appendChild(cloneContainer);
+                                }
+                            });
+                            
+                            resultContainer.appendChild(cloneSection);
+                            
+                            // Re-render KaTeX for clone questions
+                            renderMathInElement(cloneSection, {
+                                delimiters: [
+                                    {left: "$", right: "$", display: false},
+                                    {left: "\\[", right: "\\]", display: true},
+                                    {left: "\\begin{array}", right: "\\end{array}", display: true},
+                                    {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+                                ],
+                                throwOnError: false,
+                                output: 'html',
+                                trust: true,
+                                strict: false,
+                                displayMode: true
+                            });
+                        }
+                    }
                 } else {
                     resultContainer.innerHTML = '<p>No question data found.</p>';
                 }
