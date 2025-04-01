@@ -273,6 +273,14 @@
             background-color: #008800;
             margin-top: 10px;
         }
+        
+        .clone-debug {
+            background-color: #2d2d2d;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #6557ed;
+        }
     </style>
 </head>
 <body>
@@ -313,6 +321,7 @@
 
         <div id="spinner"></div>
         <div id="resultContainer"></div>
+        <div id="debugOutput"></div>
     </div>
 
     <script>
@@ -418,6 +427,9 @@
             const questionNumber = document.getElementById('questionNumberDropdown').value;
             const resultContainer = document.getElementById('resultContainer');
             const spinner = document.getElementById('spinner');
+            const debugOutput = document.getElementById('debugOutput');
+            
+            debugOutput.innerHTML = ''; // Clear any previous debug output
 
             if (!testNumber || !questionNumber) {
                 alert('Please select both a test number and question number.');
@@ -452,7 +464,7 @@
                     rawLatexDiv.textContent = data.katex;
                     debugSection.appendChild(rawLatexDiv);
                     
-                    resultContainer.appendChild(debugSection);
+                    debugOutput.appendChild(debugSection);
                 
                     // Create section for the question
                     const questionSection = document.createElement('div');
@@ -476,7 +488,8 @@
                             {left: "$$", right: "$$", display: true},
                             {left: "\\begin{array}", right: "\\end{array}", display: true},
                             {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true},
-                            {left: "\\begin{pmatrix}", right: "\\end{pmatrix}", display: true}
+                            {left: "\\begin{pmatrix}", right: "\\end{pmatrix}", display: true},
+                            {left: "\\begin{matrix}", right: "\\end{matrix}", display: true}
                         ],
                         throwOnError: false,
                         output: 'html'
@@ -507,15 +520,35 @@
                 const cloneData = await cloneResponse.json();
                 console.log('Clone data received:', cloneData);
                 
+                // Add this debug output for clone data
+                const cloneDebugOutput = document.createElement('div');
+                cloneDebugOutput.className = 'debug-section';
+                cloneDebugOutput.innerHTML = '<h4>Clone Questions Debug</h4>';
+                document.getElementById('debugOutput').appendChild(cloneDebugOutput);
+                
                 if (cloneData && cloneData.length > 0) {
                     const cloneSection = document.createElement('div');
                     cloneSection.className = 'clone-section';
                     cloneSection.innerHTML = '<h4>Similar Questions</h4>';
                     
                     cloneData.forEach(item => {
+                        // Enhanced debugging for clone items
                         console.log('Processing clone item:', item);
                         console.log('Clone LaTeX content:', item.clone);
                         
+                        // Add individual clone debug info
+                        const cloneItemDebug = document.createElement('div');
+                        cloneItemDebug.className = 'clone-debug';
+                        cloneItemDebug.innerHTML = `<strong>Model:</strong> ${item.model}`;
+                        
+                        const cloneRawLatex = document.createElement('div');
+                        cloneRawLatex.className = 'raw-latex';
+                        cloneRawLatex.textContent = item.clone || '';
+                        cloneItemDebug.appendChild(cloneRawLatex);
+                        
+                        cloneDebugOutput.appendChild(cloneItemDebug);
+                        
+                        // Regular display of clone question
                         const cloneContainer = document.createElement('div');
                         cloneContainer.className = 'clone-question';
                         
@@ -523,12 +556,6 @@
                         modelDiv.className = 'clone-model';
                         modelDiv.textContent = item.model;
                         cloneContainer.appendChild(modelDiv);
-                        
-                        // Add debug display for raw clone LaTeX
-                        const rawCloneDiv = document.createElement('div');
-                        rawCloneDiv.className = 'raw-latex';
-                        rawCloneDiv.textContent = item.clone || '';
-                        cloneContainer.appendChild(rawCloneDiv);
                         
                         const contentDiv = document.createElement('div');
                         contentDiv.className = 'katex-content';
@@ -549,15 +576,23 @@
                             {left: "$$", right: "$$", display: true},
                             {left: "\\begin{array}", right: "\\end{array}", display: true},
                             {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true},
-                            {left: "\\begin{pmatrix}", right: "\\end{pmatrix}", display: true}
+                            {left: "\\begin{pmatrix}", right: "\\end{pmatrix}", display: true},
+                            {left: "\\begin{matrix}", right: "\\end{matrix}", display: true}
                         ],
                         throwOnError: false,
                         output: 'html'
                     });
+                } else {
+                    cloneDebugOutput.innerHTML += '<p>No clone questions found.</p>';
                 }
             } catch (error) {
                 console.error('Error fetching clone questions:', error);
                 console.log('Failed to load clone questions:', error);
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'clone-debug';
+                errorDiv.innerHTML = `<strong>Error fetching clone questions:</strong> ${error.message}`;
+                document.getElementById('debugOutput').appendChild(errorDiv);
             }
         }
         
