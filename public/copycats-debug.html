@@ -371,32 +371,6 @@
             }
         }
 
-        // Function to transform LaTeX format from original to clone format
-        function transformLatex(latex) {
-            if (!latex) return '';
-            
-            // Step 1: Fix line breaks - replace single backslashes with double backslashes
-            // But only when they're used for line breaks (not followed by other commands)
-            latex = latex.replace(/\\(\s)/g, '\\\\$1');
-            
-            // Step 2: Replace single $ delimiters with \[ and \] for display math
-            // Look for patterns like $...$
-            // We need to be careful to only replace the outer $, not any inner ones
-            if (latex.startsWith('$') && latex.endsWith('$')) {
-                latex = '\\[' + latex.substring(1, latex.length - 1) + '\\]';
-            }
-            
-            // Alternative approach: replace all math blocks
-            latex = latex.replace(/\$([^$]+)\$/g, function(match, p1) {
-                // Don't transform if it's already in \[...\] format
-                if (p1.includes('\\[') || p1.includes('\\]')) return match;
-                return '\\[' + p1 + '\\]';
-            });
-            
-            console.log('Transformed LaTeX:', latex);
-            return latex;
-        }
-
         async function fetchAndDisplayQuestion() {
             const testNumber = document.getElementById('testNumberDropdown').value;
             const questionNumber = document.getElementById('questionNumberDropdown').value;
@@ -421,27 +395,49 @@
                 
                 const data = await response.json();
                 console.log('Raw API Response:', data);
-                console.log('Original LaTeX from API:', data.katex);
 
                 if (data.katex) {
-                    // Create section for the question
+                    // Create sections for question and answers
                     const questionSection = document.createElement('div');
                     questionSection.className = 'section';
                     
-                    // Transform the LaTeX to match the working clone format
-                    const transformedLatex = transformLatex(data.katex);
+                    // Create question text container
+                    const questionText = document.createElement('div');
+                    questionText.className = 'question-text';
                     
-                    // Create a simple container with the katex-content class
-                    const katexDiv = document.createElement('div');
-                    katexDiv.className = 'katex-content';
-                    katexDiv.textContent = transformedLatex; // Use the transformed LaTeX
+                    // Create answers container
+                    const answersContainer = document.createElement('div');
+                    answersContainer.className = 'answer-choices';
                     
-                    // Add to the section and then to the page
-                    questionSection.appendChild(katexDiv);
+                    // Process the content
+                    let content = data.katex;
+                    
+                    // Split into question and answers using both A-E and F-K patterns
+                    const parts = content.split(/(?=[A-K]\.\s)/);
+                    
+                    // Handle the question part (including any tables)
+                    const questionPart = parts[0].trim();
+                    questionText.innerHTML = questionPart;
+                    
+                    // Process each answer choice
+                    parts.slice(1).forEach(answer => {
+                        const answerDiv = document.createElement('div');
+                        answerDiv.className = 'answer-choice';
+                        // Clean up the answer text and ensure proper spacing
+                        const cleanAnswer = answer.trim()
+                            .replace(/([A-K]\.)\s*/, '$1 ')  // Ensure space after letter
+                            .replace(/\s+/g, ' ');  // Normalize spaces
+                        answerDiv.innerHTML = cleanAnswer;
+                        answersContainer.appendChild(answerDiv);
+                    });
+                    
+                    // Add to page
+                    questionSection.appendChild(questionText);
+                    questionSection.appendChild(answersContainer);
                     resultContainer.appendChild(questionSection);
                     
-                    // Render KaTeX on just the question section
-                    renderMathInElement(questionSection, {
+                    // Render KaTeX with expanded delimiter list
+                    renderMathInElement(resultContainer, {
                         delimiters: [
                             {left: "\\[", right: "\\]", display: true},
                             {left: "\\(", right: "\\)", display: false},
@@ -453,7 +449,8 @@
                             {left: "\\begin{matrix}", right: "\\end{matrix}", display: true}
                         ],
                         throwOnError: false,
-                        output: 'html'
+                        output: 'html',
+                        strict: false
                     });
 
                     // Fetch and display clone questions
@@ -488,7 +485,6 @@
                     
                     cloneData.forEach(item => {
                         console.log('Processing clone item:', item);
-                        console.log('Clone LaTeX content:', item.clone);
                         
                         const cloneContainer = document.createElement('div');
                         cloneContainer.className = 'clone-question';
@@ -508,7 +504,7 @@
                     
                     document.getElementById('resultContainer').appendChild(cloneSection);
                     
-                    // Render KaTeX in clone section
+                    // Render KaTeX in clone section with the same expanded delimiter list
                     renderMathInElement(cloneSection, {
                         delimiters: [
                             {left: "\\[", right: "\\]", display: true},
@@ -521,7 +517,8 @@
                             {left: "\\begin{matrix}", right: "\\end{matrix}", display: true}
                         ],
                         throwOnError: false,
-                        output: 'html'
+                        output: 'html',
+                        strict: false
                     });
                 }
             } catch (error) {
