@@ -246,9 +246,9 @@
 <body>
     <div class="container">
         <nav class="nav-links">
-            <a href="index.html">Home</a>
-            <a href="worksheet.html">Generate Worksheet</a>
-            <a href="explain.html">Explain Questions</a>
+            <a href='/'>Home</a>
+            <a href='/worksheet'>Generate Worksheet</a>
+            <a href='/explain'>Explain Questions</a>
         </nav>
 
         <h1>ACT Math Question Viewer</h1>
@@ -397,67 +397,27 @@
                 console.log('Raw API Response:', data);
 
                 if (data.katex) {
-                    // Create sections for question and answers
+                    // Create section for the question - simplified approach
                     const questionSection = document.createElement('div');
                     questionSection.className = 'section';
                     
-                    // Create question text container
-                    const questionText = document.createElement('div');
-                    questionText.className = 'question-text';
-                    
-                    // Create answers container
-                    const answersContainer = document.createElement('div');
-                    answersContainer.className = 'answer-choices';
-                    
-                    // Process the content - THE FIX: Use same approach for original question as for clones
-                    // We process the KaTeX content in a dedicated div with katex-content class
+                    // Create a simple container with the katex-content class
+                    // This mirrors how the clone questions are handled
                     const katexDiv = document.createElement('div');
                     katexDiv.className = 'katex-content';
-                    katexDiv.textContent = data.katex; // Using textContent instead of innerHTML
-                    questionText.appendChild(katexDiv);
+                    katexDiv.textContent = data.katex; // Use textContent to preserve LaTeX
                     
-                    // Split into question and answers using both A-E and F-K patterns
-                    const parts = data.katex.split(/(?=[A-K]\.\s)/);
-                    
-                    // Handle the question part (including any tables)
-                    // Clear out questionText and use the katexDiv approach
-                    questionText.innerHTML = '';
-                    const questionPart = parts[0].trim();
-                    const questionKatexDiv = document.createElement('div');
-                    questionKatexDiv.className = 'katex-content';
-                    questionKatexDiv.textContent = questionPart;
-                    questionText.appendChild(questionKatexDiv);
-                    
-                    // Process each answer choice
-                    parts.slice(1).forEach(answer => {
-                        const answerDiv = document.createElement('div');
-                        answerDiv.className = 'answer-choice';
-                        
-                        // Create a katex-content div for each answer
-                        const answerKatexDiv = document.createElement('div');
-                        answerKatexDiv.className = 'katex-content';
-                        
-                        // Clean up the answer text and ensure proper spacing
-                        const cleanAnswer = answer.trim()
-                            .replace(/([A-K]\.)\s*/, '$1 ')  // Ensure space after letter
-                            .replace(/\s+/g, ' ');  // Normalize spaces
-                        
-                        answerKatexDiv.textContent = cleanAnswer;
-                        answerDiv.appendChild(answerKatexDiv);
-                        answersContainer.appendChild(answerDiv);
-                    });
-                    
-                    // Add to page
-                    questionSection.appendChild(questionText);
-                    questionSection.appendChild(answersContainer);
+                    // Add to the section and then to the page
+                    questionSection.appendChild(katexDiv);
                     resultContainer.appendChild(questionSection);
                     
-                    // Render KaTeX - use same delimiters as fetchAndDisplayCloneQuestions
-                    renderMathInElement(resultContainer, {
+                    // Render KaTeX on just the question section, similar to clone questions
+                    renderMathInElement(questionSection, {
                         delimiters: [
                             {left: "\\[", right: "\\]", display: true},
                             {left: "\\(", right: "\\)", display: false},
                             {left: "$", right: "$", display: false},
+                            {left: "$$", right: "$$", display: true},
                             {left: "\\begin{array}", right: "\\end{array}", display: true},
                             {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                         ],
@@ -508,8 +468,6 @@
                         
                         const contentDiv = document.createElement('div');
                         contentDiv.className = 'katex-content';
-                        
-                        // Clean up the LaTeX content and use textContent to match our new approach
                         contentDiv.textContent = item.clone || '';
                         cloneContainer.appendChild(contentDiv);
                         
@@ -524,6 +482,7 @@
                             {left: "\\[", right: "\\]", display: true},
                             {left: "\\(", right: "\\)", display: false},
                             {left: "$", right: "$", display: false},
+                            {left: "$$", right: "$$", display: true},
                             {left: "\\begin{array}", right: "\\end{array}", display: true},
                             {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                         ],
