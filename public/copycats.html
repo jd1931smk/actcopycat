@@ -413,7 +413,7 @@
                     
                     // Handle the question part (including any tables)
                     const questionPart = parts[0].trim();
-                    questionContent.textContent = questionPart;
+                    questionContent.innerHTML = questionPart;
                     
                     // Process each answer choice
                     parts.slice(1).forEach(answer => {
@@ -423,8 +423,7 @@
                         const cleanAnswer = answer.trim()
                             .replace(/([A-K]\.)\s*/, '$1 ')  // Ensure space after letter
                             .replace(/\s+/g, ' ');  // Normalize spaces
-                        answerDiv.textContent = cleanAnswer;
-                        answersContent.appendChild(answerDiv);
+                            answerDiv.innerHTML = cleanAnswer;                        answersContent.appendChild(answerDiv);
                     });
                     
                     katexSection.appendChild(questionContent);
