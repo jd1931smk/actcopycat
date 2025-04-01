@@ -241,46 +241,6 @@
             font-weight: bold;
             margin-bottom: 10px;
         }
-        
-        /* Debug section */
-        .debug-section {
-            background-color: #2d2d2d;
-            padding: 20px;
-            margin-top: 20px;
-            border-radius: 8px;
-            border: 2px solid #008800;
-        }
-        
-        .debug-section h4 {
-            color: #00ff00;
-            margin: 0 0 15px 0;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #444;
-        }
-        
-        .raw-latex {
-            background-color: #333;
-            padding: 15px;
-            border-radius: 4px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            overflow-x: auto;
-            color: #cccccc;
-            margin-bottom: 20px;
-        }
-        
-        #testMatricesButton {
-            background-color: #008800;
-            margin-top: 10px;
-        }
-        
-        .clone-debug {
-            background-color: #2d2d2d;
-            padding: 15px;
-            margin-top: 10px;
-            border-radius: 4px;
-            border-left: 3px solid #6557ed;
-        }
     </style>
 </head>
 <body>
@@ -310,9 +270,6 @@
 
             <button id="fetchButton">Fetch and Render</button>
             
-            <!-- Debug test button -->
-            <button id="testMatricesButton">Test Matrix Rendering</button>
-            
             <div class="nav-buttons">
                 <button id="previousButton" onclick="navigateQuestion('prev')" disabled>Previous</button>
                 <button id="nextButton" onclick="navigateQuestion('next')" disabled>Next</button>
@@ -321,20 +278,15 @@
 
         <div id="spinner"></div>
         <div id="resultContainer"></div>
-        <div id="debugOutput"></div>
     </div>
 
     <script>
         let currentTestNumber = '';
         let currentQuestionNumber = '';
-        let lastRawApiData = null; // Store the last API response for debugging
 
         document.addEventListener('DOMContentLoaded', function() {
             initializeEventListeners();
             populateTestNumbers();
-            
-            // Log KaTeX version
-            console.log("KaTeX version:", (typeof katex !== 'undefined') ? katex.version : 'undefined');
         });
 
         function initializeEventListeners() {
@@ -356,9 +308,6 @@
             });
             
             document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
-            
-            // Add test matrices button event
-            document.getElementById('testMatricesButton').addEventListener('click', testMatrixRendering);
         }
 
         async function populateTestNumbers() {
@@ -422,14 +371,37 @@
             }
         }
 
+        // Function to transform LaTeX format from original to clone format
+        function transformLatex(latex) {
+            if (!latex) return '';
+            
+            // Step 1: Fix line breaks - replace single backslashes with double backslashes
+            // But only when they're used for line breaks (not followed by other commands)
+            latex = latex.replace(/\\(\s)/g, '\\\\$1');
+            
+            // Step 2: Replace single $ delimiters with \[ and \] for display math
+            // Look for patterns like $...$
+            // We need to be careful to only replace the outer $, not any inner ones
+            if (latex.startsWith('$') && latex.endsWith('$')) {
+                latex = '\\[' + latex.substring(1, latex.length - 1) + '\\]';
+            }
+            
+            // Alternative approach: replace all math blocks
+            latex = latex.replace(/\$([^$]+)\$/g, function(match, p1) {
+                // Don't transform if it's already in \[...\] format
+                if (p1.includes('\\[') || p1.includes('\\]')) return match;
+                return '\\[' + p1 + '\\]';
+            });
+            
+            console.log('Transformed LaTeX:', latex);
+            return latex;
+        }
+
         async function fetchAndDisplayQuestion() {
             const testNumber = document.getElementById('testNumberDropdown').value;
             const questionNumber = document.getElementById('questionNumberDropdown').value;
             const resultContainer = document.getElementById('resultContainer');
             const spinner = document.getElementById('spinner');
-            const debugOutput = document.getElementById('debugOutput');
-            
-            debugOutput.innerHTML = ''; // Clear any previous debug output
 
             if (!testNumber || !questionNumber) {
                 alert('Please select both a test number and question number.');
@@ -448,32 +420,21 @@
                 }
                 
                 const data = await response.json();
-                lastRawApiData = data; // Store for debugging
-                
                 console.log('Raw API Response:', data);
                 console.log('Original LaTeX from API:', data.katex);
 
                 if (data.katex) {
-                    // Add debug section to display raw LaTeX
-                    const debugSection = document.createElement('div');
-                    debugSection.className = 'debug-section';
-                    debugSection.innerHTML = '<h4>Debug Information</h4>';
-                    
-                    const rawLatexDiv = document.createElement('div');
-                    rawLatexDiv.className = 'raw-latex';
-                    rawLatexDiv.textContent = data.katex;
-                    debugSection.appendChild(rawLatexDiv);
-                    
-                    debugOutput.appendChild(debugSection);
-                
                     // Create section for the question
                     const questionSection = document.createElement('div');
                     questionSection.className = 'section';
                     
+                    // Transform the LaTeX to match the working clone format
+                    const transformedLatex = transformLatex(data.katex);
+                    
                     // Create a simple container with the katex-content class
                     const katexDiv = document.createElement('div');
                     katexDiv.className = 'katex-content';
-                    katexDiv.textContent = data.katex; // Use textContent to preserve LaTeX
+                    katexDiv.textContent = transformedLatex; // Use the transformed LaTeX
                     
                     // Add to the section and then to the page
                     questionSection.appendChild(katexDiv);
@@ -520,35 +481,15 @@
                 const cloneData = await cloneResponse.json();
                 console.log('Clone data received:', cloneData);
                 
-                // Add this debug output for clone data
-                const cloneDebugOutput = document.createElement('div');
-                cloneDebugOutput.className = 'debug-section';
-                cloneDebugOutput.innerHTML = '<h4>Clone Questions Debug</h4>';
-                document.getElementById('debugOutput').appendChild(cloneDebugOutput);
-                
                 if (cloneData && cloneData.length > 0) {
                     const cloneSection = document.createElement('div');
                     cloneSection.className = 'clone-section';
                     cloneSection.innerHTML = '<h4>Similar Questions</h4>';
                     
                     cloneData.forEach(item => {
-                        // Enhanced debugging for clone items
                         console.log('Processing clone item:', item);
                         console.log('Clone LaTeX content:', item.clone);
                         
-                        // Add individual clone debug info
-                        const cloneItemDebug = document.createElement('div');
-                        cloneItemDebug.className = 'clone-debug';
-                        cloneItemDebug.innerHTML = `<strong>Model:</strong> ${item.model}`;
-                        
-                        const cloneRawLatex = document.createElement('div');
-                        cloneRawLatex.className = 'raw-latex';
-                        cloneRawLatex.textContent = item.clone || '';
-                        cloneItemDebug.appendChild(cloneRawLatex);
-                        
-                        cloneDebugOutput.appendChild(cloneItemDebug);
-                        
-                        // Regular display of clone question
                         const cloneContainer = document.createElement('div');
                         cloneContainer.className = 'clone-question';
                         
@@ -582,67 +523,11 @@
                         throwOnError: false,
                         output: 'html'
                     });
-                } else {
-                    cloneDebugOutput.innerHTML += '<p>No clone questions found.</p>';
                 }
             } catch (error) {
                 console.error('Error fetching clone questions:', error);
                 console.log('Failed to load clone questions:', error);
-                
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'clone-debug';
-                errorDiv.innerHTML = `<strong>Error fetching clone questions:</strong> ${error.message}`;
-                document.getElementById('debugOutput').appendChild(errorDiv);
             }
-        }
-        
-        // Function to test various matrix formats with KaTeX
-        function testMatrixRendering() {
-            const resultContainer = document.getElementById('resultContainer');
-            resultContainer.innerHTML = '';
-            
-            const testContainer = document.createElement('div');
-            testContainer.className = 'section';
-            
-            const heading = document.createElement('h4');
-            heading.textContent = 'Matrix Rendering Test';
-            testContainer.appendChild(heading);
-            
-            const testContent = document.createElement('div');
-            testContent.className = 'katex-content';
-            
-            // Try multiple matrix formats to see which ones work
-            testContent.textContent = `Test Matrix 1 (bmatrix): $$\\begin{bmatrix} 1 & 2 \\\\ 3 & 4 \\end{bmatrix}$$
-            
-Test Matrix 2 (pmatrix): $$\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}$$
-            
-Test Matrix 3 (array with left/right): $$\\left[\\begin{array}{rr} 1 & 2 \\\\ 3 & 4 \\end{array}\\right]$$
-            
-Test Matrix 4 (single $ delimiter): $\\begin{bmatrix} 1 & 2 \\\\ 3 & 4 \\end{bmatrix}$
-            
-Test Matrix 5 (bracket notation): $$\\left[ \\begin{matrix} 1 & 2 \\\\ 3 & 4 \\end{matrix} \\right]$$
-
-Test Matrix 6 (plain array): $$\\begin{array}{rr} 1 & 2 \\\\ 3 & 4 \\end{array}$$
-
-Test Matrix 7 (bmatrix with single $): $\\begin{bmatrix} 1 & 2 \\\\ 3 & 4 \\end{bmatrix}$`;
-            
-            testContainer.appendChild(testContent);
-            resultContainer.appendChild(testContainer);
-            
-            renderMathInElement(testContainer, {
-                delimiters: [
-                    {left: "\\[", right: "\\]", display: true},
-                    {left: "\\(", right: "\\)", display: false},
-                    {left: "$", right: "$", display: false},
-                    {left: "$$", right: "$$", display: true},
-                    {left: "\\begin{array}", right: "\\end{array}", display: true},
-                    {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true},
-                    {left: "\\begin{pmatrix}", right: "\\end{pmatrix}", display: true},
-                    {left: "\\begin{matrix}", right: "\\end{matrix}", display: true}
-                ],
-                throwOnError: false,
-                output: 'html'
-            });
         }
     </script>
 </body>
