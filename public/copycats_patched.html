@@ -132,6 +132,8 @@
         }
         
         .katex-content {
+            font-family: inherit;
+            white-space: pre-wrap;
             background-color: #333;
             padding: 20px;
             border-radius: 4px;
@@ -145,6 +147,7 @@
         
         /* KaTeX Styling */
         .katex {
+            line-height: 1.4;
             font-size: 1.1em;
             color: #f0f0f0;
         }
@@ -207,6 +210,7 @@
         }
 
         .katex {
+            line-height: 1.4;
             font-size: 1.1em;
             line-height: 1.2;
             text-indent: 0;
@@ -372,182 +376,80 @@
             }
         }
 
-        async function fetchAndDisplayQuestion() {
-            const testNumber = document.getElementById('testNumberDropdown').value;
-            const questionNumber = document.getElementById('questionNumberDropdown').value;
-            const resultContainer = document.getElementById('resultContainer');
-            const spinner = document.getElementById('spinner');
+        
+async function fetchAndDisplayQuestion() {
+    const testNumber = document.getElementById('testNumberDropdown').value;
+    const questionNumber = document.getElementById('questionNumberDropdown').value;
+    const resultContainer = document.getElementById('resultContainer');
+    const spinner = document.getElementById('spinner');
 
-            if (!testNumber || !questionNumber) {
-                alert('Please select both a test number and question number.');
-                return;
-            }
+    if (!testNumber || !questionNumber) {
+        alert('Please select both a test number and question number.');
+        return;
+    }
 
-            spinner.style.display = 'block';
-            resultContainer.innerHTML = '';
+    spinner.style.display = 'block';
+    resultContainer.innerHTML = '';
 
-            try {
-                // Fetch original question
-                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                console.log('Raw API Response:', data);
+    try {
+        const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
 
-                if (data.katex) {
-                    // Create sections for question and answers
-                    const questionSection = document.createElement('div');
-                    questionSection.className = 'section';
-                    
-                    // Create question text container
-                    const questionText = document.createElement('div');
-                    questionText.className = 'question-text';
-                    
-                    // Create answers container
-                    const answersContainer = document.createElement('div');
-                    answersContainer.className = 'answer-choices';
-                    
-                    // Process the content
-                    let content = data.katex;
-                    
-                    // Split into question and answers using both A-E and F-K patterns
-                    const parts = content.split(/(?=[A-K]\.\s)/);
-                    
-                    // Handle the question part (including any tables)
-                    const questionPart = parts[0].trim();
-                    questionText.innerHTML = questionPart;
-                    
-                    // Process each answer choice
-                    parts.slice(1).forEach(answer => {
-                        const answerDiv = document.createElement('div');
-                        answerDiv.className = 'answer-choice';
-                        // Clean up the answer text and ensure proper spacing
-                        const cleanAnswer = answer.trim()
-                            .replace(/([A-K]\.)\s*/, '$1 ')  // Ensure space after letter
-                            .replace(/\s+/g, ' ');  // Normalize spaces
-                        answerDiv.innerHTML = cleanAnswer;
-                        answersContainer.appendChild(answerDiv);
-                    });
-                    
-                    // Add to page
-                    questionSection.appendChild(questionText);
-                    questionSection.appendChild(answersContainer);
-                    resultContainer.appendChild(questionSection);
-                    
-                    // Render KaTeX
-                    renderMathInElement(resultContainer, {
-                        delimiters: [
-                            {left: "\\[", right: "\\]", display: true},
-                            {left: "\\(", right: "\\)", display: false},
-                            {left: "$", right: "$", display: false},
-                            {left: "\\begin{array}", right: "\\end{array}", display: true},
-                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
-                        ],
-                        throwOnError: false,
-                        output: 'html'
-                    });
+        if (data.katex) {
+            const questionSection = document.createElement('div');
+            questionSection.className = 'section';
 
-                    // Fetch and display clone questions
-                    fetchAndDisplayCloneQuestions(testNumber, questionNumber);
-                } else {
-                    resultContainer.innerHTML = '<p>No question data found.</p>';
-                }
+            const questionText = document.createElement('div');
+            questionText.className = 'question-text';
 
-                spinner.style.display = 'none';
-            } catch (error) {
-                console.error('Error:', error);
-                spinner.style.display = 'none';
-                resultContainer.innerHTML = `<p>Error loading question: ${error.message}</p>`;
-            }
+            const answersContainer = document.createElement('div');
+            answersContainer.className = 'answer-choices';
+
+            const content = data.katex;
+            const parts = content.split(/(?=[A-K]\.\s)/);
+
+            const questionPart = parts[0].trim();
+            questionText.innerHTML = questionPart;
+
+            parts.slice(1).forEach(answer => {
+                const answerDiv = document.createElement('div');
+                answerDiv.className = 'answer-choice';
+                const cleanAnswer = answer.trim()
+                    .replace(/([A-K]\.)\s*/, '$1 ')
+                    .replace(/\s+/g, ' ');
+                answerDiv.innerHTML = cleanAnswer;
+                answersContainer.appendChild(answerDiv);
+            });
+
+            questionSection.appendChild(questionText);
+            questionSection.appendChild(answersContainer);
+            resultContainer.appendChild(questionSection);
+
+            renderMathInElement(resultContainer, {
+                delimiters: [
+                    {left: "\\[", right: "\\]", display: true},
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "$", right: "$", display: false},
+                    {left: "\\begin{array}", right: "\\end{array}", display: true},
+                    {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+                ],
+                throwOnError: false,
+                output: 'html'
+            });
+
+            fetchAndDisplayCloneQuestions(testNumber, questionNumber);
+        } else {
+            resultContainer.innerHTML = '<p>No question data found.</p>';
         }
 
-        async function fetchAndDisplayCloneQuestions(testNumber, questionNumber) {
-            try {
-                const cloneResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
-                
-                if (!cloneResponse.ok) {
-                    throw new Error(`HTTP error! status: ${cloneResponse.status}`);
-                }
-                
-                const cloneData = await cloneResponse.json();
-                console.log('Clone data received:', cloneData);
-                
-                if (cloneData && cloneData.length > 0) {
-                    const cloneSection = document.createElement('div');
-                    cloneSection.className = 'clone-section';
-                    cloneSection.innerHTML = '<h4>Similar Questions</h4>';
-                    
-                    cloneData.forEach(item => {
-                        console.log('Processing clone item:', item);
-                        
-                        const cloneContainer = document.createElement('div');
-                        cloneContainer.className = 'clone-question';
-                        
-                        const modelDiv = document.createElement('div');
-                        modelDiv.className = 'clone-model';
-                        modelDiv.textContent = item.model;
-                        cloneContainer.appendChild(modelDiv);
-                        
-                        const contentDiv = document.createElement('div');
-                        contentDiv.className = 'katex-content';
-                        
-                        // Clean up the LaTeX content
-                        let cleanedContent = item.clone || '';
-                        console.log('Raw clone content:', cleanedContent);
-                        
-                        // Split into question and answers
-                        const parts = cleanedContent.split(/(?=[A-K]\.\s)/);
-                        
-                        // Process question part
-                        const questionPart = parts[0].trim();
-                        const questionDiv = document.createElement('div');
-                        questionDiv.className = 'question-text';
-                        questionDiv.innerHTML = questionPart;
-                        contentDiv.appendChild(questionDiv);
-                        
-                        // Process answers
-                        const answersDiv = document.createElement('div');
-                        answersDiv.className = 'answer-choices';
-                        
-                        parts.slice(1).forEach(answer => {
-                            const answerDiv = document.createElement('div');
-                            answerDiv.className = 'answer-choice';
-                            // Clean up the answer text and ensure proper spacing
-                            const cleanAnswer = answer.trim()
-                                .replace(/([A-K]\.)\s*/, '$1 ')  // Ensure space after letter
-                                .replace(/\s+/g, ' ');  // Normalize spaces
-                            answerDiv.innerHTML = cleanAnswer;
-                            answersDiv.appendChild(answerDiv);
-                        });
-                        
-                        contentDiv.appendChild(answersDiv);
-                        cloneContainer.appendChild(contentDiv);
-                        cloneSection.appendChild(cloneContainer);
-                    });
-                    
-                    resultContainer.appendChild(cloneSection);
-                    
-                    // Render KaTeX in clone section
-                    renderMathInElement(cloneSection, {
-                        delimiters: [
-                            {left: "\\[", right: "\\]", display: true},
-                            {left: "\\(", right: "\\)", display: false},
-                            {left: "$", right: "$", display: false},
-                            {left: "\\begin{array}", right: "\\end{array}", display: true},
-                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
-                        ],
-                        throwOnError: false,
-                        output: 'html'
-                    });
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                console.log('Failed to load clone questions:', error);
-            }
-        }
-    </script>
-</body>
-</html> 
+        spinner.style.display = 'none';
+    } catch (error) {
+        console.error('Error:', error);
+        spinner.style.display = 'none';
+        resultContainer.innerHTML = `<p>Error loading question: ${error.message}</p>`;
+    }
+}
+fetchAndDisplayCloneQuestions(testNumber, questionNumber); else {
+            resultContainer.innerHTML = '<p>No question data found.</p>';
+        

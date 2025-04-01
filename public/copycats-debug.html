@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT Math Question Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #1e1e1e;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+        }
+        .nav-links {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .nav-links a {
+            color: #f0f0f0;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 8px 15px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .nav-links a:hover {
+            background-color: #3d3d3d;
+        }
+        .selection-area {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #f0f0f0;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .section {
+            background-color: #2b2b2b;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        .katex-content {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: inherit;
+        }
+        #spinner {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid #6557ed;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="nav-links">
+            <a href='/'>Home</a>
+            <a href='/worksheet'>Generate Worksheet</a>
+            <a href='/explain'>Explain Questions</a>
+        </nav>
+
+        <h1>ACT Math Question Viewer</h1>
+
+        <div class="selection-area">
+            <div class="form-group">
+                <label for="testNumberDropdown">Test Number:</label>
+                <select id="testNumberDropdown">
+                    <option value="">Select a test number</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="questionNumberDropdown">Question Number:</label>
+                <select id="questionNumberDropdown">
+                    <option value="">Select a question number</option>
+                </select>
+            </div>
+            <button id="fetchButton">Fetch and Render</button>
+            <button id="previousButton" onclick="navigateQuestion('prev')" disabled>Previous</button>
+            <button id="nextButton" onclick="navigateQuestion('next')" disabled>Next</button>
+        </div>
+
+        <div id="spinner"></div>
+        <div id="resultContainer"></div>
+    </div>
+
+    <script>
+        let currentTestNumber = '';
+        let currentQuestionNumber = '';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+            populateTestNumbers();
+        });
+
+        function initializeEventListeners() {
+            document.getElementById('testNumberDropdown').addEventListener('change', function() {
+                const selectedTest = this.value;
+                if (selectedTest) {
+                    currentTestNumber = selectedTest;
+                    currentQuestionNumber = '';
+                    populateQuestionNumbers(selectedTest);
+                }
+            });
+
+            document.getElementById('questionNumberDropdown').addEventListener('change', function() {
+                const selectedQuestion = this.value;
+                if (selectedQuestion) {
+                    currentQuestionNumber = selectedQuestion;
+                    updateNavigationButtons();
+                }
+            });
+
+            document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
+        }
+
+        function populateTestNumbers() {
+            const dropdown = document.getElementById('testNumberDropdown');
+            const testNumbers = ['A11', 'B04', 'C01', 'D01', 'E01', 'F01', 'G01', 'H31'];
+            dropdown.innerHTML = '<option value="">Select a test number</option>';
+            testNumbers.forEach(num => {
+                const opt = document.createElement('option');
+                opt.value = num;
+                opt.textContent = num;
+                dropdown.appendChild(opt);
+            });
+        }
+
+        async function populateQuestionNumbers(testNumber) {
+            const dropdown = document.getElementById('questionNumberDropdown');
+            dropdown.innerHTML = '<option value="">Select a question number</option>';
+            try {
+                const res = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
+                if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+                const data = await res.json();
+                data.forEach(num => {
+                    const opt = document.createElement('option');
+                    opt.value = num;
+                    opt.textContent = num;
+                    dropdown.appendChild(opt);
+                });
+            } catch (err) {
+                console.error('Failed to fetch question numbers:', err);
+                alert('Error loading question numbers. Please try selecting a different test number.');
+            }
+        }
+
+        function updateNavigationButtons() {
+            const dropdown = document.getElementById('questionNumberDropdown');
+            const prevBtn = document.getElementById('previousButton');
+            const nextBtn = document.getElementById('nextButton');
+            const currentIndex = Array.from(dropdown.options).findIndex(o => o.value === currentQuestionNumber);
+            prevBtn.disabled = currentIndex <= 1;
+            nextBtn.disabled = currentIndex === -1 || currentIndex === dropdown.options.length - 1;
+        }
+
+        function navigateQuestion(dir) {
+            const dropdown = document.getElementById('questionNumberDropdown');
+            const index = Array.from(dropdown.options).findIndex(o => o.value === currentQuestionNumber);
+            const newIndex = dir === 'prev' ? index - 1 : index + 1;
+            if (newIndex > 0 && newIndex < dropdown.options.length) {
+                currentQuestionNumber = dropdown.options[newIndex].value;
+                dropdown.value = currentQuestionNumber;
+                updateNavigationButtons();
+                fetchAndDisplayQuestion();
+            }
+        }
+
+        async function fetchAndDisplayQuestion() {
+            const testNumber = document.getElementById('testNumberDropdown').value;
+            const questionNumber = document.getElementById('questionNumberDropdown').value;
+            const resultContainer = document.getElementById('resultContainer');
+            const spinner = document.getElementById('spinner');
+
+            if (!testNumber || !questionNumber) {
+                alert('Please select both a test number and question number.');
+                return;
+            }
+
+            spinner.style.display = 'block';
+            resultContainer.innerHTML = '';
+
+            try {
+                const res = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+                const data = await res.json();
+
+                if (data.katex) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'section';
+
+                    const katexDiv = document.createElement('div');
+                    katexDiv.className = 'katex-content';
+                    katexDiv.textContent = data.katex;
+                    wrapper.appendChild(katexDiv);
+                    resultContainer.appendChild(wrapper);
+
+                    renderMathInElement(katexDiv, {
+                        delimiters: [
+                            { left: "$$", right: "$$", display: true },
+                            { left: "$", right: "$", display: false }
+                        ],
+                        throwOnError: false,
+                        output: 'html'
+                    });
+                } else {
+                    resultContainer.innerHTML = '<p>No question data found.</p>';
+                }
+            } catch (err) {
+                resultContainer.innerHTML = `<p>Error: ${err.message}</p>`;
+                console.error('Fetch/render error:', err);
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
