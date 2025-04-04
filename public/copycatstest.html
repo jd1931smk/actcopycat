@@ -1,0 +1,128 @@
+import { useEffect, useRef, useState } from 'react';
+import renderMathInElement from 'katex/contrib/auto-render';
+import 'katex/dist/katex.min.css';
+
+const KaTeXRender = ({ content }) => {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      renderMathInElement(ref.current, {
+        delimiters: [
+          { left: "\\[", right: "\\]", display: true },
+          { left: "\\(", right: "\\)", display: false },
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false },
+          { left: "\\begin{array}", right: "\\end{array}", display: true },
+          { left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true }
+        ],
+        throwOnError: false,
+        output: 'html'
+      });
+    }
+  }, [content]);
+
+  return <div className="katex-content" ref={ref}>{content}</div>;
+};
+
+const ACTMathQuestionViewer = () => {
+  const [testNumbers] = useState([
+    'A11', 'B04', 'B05', 'C01', 'C02', 'C03', 'C04', 'D01', 'D02', 'D03',
+    'D04', 'E01', 'E02', 'E03', 'E04', 'F01', 'F02', 'F03', 'F04', 'G01',
+    'G02', 'H31'
+  ]);
+  const [selectedTest, setSelectedTest] = useState('');
+  const [questionNumbers, setQuestionNumbers] = useState([]);
+  const [selectedQuestion, setSelectedQuestion] = useState('');
+  const [questionData, setQuestionData] = useState(null);
+  const [clones, setClones] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchQuestionNumbers = async (testNumber) => {
+    try {
+      const res = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${testNumber}`);
+      const data = await res.json();
+      setQuestionNumbers(data);
+    } catch (err) {
+      console.error('Error fetching question numbers:', err);
+    }
+  };
+
+  const fetchQuestion = async () => {
+    if (!selectedTest || !selectedQuestion) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${selectedTest}&questionNumber=${selectedQuestion}`);
+      const data = await res.json();
+      setQuestionData(data.katex);
+      fetchCloneQuestions();
+    } catch (err) {
+      console.error('Error fetching question:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCloneQuestions = async () => {
+    try {
+      const res = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${selectedTest}&questionNumber=${selectedQuestion}`);
+      const data = await res.json();
+      setClones(data);
+    } catch (err) {
+      console.error('Error fetching clone questions:', err);
+    }
+  };
+
+  return (
+    <div className="container">
+      <nav className="nav-links">
+        <a href='/'>Home</a>
+        <a href='/worksheet'>Generate Worksheet</a>
+        <a href='/explain'>Explain Questions</a>
+      </nav>
+
+      <h1>ACT Math Question Viewer</h1>
+
+      <div className="selection-area">
+        <div className="form-group">
+          <label>Test Number:</label>
+          <select onChange={(e) => {
+            const val = e.target.value;
+            setSelectedTest(val);
+            fetchQuestionNumbers(val);
+            setSelectedQuestion('');
+          }}>
+            <option value="">Select a test number</option>
+            {testNumbers.map(tn => <option key={tn} value={tn}>{tn}</option>)}
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Question Number:</label>
+          <select onChange={(e) => setSelectedQuestion(e.target.value)}>
+            <option value="">Select a question number</option>
+            {questionNumbers.map(qn => <option key={qn} value={qn}>{qn}</option>)}
+          </select>
+        </div>
+        <button onClick={fetchQuestion} disabled={!selectedTest || !selectedQuestion}>Fetch and Render</button>
+      </div>
+
+      {loading && <div id="spinner"></div>}
+
+      {questionData && <div className="section"><KaTeXRender content={questionData} /></div>}
+
+      {clones.length > 0 && (
+        <div className="clone-section">
+          <h4>Similar Questions</h4>
+          {clones.map((clone, idx) => (
+            <div className="clone-question" key={idx}>
+              <div className="clone-model">{clone.model}</div>
+              <KaTeXRender content={clone.clone} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ACTMathQuestionViewer;
