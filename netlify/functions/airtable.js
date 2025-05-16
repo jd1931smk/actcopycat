@@ -219,9 +219,8 @@ exports.handler = async (event) => {
                 }
 
                 console.log(`✅ Fetching clones for Test: ${testNumber}, Question: ${questionNumber}`);
-                
                 try {
-                    // First check if the question exists
+                    // First check if the question exists and get its Record ID
                     const questionExists = await base('Questions')
                         .select({
                             filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
@@ -234,34 +233,25 @@ exports.handler = async (event) => {
                         return formatResponse(404, { error: "Original question not found" });
                     }
 
-                    // More flexible matching - try both exact and flexible formats
-                    const filterFormula = `OR(
-                        {Original Question} = '${testNumber} - ${questionNumber}',
-                        {Original Question} = '${testNumber}-${questionNumber}',
-                        {Original Question} = '${testNumber} ${questionNumber}'
-                    )`;
+                    const originalRecordId = questionExists[0].get('Record ID');
+                    console.log('Original question Record ID:', originalRecordId);
 
+                    // Find all CopyCats where Original Question contains the record ID
                     const records = await base('CopyCats')
                         .select({
-                            filterByFormula: filterFormula,
+                            filterByFormula: `FIND('${originalRecordId}', ARRAYJOIN({Original Question})) > 0`,
                             fields: ['Corrected Clone Question LM', 'AI Model', 'Original Question']
                         })
                         .all();
 
                     console.log(`📌 Found ${records.length} total records`);
-                    
-                    // Log details about each record
                     records.forEach(r => {
                         const fields = r.fields;
-                        console.log(`Record details:
-                            Original Question: ${fields['Original Question']}
-                            Has Clone Question: ${Boolean(fields['Corrected Clone Question LM'])}
-                            AI Model: ${fields['AI Model'] || 'No Model'}
-                        `);
+                        console.log(`Record details:\n  Original Question: ${fields['Original Question']}\n  Has Clone Question: ${Boolean(fields['Corrected Clone Question LM'])}\n  AI Model: ${fields['AI Model'] || 'No Model'}`);
                     });
 
                     const clones = records
-                        .filter(r => r.get('Corrected Clone Question LM')) // Only include records with actual clone content
+                        .filter(r => r.get('Corrected Clone Question LM'))
                         .map(r => ({
                             clone: r.get('Corrected Clone Question LM'),
                             model: r.get('AI Model') || 'No Model',
