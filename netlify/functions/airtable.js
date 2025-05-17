@@ -94,12 +94,9 @@ exports.handler = async (event) => {
                         
                         let katexContent = records[0].get('KatexMarkdown');
                         console.log('Raw KaTeX content:', katexContent);
-                        
+                        // Do not replace double backslashes; preserve original LaTeX
                         if (katexContent) {
-                            // Simple cleanup - don't try to wrap math expressions
-                            katexContent = katexContent
-                                .replace(/\\\\/g, '\\')  // Fix double backslashes
-                                .trim();
+                            katexContent = katexContent.trim();
                         }
                         
                         const response = {
