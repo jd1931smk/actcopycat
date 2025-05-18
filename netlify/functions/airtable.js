@@ -322,7 +322,9 @@ exports.handler = async (event) => {
                     }
 
                     const linkedQuestionIds = skillRecord.fields.LinkedQuestions || [];
-                    console.log(`Linked Question IDs: ${JSON.stringify(linkedQuestionIds)}`);
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Linked Question IDs: ${JSON.stringify(linkedQuestionIds)}`);
+                    }
 
                     if (linkedQuestionIds.length === 0) {
                         return formatResponse(200, { questions: [] });
@@ -331,11 +333,9 @@ exports.handler = async (event) => {
                     const fetchedQuestions = await Promise.all(
                         linkedQuestionIds.map(async (questionId) => {
                             try {
-                                console.log(`Attempting to fetch question with ID: ${questionId}`);
                                 const record = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId, {
                                     fields: ['Photo', 'Test Number', 'Question Number', 'KatexMarkdown']
                                 });
-                                console.log(`Successfully fetched question with ID: ${questionId}`);
                                 return {
                                     id: record.id,
                                     photo: record.fields['Photo'] ? record.fields['Photo'][0].url : "No Photo Available",
@@ -350,15 +350,10 @@ exports.handler = async (event) => {
                         })
                     );
 
-                    console.log("Fetched Questions Array:", JSON.stringify(fetchedQuestions));
-
                     const validQuestions = fetchedQuestions.filter(q => q !== null && !q.error);
 
                     if (process.env.NODE_ENV !== 'production') {
                         console.log(`Successfully fetched ${validQuestions.length} questions.`);
-                        validQuestions.forEach((q, idx) => {
-                            console.log(`Question ${idx + 1}:`, JSON.stringify(q, null, 2));
-                        });
                     }
 
                     return formatResponse(200, { questions: validQuestions });
