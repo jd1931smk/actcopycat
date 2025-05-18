@@ -310,61 +310,53 @@ exports.handler = async (event) => {
                 }
 
             case 'getWorksheetQuestions':
-                if (process.env.NODE_ENV !== 'production') {
-                    console.log("Fetching worksheet questions...");
-                }
-                // skillId is already parsed from queryStringParameters
                 try {
                     if (process.env.NODE_ENV !== 'production') {
+                        console.log("Fetching worksheet questions...");
                         console.log(`Attempting to fetch Skill record with ID: ${skillId}`);
                     }
+
+                    // Fetch the skill record
                     const skillRecord = await base.table(process.env.SKILLS_TABLE_ID)
-                        .select({
-                            filterByFormula: `{Record ID} = '${skillId}'`,
-                            maxRecords: 1
-                        })
-                        .firstPage();
-                    
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log(`Found Skill record? ${skillRecord && skillRecord.length > 0}`);
-                        if (skillRecord && skillRecord.length > 0) {
-                            console.log(`Skill record ID: ${skillRecord[0].id}`);
-                            console.log(`Linked Question IDs: ${skillRecord[0].fields.LinkedQuestions || 'None'}`);
-                        }
-                    }
-                    const linkedQuestionIds = skillRecord[0].fields.LinkedQuestions || [];
-                    console.log(`Linked Question IDs:`, linkedQuestionIds.join(','));
-
-                    // Fetch questions concurrently using Promises
-                    const questionPromises = linkedQuestionIds.map(questionId => {
-                        return new Promise((resolve, reject) => {
-                            base.table(process.env.QUESTIONS_TABLE_ID).find(questionId, { fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams'] }, (err, record) => {
-                                if (err) {
-                                    console.error(`Error fetching question with ID ${questionId}:`, err);
-                                    // Resolve with null or handle error as appropriate, for now, resolve with null
-                                    resolve(null);
-                                    return;
-                                }
-                                if (record) {
-                                    console.log(`Successfully fetched question ID: ${record.id}`);
-                                    resolve(record);
-                                } else {
-                                    console.warn(`Question with ID ${questionId} not found.`);
-                                    resolve(null);
-                                }
-                            });
+                        .find(skillId)
+                        .catch(error => {
+                            console.error("Error fetching skill record:", error);
+                            throw new Error("Failed to fetch skill record.");
                         });
-                    });
 
-                    // Wait for all questions to be fetched
-                    const fetchedQuestions = await Promise.all(questionPromises);
+                    if (!skillRecord) {
+                        return formatResponse(404, { message: "Skill not found." });
+                    }
 
-                    // Filter out any null results from failed fetches
-                    const validQuestions = fetchedQuestions.filter(question => question !== null);
+                    const linkedQuestionIds = skillRecord.fields.LinkedQuestions || [];
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Linked Question IDs: ${linkedQuestionIds.join(", ")}`);
+                    }
 
-                    console.log(`Successfully fetched ${validQuestions.length} linked questions.`);
+                    if (linkedQuestionIds.length === 0) {
+                        return formatResponse(200, { questions: [] });
+                    }
 
-                    return formatResponse(200, { questions: validQuestions.map((q) => q.fields) });
+                    // Fetch the questions directly by ID
+                    const fetchedQuestions = await Promise.all(
+                        linkedQuestionIds.map(async (questionId) => {
+                            try {
+                                const record = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId);
+                                return record ? record.fields : null;
+                            } catch (error) {
+                                console.error(`Error fetching question with ID ${questionId}:`, error);
+                                return null;
+                            }
+                        })
+                    );
+
+                    const validQuestions = fetchedQuestions.filter(q => q !== null);
+
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Successfully fetched ${validQuestions.length} questions.`);
+                    }
+
+                    return formatResponse(200, { questions: validQuestions });
                 } catch (error) {
                     console.error('Error in getWorksheetQuestions:', error);
                     return formatResponse(500, {
