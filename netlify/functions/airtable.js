@@ -82,7 +82,7 @@ exports.handler = async (event) => {
                 if (process.env.NODE_ENV !== 'production') {
                     console.log('Using filter formula:', filterFormula);
                 }
-                const question = await base('Questions')
+                const question = await base(process.env.QUESTIONS_TABLE_ID)
                     .select({
                         filterByFormula: filterFormula,
                         fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
@@ -132,7 +132,7 @@ exports.handler = async (event) => {
                     console.log(`Fetching correct answer for Test: ${testNumber}, Question: ${questionNumber}`);
                 }
                 try {
-                    const records = await base('Questions')
+                    const records = await base(process.env.QUESTIONS_TABLE_ID)
                         .select({
                             filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
                             fields: ['Test Number', 'Question Number', 'Answer']
@@ -175,7 +175,7 @@ exports.handler = async (event) => {
                     if (process.env.NODE_ENV !== 'production') {
                         console.log('Querying Airtable with filter:', `AND({Test Number} = '${testNumber}', {Question Number} = '${questionNumber}')`);
                     }
-                    const records = await base('Questions')
+                    const records = await base(process.env.QUESTIONS_TABLE_ID)
                         .select({
                             filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = '${questionNumber}')`,
                             fields: ['Test Number', 'Question Number', 'Explanation 4o']
@@ -237,7 +237,7 @@ exports.handler = async (event) => {
                 }
                 try {
                     // First check if the question exists and get its Record ID
-                    const questionExists = await base('Questions')
+                    const questionExists = await base(process.env.QUESTIONS_TABLE_ID)
                         .select({
                             filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
                             fields: ['Record ID']
@@ -252,7 +252,7 @@ exports.handler = async (event) => {
                         console.log('Original question Record ID:', originalRecordId);
                     }
                     // Find all CopyCats where Original Question contains the record ID
-                    const records = await base('CopyCats')
+                    const records = await base(process.env.COPYCATS_TABLE_ID)
                         .select({
                             filterByFormula: `FIND('${originalRecordId}', ARRAYJOIN({Original Question})) > 0`,
                             fields: ['Corrected Clone Question LM', 'AI Model', 'Original Question']
@@ -284,7 +284,7 @@ exports.handler = async (event) => {
             case 'getSkills':
                 try {
                     console.log('getSkills: Fetching from Skill table...');
-                    const records = await base('tbl6l9Pu2uHM2XlvV').select({
+                    const records = await base(process.env.SKILLS_TABLE_ID).select({
                         fields: ['Name'],
                         maxRecords: 100
                     }).firstPage();
@@ -310,30 +310,42 @@ exports.handler = async (event) => {
                 }
                 // skillId is already parsed from queryStringParameters
                 try {
-                    const skillRecord = await base('Skills')
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Attempting to fetch Skill record with ID: ${skillId}`);
+                    }
+                    const skillRecord = await base(process.env.SKILLS_TABLE_ID)
                         .select({
                             filterByFormula: `{Record ID} = '${skillId}'`,
                             maxRecords: 1
                         })
                         .firstPage();
                     
-                    if (!skillRecord || skillRecord.length === 0) {
-                        return formatResponse(404, { message: 'Skill not found.' });
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Found Skill record? ${skillRecord && skillRecord.length > 0}`);
+                        if (skillRecord && skillRecord.length > 0) {
+                            console.log(`Skill record ID: ${skillRecord[0].id}`);
+                            console.log(`Linked Question IDs: ${skillRecord[0].fields.LinkedQuestions || 'None'}`);
+                        }
+                        console.log(`Attempting to fetch Questions with IDs: ${skillRecord[0].fields.LinkedQuestions || 'None'}`);
                     }
-
                     const linkedQuestionIds = skillRecord[0].fields.LinkedQuestions || [];
                     if (linkedQuestionIds.length === 0) return formatResponse(200, { questions: [] });
 
-                    const questions = await base('Questions')
+                    const questions = await base(process.env.QUESTIONS_TABLE_ID)
                         .select({
                             filterByFormula: `RECORD_ID() IN (${linkedQuestionIds.map(id => `'${id}'`).join(',')})`,
                             fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams']
                         })
                         .all();
                     
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Found ${questions.length} linked questions.`);
+                    }
                     return formatResponse(200, { questions: questions.map((q) => q.fields) });
                 } catch (error) {
                     console.error('[getWorksheetQuestions Error]:', error);
+                    console.error('[getWorksheetQuestions Error Details]:', error.message);
+                    console.error('[getWorksheetQuestions Error Stack]:', error.stack);
                     return formatResponse(500, {
                         message: 'Failed to fetch worksheet questions.',
                         details: error.message,
@@ -357,7 +369,7 @@ exports.handler = async (event) => {
                     if (process.env.NODE_ENV !== 'production') {
                         console.log('Clone filter formula:', filterFormula);
                     }
-                    const cloneRecords = await base('tblpE46FDmB0LmeTU')
+                    const cloneRecords = await base(process.env.COPYCATS_TABLE_ID)
                         .select({
                             maxRecords: 10,
                             filterByFormula: filterFormula,
