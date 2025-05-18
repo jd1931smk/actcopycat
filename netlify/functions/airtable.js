@@ -285,7 +285,7 @@ exports.handler = async (event) => {
                 try {
                     console.log('getSkills: Fetching from Skill table...');
                     const records = await base.table(process.env.SKILLS_TABLE_ID).select({
-                        fields: ['Name'],
+                        fields: ['Record ID', 'Name'],
                     }).all();
                     
                     if (process.env.NODE_ENV !== 'production') {
