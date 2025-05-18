@@ -82,7 +82,7 @@ exports.handler = async (event) => {
                 if (process.env.NODE_ENV !== 'production') {
                     console.log('Using filter formula:', filterFormula);
                 }
-                const question = await base(process.env.QUESTIONS_TABLE_ID)
+                const question = await base.table(process.env.QUESTIONS_TABLE_ID)
                     .select({
                         filterByFormula: filterFormula,
                         fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
@@ -132,7 +132,7 @@ exports.handler = async (event) => {
                     console.log(`Fetching correct answer for Test: ${testNumber}, Question: ${questionNumber}`);
                 }
                 try {
-                    const records = await base(process.env.QUESTIONS_TABLE_ID)
+                    const records = await base.table(process.env.QUESTIONS_TABLE_ID)
                         .select({
                             filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
                             fields: ['Test Number', 'Question Number', 'Answer']
@@ -175,7 +175,7 @@ exports.handler = async (event) => {
                     if (process.env.NODE_ENV !== 'production') {
                         console.log('Querying Airtable with filter:', `AND({Test Number} = '${testNumber}', {Question Number} = '${questionNumber}')`);
                     }
-                    const records = await base(process.env.QUESTIONS_TABLE_ID)
+                    const records = await base.table(process.env.QUESTIONS_TABLE_ID)
                         .select({
                             filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = '${questionNumber}')`,
                             fields: ['Test Number', 'Question Number', 'Explanation 4o']
@@ -237,7 +237,7 @@ exports.handler = async (event) => {
                 }
                 try {
                     // First check if the question exists and get its Record ID
-                    const questionExists = await base(process.env.QUESTIONS_TABLE_ID)
+                    const questionExists = await base.table(process.env.QUESTIONS_TABLE_ID)
                         .select({
                             filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
                             fields: ['Record ID']
@@ -252,7 +252,7 @@ exports.handler = async (event) => {
                         console.log('Original question Record ID:', originalRecordId);
                     }
                     // Find all CopyCats where Original Question contains the record ID
-                    const records = await base(process.env.COPYCATS_TABLE_ID)
+                    const records = await base.table(process.env.COPYCATS_TABLE_ID)
                         .select({
                             filterByFormula: `FIND('${originalRecordId}', ARRAYJOIN({Original Question})) > 0`,
                             fields: ['Corrected Clone Question LM', 'AI Model', 'Original Question']
@@ -284,12 +284,12 @@ exports.handler = async (event) => {
             case 'getSkills':
                 try {
                     console.log('getSkills: Fetching from Skill table...');
-                    const records = await base(process.env.SKILLS_TABLE_ID).select({
+                    const records = await base.table(process.env.SKILLS_TABLE_ID).select({
                         fields: ['Name'],
                     }).all();
                     
                     if (process.env.NODE_ENV !== 'production') {
-                        console.log('getSkills: Raw records received from Airtable:', JSON.stringify(records, null, 2));
+                        console.log('getSkills: Raw records received from Airtable (full array): ', JSON.stringify(records, null, 2));
                         console.log(`getSkills: Number of records received: ${records.length}`);
                         console.log('getSkills: Mapped skills before filtering:', JSON.stringify(records.map(record => ({ id: record.id, name: record.get('Name') })), null, 2));
                     }
@@ -318,7 +318,7 @@ exports.handler = async (event) => {
                     if (process.env.NODE_ENV !== 'production') {
                         console.log(`Attempting to fetch Skill record with ID: ${skillId}`);
                     }
-                    const skillRecord = await base(process.env.SKILLS_TABLE_ID)
+                    const skillRecord = await base.table(process.env.SKILLS_TABLE_ID)
                         .select({
                             filterByFormula: `{Record ID} = '${skillId}'`,
                             maxRecords: 1
@@ -336,7 +336,7 @@ exports.handler = async (event) => {
                     const linkedQuestionIds = skillRecord[0].fields.LinkedQuestions || [];
                     if (linkedQuestionIds.length === 0) return formatResponse(200, { questions: [] });
 
-                    const questions = await base(process.env.QUESTIONS_TABLE_ID)
+                    const questions = await base.table(process.env.QUESTIONS_TABLE_ID)
                         .select({
                             filterByFormula: `RECORD_ID() IN (${linkedQuestionIds.map(id => `'${id}'`).join(',')})`,
                             fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams']
@@ -374,7 +374,7 @@ exports.handler = async (event) => {
                     if (process.env.NODE_ENV !== 'production') {
                         console.log('Clone filter formula:', filterFormula);
                     }
-                    const cloneRecords = await base(process.env.COPYCATS_TABLE_ID)
+                    const cloneRecords = await base.table(process.env.COPYCATS_TABLE_ID)
                         .select({
                             maxRecords: 10,
                             filterByFormula: filterFormula,
