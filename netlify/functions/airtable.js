@@ -270,10 +270,14 @@ exports.handler = async (event) => {
                         maxRecords: 100
                     }).firstPage();
 
-                    const skills = records.map(record => ({
-                        id: record.id,
-                        name: record.get('Name')
-                    })).sort((a, b) => a.name.localeCompare(b.name));
+                    // Filter out records with no Name
+                    const skills = records
+                        .map(record => ({
+                            id: record.id,
+                            name: record.get('Name')
+                        }))
+                        .filter(skill => !!skill.name)
+                        .sort((a, b) => a.name.localeCompare(b.name));
 
                     if (skills.length === 0) {
                         return formatResponse(404, { error: 'No skills found' });
