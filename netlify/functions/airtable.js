@@ -312,18 +312,35 @@ exports.handler = async (event) => {
                 }
                 // skillId is already parsed from queryStringParameters
                 try {
-                    const skillRecord = await base('Skills').find(skillId);
-                    if (!skillRecord) return formatResponse(404, { message: 'Skill not found.' });
-                    const linkedQuestionIds = skillRecord.fields.LinkedQuestions || [];
+                    const skillRecord = await base('Skills')
+                        .select({
+                            filterByFormula: `{Record ID} = '${skillId}'`,
+                            maxRecords: 1
+                        })
+                        .firstPage();
+                    
+                    if (!skillRecord || skillRecord.length === 0) {
+                        return formatResponse(404, { message: 'Skill not found.' });
+                    }
+
+                    const linkedQuestionIds = skillRecord[0].fields.LinkedQuestions || [];
                     if (linkedQuestionIds.length === 0) return formatResponse(200, { questions: [] });
-                    const questions = await base('Questions').select({
-                        filterByFormula: `RECORD_ID() IN (${linkedQuestionIds.map(id => `'${id}'`).join(',')})`,
-                        fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams']
-                    }).all();
+
+                    const questions = await base('Questions')
+                        .select({
+                            filterByFormula: `RECORD_ID() IN (${linkedQuestionIds.map(id => `'${id}'`).join(',')})`,
+                            fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams']
+                        })
+                        .all();
+                    
                     return formatResponse(200, { questions: questions.map((q) => q.fields) });
                 } catch (error) {
                     console.error('[getWorksheetQuestions Error]:', error);
-                    return formatResponse(500, { message: 'Server Error. Please try again later.' });
+                    return formatResponse(500, {
+                        message: 'Failed to fetch worksheet questions.',
+                        details: error.message,
+                        suggestion: 'Check API Key, Base ID, and Table Permissions.'
+                    });
                 }
 
             case 'getWorksheetClones':
