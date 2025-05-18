@@ -310,7 +310,7 @@ exports.handler = async (event) => {
 
                     console.log(`Fetching questions for skill ID ${skillId}`);
                     // Log the filter formula being used
-                    const filterFormula = `FIND(\\"${skillId}\\", ARRAYJOIN({Skill})) > 0`;
+                    const filterFormula = `FIND('${skillId}', ARRAYJOIN({Skill})) > 0`;
                     console.log('Using filter formula:', filterFormula);
 
                     // Get questions that have this skill (linked record by ID)
