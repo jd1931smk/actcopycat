@@ -287,9 +287,11 @@ exports.handler = async (event) => {
                     const records = await base(process.env.SKILLS_TABLE_ID).select({
                         fields: ['Name'],
                     }).all();
+                    
                     if (process.env.NODE_ENV !== 'production') {
                         console.log('getSkills: Raw records received from Airtable:', JSON.stringify(records, null, 2));
                         console.log(`getSkills: Number of records received: ${records.length}`);
+                        console.log('getSkills: Mapped skills before filtering:', JSON.stringify(records.map(record => ({ id: record.id, name: record.get('Name') })), null, 2));
                     }
                     const skills = records
                         .map(record => ({
