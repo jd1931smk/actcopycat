@@ -289,105 +289,57 @@ exports.handler = async (event) => {
                     return formatResponse(500, { error: 'Failed to fetch skills', details: error.message });
                 }
 
-            case 'getWorksheetQuestions':
-                console.log('--- Attempting to load worksheet questions ---');
-                const { skillId, includeClones } = event.queryStringParameters;
-                console.log('Received parameters:', { skillId, includeClones });
+                const Airtable = require('airtable');
 
-                if (!skillId) {
-                    console.log('Missing required parameter: skillId');
-                    return formatResponse(400, { error: 'Skill ID is required' });
-                }
-
-                try {
-                    // Fetch the skill name from the Skill table
-                    let skillName = '';
-                    try {
-                        const skillRecord = await base('Skill').find(skillId);
-                        skillName = skillRecord.get('Name');
-                    } catch (err) {
-                        console.warn('Could not fetch skill name for skillId:', skillId, err);
+                exports.handler = async (event) => {
+                  const { skillId } = JSON.parse(event.body);
+                  const apiKey = process.env.AIRTABLE_API_KEY;
+                  const baseId = process.env.AIRTABLE_BASE_ID;
+                  const base = new Airtable({ apiKey }).base(baseId);
+                
+                  try {
+                    // Step 1: Fetch the Skill Record
+                    const skillRecord = await base('Skills').find(skillId);
+                
+                    if (!skillRecord) {
+                      return {
+                        statusCode: 404,
+                        body: JSON.stringify({ message: 'Skill not found.' }),
+                      };
                     }
-
-                    console.log(`Fetching questions for skill ID ${skillId}`);
-                    // Log the filter formula being used
-                    const filterFormula = `FIND('${skillId}', ARRAYJOIN({Skill}, "Skill Record ID")) > 0`;
-                    console.log('Using filter formula:', filterFormula);
-
-                    // Get questions that have this skill (linked record by ID)
-                    const questionRecords = await base('tbllwZpPeh9yHJ3fM')
-                        .select({
-                            maxRecords: 5, // This retrieves up to 5 records
-                            filterByFormula: filterFormula,
-                            fields: [
-                                'Photo',
-                                'KatexMarkdown',
-                                'Test Number',
-                                'Question Number',
-                                'Answer'
-                            ]
-                        })
-                        .firstPage();
-
-                    // Log the raw response from Airtable (or at least the record count and IDs)
-                    console.log(`Airtable query returned ${questionRecords.length} records.`);
-                    if (questionRecords.length > 0) {
-                        console.log('First record ID returned:', questionRecords[0].id);
+                
+                    // Step 2: Extract Linked Question IDs
+                    const linkedQuestionIds = skillRecord.fields.LinkedQuestions || [];
+                
+                    if (linkedQuestionIds.length === 0) {
+                      return {
+                        statusCode: 200,
+                        body: JSON.stringify({ questions: [] }),
+                      };
                     }
-
-                    let allQuestions = questionRecords.map(record => ({
-                        id: record.id,
-                        photo: record.get('Photo'),
-                        latexMarkdown: record.get('KatexMarkdown'),
-                        testNumber: record.get('Test Number'),
-                        questionNumber: record.get('Question Number'),
-                        answer: record.get('Answer'),
-                        isClone: false
-                    }));
-
-                    // Filter out any clone questions if includeClones is false
-                    if (includeClones !== 'true') {
-                         allQuestions = allQuestions.filter(q => !q.isClone); // Ensure non-clones are selected
-                         // Note: the clone filtering logic based on isClone field seems redundant here
-                         // if the frontend already filters after receiving the data. 
-                         // We should rely on the Airtable filter if possible, but the current
-                         // filterByFormula doesn't distinguish clones.
-                         // Let's keep the filter here for now but be aware it might be redundant
-                         // with the frontend filter or may need adjustment if clone logic changes.
-                    }
-
-
-                    // Return immediately if we don't need clones or have no original questions
-                    if (includeClones !== 'true' || allQuestions.length === 0) { // Use allQuestions.length here after filtering
-                        return formatResponse(200, {
-                            skillId,
-                            skillName,
-                            questions: allQuestions,
-                            hasMoreQuestions: true // Indicate that clones can be loaded separately
-                        });
-                    }
-
-                    // If includeClones is true, we need to fetch clones separately.
-                    // This part of the code seems to be structured to *only* return original
-                    // questions or *only* return clones, not a mix, based on the frontend logic.
-                    // However, the current `getWorksheetQuestions` function fetches ALL questions
-                    // with the skill ID and then filters by `isClone` on the backend or frontend.
-                    // There seems to be some confusion in the original code's intent vs implementation
-                    // regarding clones within this specific function.
-                    // Let's proceed with the original structure but note this potential area for refactoring.
-
-                    return formatResponse(200, {
-                        skillId,
-                        skillName,
-                        questions: allQuestions, // This will now contain only non-clones if includeClones was false
-                        hasMoreQuestions: true // Indicate that clones can be loaded separately
-                    });
-                } catch (error) {
-                    console.error('Error in getWorksheetQuestions:', error);
-                    console.error('Error details:', error.message);
-                    if (error.stack) console.error('Stack trace:', error.stack);
-                    return formatResponse(500, { error: `Failed to fetch questions: ${error.message}` });
-                }
+                
+                    // Step 3: Fetch Questions Individually
+                    const questionPromises = linkedQuestionIds.map((id) =>
+                      base('Questions').find(id)
+                    );
+                
+                    const questions = await Promise.all(questionPromises);
+                
+                    // Step 4: Return the Questions
+                    return {
+                      statusCode: 200,
+                      body: JSON.stringify({ questions: questions.map((q) => q.fields) }),
+                    };
+                
+                  } catch (error) {
+                    console.error('Error fetching questions:', error);
+                    return {
+                      statusCode: 500,
+                      body: JSON.stringify({ message: 'An error occurred.', error: error.message }),
+                    };
+                  }
+                };
+                
 
             case 'getWorksheetClones':
                 const { testNumbersJson } = event.queryStringParameters;
