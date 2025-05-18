@@ -333,9 +333,7 @@ exports.handler = async (event) => {
                     const fetchedQuestions = await Promise.all(
                         linkedQuestionIds.map(async (questionId) => {
                             try {
-                                const record = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId, {
-                                    fields: ['Photo', 'Test Number', 'Question Number', 'KatexMarkdown']
-                                });
+                                const record = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId);
                                 return {
                                     id: record.id,
                                     photo: record.fields['Photo'] ? record.fields['Photo'][0].url : "No Photo Available",
