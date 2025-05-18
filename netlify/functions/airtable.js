@@ -299,18 +299,12 @@ exports.handler = async (event) => {
                 }
 
                 try {
-                    console.log(`Fetching questions for skill ${skillId}`);
-                    
-                    // Convert skillId back to skill name
-                    const skillName = skillId.split('-').map(word => 
-                        word.charAt(0).toUpperCase() + word.slice(1)
-                    ).join(' ');
-                    
-                    // Get questions that have this skill, limit to first 5 for performance
+                    console.log(`Fetching questions for skill ID ${skillId}`);
+                    // Get questions that have this skill (linked record by ID)
                     const questionRecords = await base('tbllwZpPeh9yHJ3fM')
                         .select({
                             maxRecords: 5,
-                            filterByFormula: `FIND("${skillName}", ARRAYJOIN({Skill})) > 0`,
+                            filterByFormula: `FIND(\"${skillId}\", ARRAYJOIN({Skill})) > 0`,
                             fields: [
                                 'Photo', 
                                 'KatexMarkdown',
@@ -321,7 +315,7 @@ exports.handler = async (event) => {
                         })
                         .firstPage();
 
-                    console.log(`Found ${questionRecords.length} questions with skill: ${skillName}`);
+                    console.log(`Found ${questionRecords.length} questions with skill ID: ${skillId}`);
 
                     let allQuestions = questionRecords.map(record => ({
                         id: record.id,
@@ -336,14 +330,14 @@ exports.handler = async (event) => {
                     // Return immediately if we don't need clones or have no original questions
                     if (includeClones !== 'true' || questionRecords.length === 0) {
                         return formatResponse(200, {
-                            skillName,
+                            skillId,
                             questions: allQuestions,
                             hasMoreQuestions: true // Indicate that clones can be loaded separately
                         });
                     }
 
                     return formatResponse(200, {
-                        skillName,
+                        skillId,
                         questions: allQuestions,
                         hasMoreQuestions: true // Indicate that clones can be loaded separately
                     });
