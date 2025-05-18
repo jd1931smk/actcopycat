@@ -264,68 +264,25 @@ exports.handler = async (event) => {
 
             case 'getSkills':
                 try {
-                    console.log('getSkills: Starting to fetch skills...');
-                    console.log('getSkills: Environment check:', {
-                        baseId: process.env.BASE_ID,
-                        hasApiKey: !!process.env.AIRTABLE_API_KEY
-                    });
-                    
-                    // Fetch from Questions table and get unique skills
-                    console.log('getSkills: Fetching from Questions table...');
-                    const records = await base('tbllwZpPeh9yHJ3fM')
-                        .select({
-                            fields: ['Skill'],
-                            maxRecords: 100  // Limit for performance
-                        })
-                        .firstPage();
+                    console.log('getSkills: Fetching from Skills table...');
+                    const records = await base('Skills').select({
+                        fields: ['Name'],
+                        maxRecords: 100
+                    }).firstPage();
 
-                    console.log(`getSkills: Fetched ${records.length} records`);
-                    
-                    // Extract all unique skills from the Skill field
-                    const skillSet = new Set();
-                    records.forEach(record => {
-                        const skills = record.get('Skill');
-                        if (Array.isArray(skills)) {
-                            skills.forEach(skill => {
-                                if (skill) skillSet.add(skill);
-                            });
-                        }
-                    });
+                    const skills = records.map(record => ({
+                        id: record.id,
+                        name: record.get('Name')
+                    })).sort((a, b) => a.name.localeCompare(b.name));
 
-                    // Convert to required format and sort
-                    const skills = Array.from(skillSet)
-                        .map(name => ({
-                            id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                            name: name
-                        }))
-                        .sort((a, b) => a.name.localeCompare(b.name));
-
-                    console.log('getSkills: Processed skills:', {
-                        totalSkills: skills.length,
-                        firstFew: skills.slice(0, 3)
-                    });
-                    
                     if (skills.length === 0) {
-                        console.warn('getSkills: No skills found in records');
-                        return formatResponse(404, { 
-                            error: 'No skills found',
-                            details: 'No skills found in the Questions table'
-                        });
+                        return formatResponse(404, { error: 'No skills found' });
                     }
-                    
+
                     return formatResponse(200, skills);
                 } catch (error) {
-                    console.error('getSkills: Fatal error:', {
-                        message: error.message,
-                        type: error.type,
-                        code: error.code,
-                        stack: error.stack
-                    });
-                    return formatResponse(500, { 
-                        error: 'Failed to fetch skills',
-                        details: error.message,
-                        type: error.type || 'Unknown'
-                    });
+                    console.error('getSkills: Fatal error:', error);
+                    return formatResponse(500, { error: 'Failed to fetch skills', details: error.message });
                 }
 
             case 'getWorksheetQuestions':
