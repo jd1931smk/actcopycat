@@ -337,12 +337,18 @@ exports.handler = async (event) => {
                         return formatResponse(200, { questions: [] });
                     }
 
-                    // Fetch the questions directly by ID
+                    // Fetch the questions directly by ID with additional fields
                     const fetchedQuestions = await Promise.all(
                         linkedQuestionIds.map(async (questionId) => {
                             try {
                                 const record = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId);
-                                return record ? record.fields : null;
+                                return {
+                                    id: record.id,
+                                    testNumber: record.fields['Test Number'] || 'Unknown Test',
+                                    questionNumber: record.fields['Question Number'] || 'Unknown Number',
+                                    photo: record.fields['Photo'] ? record.fields['Photo'][0].url : null,
+                                    katex: record.fields['KatexMarkdown'] || '',
+                                };
                             } catch (error) {
                                 console.error(`Error fetching question with ID ${questionId}:`, error);
                                 return null;
