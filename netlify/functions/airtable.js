@@ -264,8 +264,8 @@ exports.handler = async (event) => {
 
             case 'getSkills':
                 try {
-                    console.log('getSkills: Fetching from Skills table...');
-                    const records = await base('Skills').select({
+                    console.log('getSkills: Fetching from Skill table...');
+                    const records = await base('Skill').select({
                         fields: ['Name'],
                         maxRecords: 100
                     }).firstPage();
