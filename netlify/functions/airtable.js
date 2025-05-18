@@ -345,6 +345,7 @@ exports.handler = async (event) => {
                     for (const questionId of linkedQuestionIds) {
                         try {
                             const question = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId);
+                            console.log(`Result for ID ${questionId}:`, question);
                             if (question) {
                                 questions.push(question);
                             } else {
