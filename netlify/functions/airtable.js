@@ -286,8 +286,7 @@ exports.handler = async (event) => {
                     console.log('getSkills: Fetching from Skill table...');
                     const records = await base(process.env.SKILLS_TABLE_ID).select({
                         fields: ['Name'],
-                        maxRecords: 100
-                    }).firstPage();
+                    }).all();
                     const skills = records
                         .map(record => ({
                             id: record.id,
