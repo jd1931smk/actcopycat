@@ -283,10 +283,8 @@ exports.handler = async (event) => {
 
             case 'getSkills':
                 try {
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log('getSkills: Fetching from Skill table...');
-                    }
-                    const records = await base('Skill').select({
+                    console.log('getSkills: Fetching from Skill table...');
+                    const records = await base('tbl6l9Pu2uHM2XlvV').select({
                         fields: ['Name'],
                         maxRecords: 100
                     }).firstPage();
