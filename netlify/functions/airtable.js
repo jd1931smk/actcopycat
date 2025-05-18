@@ -299,6 +299,15 @@ exports.handler = async (event) => {
                 }
 
                 try {
+                    // Fetch the skill name from the Skill table
+                    let skillName = '';
+                    try {
+                        const skillRecord = await base('Skill').find(skillId);
+                        skillName = skillRecord.get('Name');
+                    } catch (err) {
+                        console.warn('Could not fetch skill name for skillId:', skillId, err);
+                    }
+
                     console.log(`Fetching questions for skill ID ${skillId}`);
                     // Get questions that have this skill (linked record by ID)
                     const questionRecords = await base('tbllwZpPeh9yHJ3fM')
@@ -331,6 +340,7 @@ exports.handler = async (event) => {
                     if (includeClones !== 'true' || questionRecords.length === 0) {
                         return formatResponse(200, {
                             skillId,
+                            skillName,
                             questions: allQuestions,
                             hasMoreQuestions: true // Indicate that clones can be loaded separately
                         });
@@ -338,6 +348,7 @@ exports.handler = async (event) => {
 
                     return formatResponse(200, {
                         skillId,
+                        skillName,
                         questions: allQuestions,
                         hasMoreQuestions: true // Indicate that clones can be loaded separately
                     });
