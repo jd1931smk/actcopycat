@@ -309,22 +309,30 @@ exports.handler = async (event) => {
                     }
 
                     console.log(`Fetching questions for skill ID ${skillId}`);
+                    // Log the filter formula being used
+                    const filterFormula = `FIND(\\"${skillId}\\", ARRAYJOIN({Skill})) > 0`;
+                    console.log('Using filter formula:', filterFormula);
+
                     // Get questions that have this skill (linked record by ID)
                     const questionRecords = await base('tbllwZpPeh9yHJ3fM')
                         .select({
-                            maxRecords: 5,
-                            filterByFormula: `FIND(\"${skillId}\", ARRAYJOIN({Skill})) > 0`,
+                            maxRecords: 5, // This retrieves up to 5 records
+                            filterByFormula: filterFormula,
                             fields: [
-                                'Photo', 
+                                'Photo',
                                 'KatexMarkdown',
-                                'Test Number', 
+                                'Test Number',
                                 'Question Number',
                                 'Answer'
                             ]
                         })
                         .firstPage();
 
-                    console.log(`Found ${questionRecords.length} questions with skill ID: ${skillId}`);
+                    // Log the raw response from Airtable (or at least the record count and IDs)
+                    console.log(`Airtable query returned ${questionRecords.length} records.`);
+                    if (questionRecords.length > 0) {
+                        console.log('First record ID returned:', questionRecords[0].id);
+                    }
 
                     let allQuestions = questionRecords.map(record => ({
                         id: record.id,
@@ -336,8 +344,20 @@ exports.handler = async (event) => {
                         isClone: false
                     }));
 
+                    // Filter out any clone questions if includeClones is false
+                    if (includeClones !== 'true') {
+                         allQuestions = allQuestions.filter(q => !q.isClone); // Ensure non-clones are selected
+                         // Note: the clone filtering logic based on isClone field seems redundant here
+                         // if the frontend already filters after receiving the data. 
+                         // We should rely on the Airtable filter if possible, but the current
+                         // filterByFormula doesn't distinguish clones.
+                         // Let's keep the filter here for now but be aware it might be redundant
+                         // with the frontend filter or may need adjustment if clone logic changes.
+                    }
+
+
                     // Return immediately if we don't need clones or have no original questions
-                    if (includeClones !== 'true' || questionRecords.length === 0) {
+                    if (includeClones !== 'true' || allQuestions.length === 0) { // Use allQuestions.length here after filtering
                         return formatResponse(200, {
                             skillId,
                             skillName,
@@ -346,10 +366,19 @@ exports.handler = async (event) => {
                         });
                     }
 
+                    // If includeClones is true, we need to fetch clones separately.
+                    // This part of the code seems to be structured to *only* return original
+                    // questions or *only* return clones, not a mix, based on the frontend logic.
+                    // However, the current `getWorksheetQuestions` function fetches ALL questions
+                    // with the skill ID and then filters by `isClone` on the backend or frontend.
+                    // There seems to be some confusion in the original code's intent vs implementation
+                    // regarding clones within this specific function.
+                    // Let's proceed with the original structure but note this potential area for refactoring.
+
                     return formatResponse(200, {
                         skillId,
                         skillName,
-                        questions: allQuestions,
+                        questions: allQuestions, // This will now contain only non-clones if includeClones was false
                         hasMoreQuestions: true // Indicate that clones can be loaded separately
                     });
                 } catch (error) {

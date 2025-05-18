@@ -1,0 +1,39 @@
+/* ADHD-Friendly Theme: High clarity, minimal clutter, calming contrast, supportive spacing */
+body {
+    background-color: #f0f4f8;
+    color: #1a1a1a;
+    font-family: 'Comic Sans MS', sans-serif;
+    font-size: 18px;
+    padding: 1.5rem;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 1.8rem;
+    text-align: center;
+    color: #2a5d84;
+    margin-bottom: 1rem;
+}
+
+button {
+    background-color: #6495ed;
+    color: white;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    margin-top: 0.5rem;
+}
+
+.section, .clone-section {
+    background: #ffffff;
+    padding: 1rem;
+    margin-top: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}

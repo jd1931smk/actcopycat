@@ -1,0 +1,214 @@
+/* Base Styles */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+h1 {
+  text-align: center;
+  color: #fff;
+  margin-bottom: 30px;
+}
+
+/* Nav */
+.nav-links {
+  background-color: #2d2d2d;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.nav-links a {
+  color: #f0f0f0;
+  text-decoration: none;
+  margin: 0 15px;
+  padding: 8px 15px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.nav-links a:hover {
+  background-color: #3d3d3d;
+}
+
+/* Theme Dropdown */
+.theme-switcher {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin: 20px 0;
+  gap: 10px;
+}
+
+.theme-switcher select {
+  padding: 8px 12px;
+  background-color: #333;
+  border: 1px solid #444;
+  color: #f0f0f0;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+/* Selection Area */
+.selection-area {
+  background-color: #2d2d2d;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #f0f0f0;
+}
+
+select {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #333;
+  border: 1px solid #444;
+  color: #f0f0f0;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+/* General button styles */
+button {
+  background-color: #6557ed;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+button:hover:not(:disabled) {
+  background-color: #7466ff;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Override styles for KaTeX issue button specifically */
+.section .katex-issue-button {
+  width: auto !important;
+  background-color: #ff6b6b !important;
+  margin: 20px 0 0 0 !important;
+  padding: 8px 16px !important;
+  font-size: 0.9rem !important;
+  display: inline-block !important;
+}
+
+.section .katex-issue-button:hover {
+  background-color: #ff5252 !important;
+}
+
+/* Question Box */
+.section {
+  background-color: #2b2b2b;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  font-size: 1.1em;
+  line-height: 1.6;
+}
+
+.katex-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Force answer choices to their own lines */
+.katex-content br {
+  display: block;
+  margin-bottom: 8px;
+  content: '';
+}
+
+.clone-section {
+  background-color: #2d2d2d;
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 8px;
+}
+
+.clone-section h4 {
+  color: #fff;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 5px;
+}
+
+.clone-question {
+  background-color: #333;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+}
+
+.clone-model {
+  color: #6557ed;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+#spinner {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top: 4px solid #6557ed;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.katex-issue-container {
+  position: relative;
+  margin-bottom: 1rem;
+  padding-top: 40px;
+}
+
+.katex-issue-button {
+  background-color: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+  width: auto;
+  margin-top: 20px;
+  display: block;
+}
+
+.katex-issue-button:hover {
+  background-color: #ff5252;
+}

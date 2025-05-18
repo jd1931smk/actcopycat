@@ -1,0 +1,35 @@
+/* Classroom Theme: Balanced contrast, legible font, optimized for projection or whiteboard */
+body {
+    background-color: #fefefe;
+    color: #000;
+    font-family: Georgia, serif;
+    font-size: 20px;
+    padding: 2rem;
+}
+
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 2rem;
+    text-align: center;
+}
+
+button {
+    background-color: #0044cc;
+    color: white;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+    font-size: 1.1rem;
+}
+
+.section, .clone-section {
+    background: #ffffff;
+    border: 1px solid #ccc;
+    padding: 1rem;
+    margin-top: 1.5rem;
+    border-radius: 6px;
+}

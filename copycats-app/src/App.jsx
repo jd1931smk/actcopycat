@@ -50,6 +50,9 @@ const App = () => {
       }
       const data = await res.json();
       console.log('Question data:', data); // Debug log
+      let content = data.katex;
+      console.log('Raw KatexMarkdown:', JSON.stringify(content)); // See exactly what's being rendered
+      content = content.replace(/\r/g, ''); // Remove carriage returns
       setQuestionData({
         ...data,
         testNumber: selectedTest,
