@@ -283,16 +283,9 @@ exports.handler = async (event) => {
 
             case 'getSkills':
                 try {
-                    console.log('getSkills: Fetching from Skill table...');
                     const records = await base.table(process.env.SKILLS_TABLE_ID).select({
                         fields: ['Record ID', 'Name'],
                     }).all();
-                    
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log('getSkills: Raw records received from Airtable (full array): ', JSON.stringify(records, null, 2));
-                        console.log(`getSkills: Number of records received: ${records.length}`);
-                        console.log('getSkills: Mapped skills before filtering:', JSON.stringify(records.map(record => ({ id: record.id, name: record.get('Name') })), null, 2));
-                    }
                     const skills = records
                         .map(record => ({
                             id: record.id,
@@ -329,9 +322,7 @@ exports.handler = async (event) => {
                     }
 
                     const linkedQuestionIds = skillRecord.fields.LinkedQuestions || [];
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log(`Linked Question IDs: ${linkedQuestionIds.join(", ")}`);
-                    }
+                    console.log(`Linked Question IDs: ${JSON.stringify(linkedQuestionIds)}`);
 
                     if (linkedQuestionIds.length === 0) {
                         return formatResponse(200, { questions: [] });
@@ -340,32 +331,31 @@ exports.handler = async (event) => {
                     const fetchedQuestions = await Promise.all(
                         linkedQuestionIds.map(async (questionId) => {
                             try {
+                                console.log(`Attempting to fetch question with ID: ${questionId}`);
                                 const record = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId, {
                                     fields: ['Photo', 'Test Number', 'Question Number', 'KatexMarkdown']
                                 });
-                                let photoUrl = null;
-                                if (record.fields['Photo'] && Array.isArray(record.fields['Photo']) && record.fields['Photo'].length > 0) {
-                                    photoUrl = record.fields['Photo'][0].url;
-                                }
+                                console.log(`Successfully fetched question with ID: ${questionId}`);
                                 return {
                                     id: record.id,
-                                    photo: photoUrl ? photoUrl : "No Photo Available",
+                                    photo: record.fields['Photo'] ? record.fields['Photo'][0].url : "No Photo Available",
                                     testNumber: record.fields['Test Number'] || "No Test Number",
                                     questionNumber: record.fields['Question Number'] || "No Question Number",
                                     katex: record.fields['KatexMarkdown'] || 'No Katex Content',
                                 };
                             } catch (error) {
                                 console.error(`Error fetching question with ID ${questionId}:`, error);
-                                return null;
+                                return { error: `Failed to fetch question with ID ${questionId}`, details: error.message };
                             }
                         })
                     );
 
-                    const validQuestions = fetchedQuestions.filter(q => q !== null);
+                    console.log("Fetched Questions Array:", JSON.stringify(fetchedQuestions));
+
+                    const validQuestions = fetchedQuestions.filter(q => q !== null && !q.error);
 
                     if (process.env.NODE_ENV !== 'production') {
                         console.log(`Successfully fetched ${validQuestions.length} questions.`);
-                        // Log the raw fields for debugging
                         validQuestions.forEach((q, idx) => {
                             console.log(`Question ${idx + 1}:`, JSON.stringify(q, null, 2));
                         });
