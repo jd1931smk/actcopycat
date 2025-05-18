@@ -337,16 +337,20 @@ exports.handler = async (event) => {
                         return formatResponse(200, { questions: [] });
                     }
 
-                    // Fetch the questions directly by ID with additional fields
+                    // Fetch the questions directly by ID with explicit fields
                     const fetchedQuestions = await Promise.all(
                         linkedQuestionIds.map(async (questionId) => {
                             try {
-                                const record = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId);
+                                // Only request the necessary fields for clarity and performance
+                                const record = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId, {
+                                    fields: ['Photo', 'Test Number', 'Question Number', 'KatexMarkdown']
+                                });
                                 return {
                                     id: record.id,
-                                    testNumber: record.fields['Test Number'] || 'Unknown Test',
-                                    questionNumber: record.fields['Question Number'] || 'Unknown Number',
-                                    photo: record.fields['Photo'] ? record.fields['Photo'][0].url : null,
+                                    // Use exact Airtable field names
+                                    photo: record.fields['Photo'] || null,
+                                    testNumber: record.fields['Test Number'] || null,
+                                    questionNumber: record.fields['Question Number'] || null,
                                     katex: record.fields['KatexMarkdown'] || '',
                                 };
                             } catch (error) {
@@ -360,6 +364,10 @@ exports.handler = async (event) => {
 
                     if (process.env.NODE_ENV !== 'production') {
                         console.log(`Successfully fetched ${validQuestions.length} questions.`);
+                        // Log the raw fields for debugging
+                        validQuestions.forEach((q, idx) => {
+                            console.log(`Question ${idx + 1}:`, JSON.stringify(q, null, 2));
+                        });
                     }
 
                     return formatResponse(200, { questions: validQuestions });
