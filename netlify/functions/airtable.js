@@ -337,21 +337,25 @@ exports.handler = async (event) => {
                         return formatResponse(200, { questions: [] });
                     }
 
-                    // Fetch the questions directly by ID with explicit fields
+                    // Fetch the questions directly by ID with explicit fields, including Photo, Test Number, Question Number
                     const fetchedQuestions = await Promise.all(
                         linkedQuestionIds.map(async (questionId) => {
                             try {
-                                // Only request the necessary fields for clarity and performance
+                                // Request Photo, Test Number, Question Number, and KatexMarkdown fields
                                 const record = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId, {
                                     fields: ['Photo', 'Test Number', 'Question Number', 'KatexMarkdown']
                                 });
+                                // Prepare the photo (Airtable attachment) for front-end
+                                let photoUrl = null;
+                                if (record.fields['Photo'] && Array.isArray(record.fields['Photo']) && record.fields['Photo'].length > 0) {
+                                    photoUrl = record.fields['Photo'][0].url;
+                                }
                                 return {
                                     id: record.id,
-                                    // Use exact Airtable field names
-                                    photo: record.fields['Photo'] || null,
-                                    testNumber: record.fields['Test Number'] || null,
-                                    questionNumber: record.fields['Question Number'] || null,
-                                    katex: record.fields['KatexMarkdown'] || '',
+                                    photo: photoUrl ? photoUrl : "No Photo Available",
+                                    testNumber: record.fields['Test Number'] || "No Test Number",
+                                    questionNumber: record.fields['Question Number'] || "No Question Number",
+                                    katex: record.fields['KatexMarkdown'] || 'No Katex Content',
                                 };
                             } catch (error) {
                                 console.error(`Error fetching question with ID ${questionId}:`, error);
