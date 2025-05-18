@@ -290,6 +290,7 @@ exports.handler = async (event) => {
                 }
 
             case 'getWorksheetQuestions':
+                console.log('--- Attempting to load worksheet questions ---');
                 const { skillId, includeClones } = event.queryStringParameters;
                 console.log('Received parameters:', { skillId, includeClones });
 
@@ -310,7 +311,7 @@ exports.handler = async (event) => {
 
                     console.log(`Fetching questions for skill ID ${skillId}`);
                     // Log the filter formula being used
-                    const filterFormula = `FIND('${skillId}', ARRAYJOIN({Skill})) > 0`;
+                    const filterFormula = `FIND('${skillId}', ARRAYJOIN({Skill}, "Skill Record ID")) > 0`;
                     console.log('Using filter formula:', filterFormula);
 
                     // Get questions that have this skill (linked record by ID)
