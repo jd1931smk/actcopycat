@@ -336,9 +336,15 @@ exports.handler = async (event) => {
                     const linkedQuestionIds = skillRecord[0].fields.LinkedQuestions || [];
                     if (linkedQuestionIds.length === 0) return formatResponse(200, { questions: [] });
 
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Attempting to fetch Questions from table ID: ${process.env.QUESTIONS_TABLE_ID}`);
+                        console.log(`Requesting fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams']`);
+                    }
+                    const filterFormula = `RECORD_ID() IN (${linkedQuestionIds.map(id => `'${id}'`).join(',')})`;
+                    console.log(`Generated filter formula: ${filterFormula}`);
                     const questions = await base.table(process.env.QUESTIONS_TABLE_ID)
                         .select({
-                            filterByFormula: `RECORD_ID() IN (${linkedQuestionIds.map(id => `'${id}'`).join(',')})`,
+                            filterByFormula: filterFormula,
                             fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams']
                         })
                         .all();
