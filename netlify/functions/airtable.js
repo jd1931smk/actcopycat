@@ -344,8 +344,12 @@ exports.handler = async (event) => {
                     const questions = [];
                     for (const questionId of linkedQuestionIds) {
                         try {
-                            const question = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId);
-                            console.log(`Result for ID ${questionId}:`, question);
+                            // Fetch only necessary fields for the question
+                            const question = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId, { fields: ['Photo', 'Record ID'] });
+                            console.log(`Result for ID ${questionId} (with specific fields):`, question);
+                            if (question && question.id) {
+                                console.log(`Fetched question with ID: ${question.id}`);
+                            }
                             if (question) {
                                 questions.push(question);
                             } else {
