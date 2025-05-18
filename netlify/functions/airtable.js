@@ -340,17 +340,24 @@ exports.handler = async (event) => {
                         console.log(`Attempting to fetch Questions from table ID: ${process.env.QUESTIONS_TABLE_ID}`);
                         console.log(`Requesting fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams']`);
                     }
-                    const filterFormula = `RECORD_ID() IN (${linkedQuestionIds.map(id => `'${id}'`).join(',')})`;
-                    console.log(`Generated filter formula: ${filterFormula}`);
-                    const questions = await base.table(process.env.QUESTIONS_TABLE_ID)
-                        .select({
-                            filterByFormula: filterFormula,
-                            fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams']
-                        })
-                        .all();
-                    
+                    // Fetch questions one by one using their Record IDs
+                    const questions = [];
+                    for (const questionId of linkedQuestionIds) {
+                        try {
+                            const question = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId);
+                            if (question) {
+                                questions.push(question);
+                            } else {
+                                console.warn(`Question with ID ${questionId} not found.`);
+                            }
+                        } catch (error) {
+                            console.error(`Error fetching question with ID ${questionId}:`, error);
+                            // Depending on desired behavior, you might continue or break here
+                        }
+                    }
+  
                     if (process.env.NODE_ENV !== 'production') {
-                        console.log(`Found ${questions.length} linked questions.`);
+                        console.log(`Successfully fetched ${questions.length} linked questions.`);
                     }
                     return formatResponse(200, { questions: questions.map((q) => q.fields) });
                 } catch (error) {
