@@ -337,15 +337,12 @@ exports.handler = async (event) => {
                         return formatResponse(200, { questions: [] });
                     }
 
-                    // Fetch the questions directly by ID with explicit fields, including Photo, Test Number, Question Number
                     const fetchedQuestions = await Promise.all(
                         linkedQuestionIds.map(async (questionId) => {
                             try {
-                                // Request Photo, Test Number, Question Number, and KatexMarkdown fields
                                 const record = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId, {
                                     fields: ['Photo', 'Test Number', 'Question Number', 'KatexMarkdown']
                                 });
-                                // Prepare the photo (Airtable attachment) for front-end
                                 let photoUrl = null;
                                 if (record.fields['Photo'] && Array.isArray(record.fields['Photo']) && record.fields['Photo'].length > 0) {
                                     photoUrl = record.fields['Photo'][0].url;
