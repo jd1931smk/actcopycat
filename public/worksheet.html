@@ -339,6 +339,7 @@
                             <div class="question-content">
                                 <div class="question-text">
                                     <div class="latex-content" data-latex="${q.latexMarkdown || ''}"></div>
+                                    <pre style="font-size: 12px; color: darkgreen;">${q.latexMarkdown}</pre>
                                 </div>
                                 <div class="photo-column">
                                     ${q.photo && q.photo.length > 0 ? 
@@ -367,7 +368,13 @@
 
                 // Set up LaTeX content and render
                 document.querySelectorAll('.latex-content').forEach(el => {
-                    el.innerHTML = `\\[${el.dataset.latex}\\]`;
+                    const latex = el.dataset.latex.trim();
+                    console.log("LatexMarkdown for question:", latex);
+                    if (latex) {
+                        el.innerHTML = `\\[${latex}\\]`;
+                    } else {
+                        el.innerHTML = `<em style="color: #888;">No LaTeX available</em>`;
+                    }
                 });
                 if (window.MathJax) {
                     await MathJax.typesetPromise();
@@ -438,6 +445,7 @@
                         <div class="question-content">
                             <div class="question-text">
                                 <div class="latex-content" data-latex="${q.latexMarkdown || ''}"></div>
+                                <pre style="font-size: 12px; color: darkgreen;">${q.latexMarkdown}</pre>
                             </div>
                             <div class="photo-column">
                                 ${q.photo && q.photo.length > 0 ? 
@@ -485,7 +493,13 @@
 
             // Set up LaTeX content and render, then print
             document.querySelectorAll('.latex-content').forEach(el => {
-                el.innerHTML = `\\[${el.dataset.latex}\\]`;
+                const latex = el.dataset.latex.trim();
+                console.log("LatexMarkdown for question:", latex);
+                if (latex) {
+                    el.innerHTML = `\\[${latex}\\]`;
+                } else {
+                    el.innerHTML = `<em style="color: #888;">No LaTeX available</em>`;
+                }
             });
             if (window.MathJax) {
                 await MathJax.typesetPromise();
