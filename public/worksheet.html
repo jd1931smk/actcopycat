@@ -333,7 +333,7 @@
                                     ${q.latexMarkdown ? `<div class="latex-content">${q.latexMarkdown}</div>` : ''}
                                 </div>
                                 <div class="photo-column">
-                                    ${q.photo ? 
+                                    ${q.photo && q.photo.length > 0 ? 
                                         q.photo.length === 2 ? 
                                             `<div class="photo-container">
                                                 <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left">
@@ -429,7 +429,7 @@
                                 ${q.latexMarkdown ? `<div class="latex-content">${q.latexMarkdown}</div>` : ''}
                             </div>
                              <div class="photo-column">
-                                ${q.photo ? 
+                                ${q.photo && q.photo.length > 0 ? 
                                     q.photo.length === 2 ? 
                                         `<div class="photo-container">
                                             <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
