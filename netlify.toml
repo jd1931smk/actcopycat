@@ -1,7 +1,6 @@
 [build]
-base = "copycats-app"
 command = "npm run build"
-publish = "copycats-app/dist"
+publish = "dist"
 functions = "netlify/functions"
 
 [dev]
