@@ -339,7 +339,7 @@
                             </p>
                             <div class="question-content">
                                 <div class="question-text">
-                                    <div class="latex-content">${q.KatexMarkdown ? marked.parse(q.KatexMarkdown) : '<em style="color: #888;">No LaTeX available</em>'}</div>
+                                    <div class="latex-content">${q.LatexMarkdown ? q.LatexMarkdown : '<em style="color: #888;">No LaTeX available</em>'}</div>
                                 </div>
                                 <div class="photo-column">
                                     ${q.photo && q.photo.length > 0 ? 
@@ -435,7 +435,7 @@
                         </p>
                         <div class="question-content">
                             <div class="question-text">
-                                <div class="latex-content">${q.KatexMarkdown ? marked.parse(q.KatexMarkdown) : '<em style="color: #888;">No LaTeX available</em>'}</div>
+                                <div class="latex-content">${q.LatexMarkdown ? q.LatexMarkdown : '<em style="color: #888;">No LaTeX available</em>'}</div>
                             </div>
                             <div class="photo-column">
                                 ${q.photo && q.photo.length > 0 ? 
