@@ -385,6 +385,30 @@ exports.handler = async (event) => {
 
                             // Combine original and clone questions
                             allQuestions = [...fetchedQuestions, ...cloneQuestions];
+
+                            // Sort questions by question number
+                            allQuestions.sort((a, b) => {
+                                const getQuestionNumber = (q) => {
+                                    if (!q) return -1; // Handle potential null/undefined gracefully
+                                    if (!q.isClone) {
+                                        return parseInt(q.questionNumber, 10) || 0; // Parse original question number
+                                    } else {
+                                        // Parse question number from clone's originalQuestion string (e.g., "Test A11 - #3")
+                                        const parts = q.originalQuestion ? q.originalQuestion.split(' - #') : [];
+                                        return parts.length > 1 ? parseInt(parts[1], 10) || 0 : 0;
+                                    }
+                                };
+                                return getQuestionNumber(a) - getQuestionNumber(b);
+                            });
+
+                            if (process.env.NODE_ENV !== 'production') {
+                                console.log(`Returning ${allQuestions.length} total questions`);
+                            }
+
+                            return formatResponse(200, { 
+                                questions: allQuestions, 
+                                skillName: skillRecord.fields.Name || 'Unknown Skill' 
+                            });
                         } catch (cloneError) {
                             console.error('Error fetching clone questions:', cloneError);
                             // Continue with just the original questions
