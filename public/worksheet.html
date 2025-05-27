@@ -134,6 +134,9 @@
             flex-direction: column;
             align-items: flex-start;
         }
+        .photo-column img {
+            align-self: flex-start;
+        }
         .photo-container {
             display: flex;
             gap: 10px;
@@ -335,7 +338,7 @@
                             </p>
                             <div class="question-content">
                                 <div class="question-text">
-                                    <div class="latex-content">\\[${q.latexMarkdown || ''}\\]</div>
+                                    <div class="latex-content" data-latex="${q.latexMarkdown || ''}"></div>
                                 </div>
                                 <div class="photo-column">
                                     ${q.photo && q.photo.length > 0 ? 
@@ -362,9 +365,12 @@
                 `;
                 document.head.appendChild(style);
 
-                // Render math expressions
+                // Set up LaTeX content and render
+                document.querySelectorAll('.latex-content').forEach(el => {
+                    el.innerHTML = `\\[${el.dataset.latex}\\]`;
+                });
                 if (window.MathJax) {
-                    await MathJax.typesetPromise([worksheet]);
+                    await MathJax.typesetPromise();
                 }
                 
                 selectionControls.style.display = 'block';
@@ -409,7 +415,7 @@
             updateSelection();
         }
 
-        function generatePdf() {
+        async function generatePdf() {
             const selectedQuestions = Array.from(document.querySelectorAll('.question-checkbox:checked'))
                 .map(cb => allQuestions[parseInt(cb.dataset.index)]);
             const includeAnswerSheet = document.getElementById('includeAnswerSheet').checked;
@@ -431,7 +437,7 @@
                         </p>
                         <div class="question-content">
                             <div class="question-text">
-                                <div class="latex-content">\\[${q.latexMarkdown || ''}\\]</div>
+                                <div class="latex-content" data-latex="${q.latexMarkdown || ''}"></div>
                             </div>
                             <div class="photo-column">
                                 ${q.photo && q.photo.length > 0 ? 
@@ -477,11 +483,13 @@
 
             worksheet.innerHTML = worksheetContent;
 
-            // Render math expressions and print
+            // Set up LaTeX content and render, then print
+            document.querySelectorAll('.latex-content').forEach(el => {
+                el.innerHTML = `\\[${el.dataset.latex}\\]`;
+            });
             if (window.MathJax) {
-                MathJax.typesetPromise([worksheet]).then(() => {
-                    window.print();
-                });
+                await MathJax.typesetPromise();
+                window.print();
             } else {
                 window.print();
             }
