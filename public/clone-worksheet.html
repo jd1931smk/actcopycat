@@ -178,6 +178,20 @@
                 background-color: white;
                 border: none;
             }
+            /* Add print-specific styles for photos */
+            .photo-container {
+                display: flex;
+                gap: 10px;
+                justify-content: flex-start;
+                align-items: center;
+                margin: 10px 0;
+            }
+            .photo-container img {
+                max-width: 35%;  /* Reduced from 45% to 35% */
+                object-fit: contain;
+                transform: scale(0.7);  /* Additional 30% reduction */
+                transform-origin: left top;
+            }
         }
         .loading {
             display: none;
@@ -375,13 +389,13 @@
                         </p>
                         ${q.photo ? 
                             q.photo.length === 2 ? 
-                                `<div class="photo-container">
-                                    <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left">
-                                    <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right">
+                                `<div class="photo-container" style="display: flex; gap: 10px; justify-content: flex-start; align-items: center; margin: 10px 0;">
+                                    <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left" style="max-width: 35%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
+                                    <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right" style="max-width: 35%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
                                 </div>` :
-                                q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('')
+                                q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}" style="max-width: 35%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">`).join('')
                             : `<div class="latex-content">${q.latexMarkdown}</div>`}
-                        <div style="margin: 20px 0; border-bottom: 1px dashed #ccc;"></div>
+                        <div style="margin: 15px 0; border-bottom: 1px dashed #ccc;"></div>
                     </div>
                 `).join('')}`;
 
