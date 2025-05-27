@@ -366,19 +366,19 @@
                 `;
                 document.head.appendChild(style);
 
-                // Set up LaTeX content and render
+                // Set up LaTeX content and render (KaTeX/HTML)
                 document.querySelectorAll('.latex-content').forEach(el => {
-                    const latex = el.dataset.latex.trim();
-                    console.log("LatexMarkdown for question:", latex);
+                    const latex = el.dataset.latex?.trim();
+                    console.log("KaTeX Markdown for question:", latex);
                     if (latex) {
-                        el.innerHTML = `\\[${latex}\\]`;
+                        el.innerHTML = latex;
                     } else {
                         el.innerHTML = `<em style="color: #888;">No LaTeX available</em>`;
                     }
                 });
-                if (window.MathJax) {
-                    await MathJax.typesetPromise();
-                }
+                // if (window.MathJax) {
+                //     await MathJax.typesetPromise();
+                // }
                 
                 selectionControls.style.display = 'block';
                 generatePdfButton.style.display = 'inline-block';
@@ -491,22 +491,23 @@
 
             worksheet.innerHTML = worksheetContent;
 
-            // Set up LaTeX content and render, then print
+            // Set up LaTeX content and render (KaTeX/HTML), then print
             document.querySelectorAll('.latex-content').forEach(el => {
-                const latex = el.dataset.latex.trim();
-                console.log("LatexMarkdown for question:", latex);
+                const latex = el.dataset.latex?.trim();
+                console.log("KaTeX Markdown for question:", latex);
                 if (latex) {
-                    el.innerHTML = `\\[${latex}\\]`;
+                    el.innerHTML = latex;
                 } else {
                     el.innerHTML = `<em style="color: #888;">No LaTeX available</em>`;
                 }
             });
-            if (window.MathJax) {
-                await MathJax.typesetPromise();
-                window.print();
-            } else {
-                window.print();
-            }
+            // if (window.MathJax) {
+            //     await MathJax.typesetPromise();
+            //     window.print();
+            // } else {
+            //     window.print();
+            // }
+            window.print();
         }
     </script>
 </body>
