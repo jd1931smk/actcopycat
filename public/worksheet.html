@@ -332,16 +332,15 @@
                                 <div class="question-text">
                                     ${q.latexMarkdown ? `<div class="latex-content">${q.latexMarkdown}</div>` : ''}
                                 </div>
-                                <div class="photo-column">
-                                    ${q.photo && q.photo.length > 0 ? 
-                                        q.photo.length === 2 ? 
+                                ${q.photo ? 
+                                    `<div class="photo-column">
+                                        ${q.photo.length === 2 ? 
                                             `<div class="photo-container">
                                                 <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left">
                                                 <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right">
                                             </div>` :
-                                            q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('')
-                                        : ''}
-                                </div>
+                                            q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('')}
+                                    </div>` : ''}
                             </div>
                         </div>
                     `).join('')}
@@ -425,23 +424,22 @@
                                 : `Test ${q.testNumber}, #${q.questionNumber}`})
                         </p>
                         <div class="question-content">
-                             <div class="question-text">
+                            <div class="question-text">
                                 ${q.latexMarkdown ? `<div class="latex-content">${q.latexMarkdown}</div>` : ''}
                             </div>
-                             <div class="photo-column">
-                                ${q.photo && q.photo.length > 0 ? 
-                                    q.photo.length === 2 ? 
+                            ${q.photo ? 
+                                `<div class="photo-column">
+                                    ${q.photo.length === 2 ? 
                                         `<div class="photo-container">
-                                            <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
-                                            <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">` :
-                                        q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">`).join('')}
+                                            <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left">
+                                            <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right">
+                                        </div>` :
+                                        q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('')}
                                 </div>` : ''}
-                            </div>
                         </div>
                         <div style="margin: 15px 0; border-bottom: 1px dashed #ccc;"></div>
                     </div>
-                `).join('')}
-                `;
+                `).join('')}`;
 
             if (includeAnswerSheet) {
                 worksheetContent += `
