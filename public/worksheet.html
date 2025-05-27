@@ -339,7 +339,7 @@
                             </p>
                             <div class="question-content">
                                 <div class="question-text">
-                                    <div class="latex-content" data-latex="${q.KatexMarkdown || ''}"></div>
+                                    <div class="latex-content">${q.KatexMarkdown || '<em style="color: #888;">No LaTeX available</em>'}</div>
                                     <pre style="font-size: 12px; color: darkgreen;">${q.KatexMarkdown}</pre>
                                 </div>
                                 <div class="photo-column">
@@ -367,16 +367,7 @@
                 `;
                 document.head.appendChild(style);
 
-                // Set up LaTeX content and render (Markdown)
-                document.querySelectorAll('.latex-content').forEach(el => {
-                    const raw = el.dataset.latex?.trim();
-                    console.log("KaTeX Markdown for question:", raw);
-                    if (raw) {
-                        el.innerHTML = marked.parse(raw);
-                    } else {
-                        el.innerHTML = `<em style="color: #888;">No LaTeX available</em>`;
-                    }
-                });
+                // LaTeX content is already present; just typeset with MathJax
                 if (window.MathJax) {
                     await MathJax.typesetPromise();
                 }
@@ -445,7 +436,7 @@
                         </p>
                         <div class="question-content">
                             <div class="question-text">
-                                <div class="latex-content" data-latex="${q.KatexMarkdown || ''}"></div>
+                                <div class="latex-content">${q.KatexMarkdown || '<em style="color: #888;">No LaTeX available</em>'}</div>
                                 <pre style="font-size: 12px; color: darkgreen;">${q.KatexMarkdown}</pre>
                             </div>
                             <div class="photo-column">
@@ -492,16 +483,7 @@
 
             worksheet.innerHTML = worksheetContent;
 
-            // Set up LaTeX content and render (Markdown), then print
-            document.querySelectorAll('.latex-content').forEach(el => {
-                const raw = el.dataset.latex?.trim();
-                console.log("KaTeX Markdown for question:", raw);
-                if (raw) {
-                    el.innerHTML = marked.parse(raw);
-                } else {
-                    el.innerHTML = `<em style="color: #888;">No LaTeX available</em>`;
-                }
-            });
+            // LaTeX content is already present; just typeset with MathJax, then print
             if (window.MathJax) {
                 await MathJax.typesetPromise();
                 window.print();
