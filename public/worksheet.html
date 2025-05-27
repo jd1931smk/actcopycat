@@ -237,6 +237,7 @@
             60%, 100% { content: "..."; }
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="nav-links">
@@ -366,19 +367,19 @@
                 `;
                 document.head.appendChild(style);
 
-                // Set up LaTeX content and render (KaTeX/HTML)
+                // Set up LaTeX content and render (Markdown)
                 document.querySelectorAll('.latex-content').forEach(el => {
-                    const latex = el.dataset.latex?.trim();
-                    console.log("KaTeX Markdown for question:", latex);
-                    if (latex) {
-                        el.innerHTML = latex;
+                    const raw = el.dataset.latex?.trim();
+                    console.log("KaTeX Markdown for question:", raw);
+                    if (raw) {
+                        el.innerHTML = marked.parse(raw);
                     } else {
                         el.innerHTML = `<em style="color: #888;">No LaTeX available</em>`;
                     }
                 });
-                // if (window.MathJax) {
-                //     await MathJax.typesetPromise();
-                // }
+                if (window.MathJax) {
+                    await MathJax.typesetPromise();
+                }
                 
                 selectionControls.style.display = 'block';
                 generatePdfButton.style.display = 'inline-block';
@@ -491,23 +492,22 @@
 
             worksheet.innerHTML = worksheetContent;
 
-            // Set up LaTeX content and render (KaTeX/HTML), then print
+            // Set up LaTeX content and render (Markdown), then print
             document.querySelectorAll('.latex-content').forEach(el => {
-                const latex = el.dataset.latex?.trim();
-                console.log("KaTeX Markdown for question:", latex);
-                if (latex) {
-                    el.innerHTML = latex;
+                const raw = el.dataset.latex?.trim();
+                console.log("KaTeX Markdown for question:", raw);
+                if (raw) {
+                    el.innerHTML = marked.parse(raw);
                 } else {
                     el.innerHTML = `<em style="color: #888;">No LaTeX available</em>`;
                 }
             });
-            // if (window.MathJax) {
-            //     await MathJax.typesetPromise();
-            //     window.print();
-            // } else {
-            //     window.print();
-            // }
-            window.print();
+            if (window.MathJax) {
+                await MathJax.typesetPromise();
+                window.print();
+            } else {
+                window.print();
+            }
         }
     </script>
 </body>
