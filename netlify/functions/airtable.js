@@ -309,8 +309,8 @@ exports.handler = async (event) => {
                         console.log(`Attempting to fetch Skill record with ID: ${skillId}`);
                     }
 
-                    // Fetch the skill record
-                    const skillRecord = await base.table(process.env.SKILLS_TABLE_ID)
+                    // Fetch the skill record from the skills table (tbl6l9Pu2uHM2XlvV)
+                    const skillRecord = await base.table('tbl6l9Pu2uHM2XlvV')
                         .find(skillId)
                         .catch(error => {
                             console.error("Error fetching skill record:", error);
@@ -321,46 +321,89 @@ exports.handler = async (event) => {
                         return formatResponse(404, { message: "Skill not found." });
                     }
 
-                    const linkedQuestionIds = skillRecord.fields.LinkedQuestions || [];
+                    // Get the linked questions from the skill record
+                    const linkedQuestions = skillRecord.fields.LinkedQuestions || [];
                     if (process.env.NODE_ENV !== 'production') {
-                        console.log(`Linked Question IDs: ${JSON.stringify(linkedQuestionIds)}`);
+                        console.log(`Linked Questions: ${JSON.stringify(linkedQuestions)}`);
                     }
 
-                    if (linkedQuestionIds.length === 0) {
-                        return formatResponse(200, { questions: [] });
+                    if (linkedQuestions.length === 0) {
+                        return formatResponse(200, { questions: [], skillName: skillRecord.fields.Name || 'Unknown Skill' });
                     }
 
-                    const fetchedQuestions = await Promise.all(
-                        linkedQuestionIds.map(async (questionId) => {
-                            try {
-                                const record = await base.table(process.env.QUESTIONS_TABLE_ID).find(questionId);
-                                return {
-                                    id: record.id,
-                                    photo: record.fields['Photo'] ? record.fields['Photo'][0].url : "No Photo Available",
-                                    testNumber: record.fields['Test Number'] || "No Test Number",
-                                    questionNumber: record.fields['Question Number'] || "No Question Number",
-                                    katex: record.fields['KatexMarkdown'] || 'No Katex Content',
-                                };
-                            } catch (error) {
-                                console.error(`Error fetching question with ID ${questionId}:`, error);
-                                return { error: `Failed to fetch question with ID ${questionId}`, details: error.message };
-                            }
+                    // Fetch all linked questions from the questions table (tbllwZpPeh9yHJ3fM)
+                    const records = await base.table('tbllwZpPeh9yHJ3fM')
+                        .select({
+                            filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`,
+                            fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
                         })
-                    );
+                        .all();
 
-                    const validQuestions = fetchedQuestions.filter(q => q !== null && !q.error);
+                    const fetchedQuestions = records.map(record => ({
+                        id: record.id,
+                        photo: record.fields['Photo'] || null,
+                        testNumber: record.fields['Test Number'] || "No Test Number",
+                        questionNumber: record.fields['Question Number'] || "No Question Number",
+                        katex: record.fields['KatexMarkdown'] || 'No Katex Content',
+                        isClone: false
+                    }));
 
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log(`Successfully fetched ${validQuestions.length} questions.`);
+                    // If includeClones is true, fetch clone questions as well
+                    const includeClones = event.queryStringParameters.includeClones === 'true';
+                    let allQuestions = fetchedQuestions;
+
+                    if (includeClones) {
+                        try {
+                            // Get the record IDs of the original questions
+                            const originalQuestionIds = fetchedQuestions.map(q => q.id);
+                            
+                            // Fetch clone questions from the copycats table
+                            const cloneRecords = await base.table(process.env.COPYCATS_TABLE_ID)
+                                .select({
+                                    filterByFormula: `OR(${originalQuestionIds.map(id => `FIND('${id}', ARRAYJOIN({Original Question})) > 0`).join(', ')})`,
+                                    fields: [
+                                        'Corrected Clone Question LM',
+                                        'Original Question',
+                                        'AI Model'
+                                    ]
+                                })
+                                .all();
+
+                            const cloneQuestions = cloneRecords
+                                .filter(clone => clone.get('Corrected Clone Question LM'))
+                                .map(clone => ({
+                                    id: clone.id,
+                                    katex: clone.get('Corrected Clone Question LM'),
+                                    model: clone.get('AI Model') || 'AI Generated',
+                                    originalQuestion: clone.get('Original Question'),
+                                    isClone: true
+                                }));
+
+                            if (process.env.NODE_ENV !== 'production') {
+                                console.log(`Found ${cloneQuestions.length} clone questions`);
+                            }
+
+                            // Combine original and clone questions
+                            allQuestions = [...fetchedQuestions, ...cloneQuestions];
+                        } catch (cloneError) {
+                            console.error('Error fetching clone questions:', cloneError);
+                            // Continue with just the original questions
+                        }
                     }
 
-                    return formatResponse(200, { questions: validQuestions });
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Returning ${allQuestions.length} total questions`);
+                    }
+
+                    return formatResponse(200, { 
+                        questions: allQuestions, 
+                        skillName: skillRecord.fields.Name || 'Unknown Skill' 
+                    });
                 } catch (error) {
                     console.error('Error in getWorksheetQuestions:', error);
                     return formatResponse(500, {
                         message: 'Failed to fetch worksheet questions.',
-                        details: error.message,
-                        suggestion: 'Check API Key, Base ID, and Table Permissions.'
+                        details: error.message
                     });
                 }
 
