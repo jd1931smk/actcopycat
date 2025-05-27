@@ -213,6 +213,12 @@
             <button onclick="loadQuestions()">Load Clone Questions</button>
             <button id="generatePdf" onclick="generatePdf()" style="display: none;">Generate PDF</button>
         </div>
+        <div class="form-group" style="margin-top: 15px;">
+            <label>
+                <input type="checkbox" id="includeAnswerSheet" checked>
+                Include Answer Sheet
+            </label>
+        </div>
     </div>
 
     <div id="loading" class="loading">Loading questions...</div>
@@ -352,11 +358,11 @@
         function generatePdf() {
             const selectedQuestions = Array.from(document.querySelectorAll('.question-checkbox:checked'))
                 .map(cb => allQuestions[parseInt(cb.dataset.index)]);
-
+            const includeAnswerSheet = document.getElementById('includeAnswerSheet').checked;
             const currentDate = new Date().toLocaleDateString();
             const worksheet = document.getElementById('worksheet');
             
-            worksheet.innerHTML = `
+            let worksheetContent = `
                 <h2>ACT Math Clone Practice Worksheet</h2>
                 <p><strong>Skill:</strong> ${skillName}</p>
                 <p><strong>Date:</strong> ${currentDate}</p>
@@ -377,8 +383,35 @@
                             : `<div class="latex-content">${q.latexMarkdown}</div>`}
                         <div style="margin: 20px 0; border-bottom: 1px dashed #ccc;"></div>
                     </div>
-                `).join('')}
-            `;
+                `).join('')}`;
+
+            if (includeAnswerSheet) {
+                worksheetContent += `
+                    <div style="page-break-before: always;">
+                        <h2>Answer Key</h2>
+                        <p><strong>Skill:</strong> ${skillName}</p>
+                        <p><strong>Date:</strong> ${currentDate}</p>
+                        <hr>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                            <tr style="background-color: #f8f9fa;">
+                                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Question</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Original Test</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Original #</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Answer</th>
+                            </tr>
+                            ${selectedQuestions.map((q, index) => `
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">${index + 1}</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">${q.originalQuestion.split(' - ')[0]}</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">${q.originalQuestion.split(' - ')[1]}</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">${q.answer || 'N/A'}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>`;
+            }
+
+            worksheet.innerHTML = worksheetContent;
 
             // Render math expressions and print
             if (window.MathJax) {
