@@ -129,7 +129,10 @@
         }
         .photo-column {
             flex: 1;
-            min-width: 0; /* Prevents flex item from overflowing */
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
         }
         .photo-container {
             display: flex;
@@ -332,7 +335,7 @@
                             </p>
                             <div class="question-content">
                                 <div class="question-text">
-                                    <div class="latex-content">${q.latexMarkdown || ''}</div>
+                                    <div class="latex-content">\\[${q.latexMarkdown || ''}\\]</div>
                                 </div>
                                 <div class="photo-column">
                                     ${q.photo && q.photo.length > 0 ? 
@@ -428,7 +431,7 @@
                         </p>
                         <div class="question-content">
                             <div class="question-text">
-                                <div class="latex-content">${q.latexMarkdown || ''}</div>
+                                <div class="latex-content">\\[${q.latexMarkdown || ''}\\]</div>
                             </div>
                             <div class="photo-column">
                                 ${q.photo && q.photo.length > 0 ? 
