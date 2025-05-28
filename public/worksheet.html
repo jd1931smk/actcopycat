@@ -9,8 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="ACT Math">
     <meta name="mobile-web-app-capable" content="yes">
     <!-- PWA manifest -->
-    <script type="text/javascript" nonce="d1a370fe60a14010b2b68ff8ef9" src="//local.adguard.org?ts=1743523308524&amp;type=content-script&amp;dmn=api.netlify.com&amp;url=https%3A%2F%2Fapi.netlify.com%2Fapi%2Fv1%2Fdeploys%2F67e725b35fa2a90008f6a1a0%2Ffiles%2Fworksheet.html&amp;app=com.brave.Browser&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script>
-<script type="text/javascript" nonce="d1a370fe60a14010b2b68ff8ef9" src="//local.adguard.org?ts=1743523308524&amp;name=AdGuard%20Extra&amp;type=user-script"></script><link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/manifest.json">
     <title>ACT Math Worksheet Generator</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -320,6 +319,11 @@
                 allQuestions = data.questions.filter(q => !q.isClone); // Filter out any clone questions
                 skillName = data.skillName;
 
+                // Debug: log first question to check field names
+                if (allQuestions.length > 0) {
+                    console.log('First question data:', allQuestions[0]);
+                }
+
                 worksheet.innerHTML = `
                     <h2>Question Selection for ${skillName}</h2>
                     <p>Select the questions you want to include in your worksheet:</p>
@@ -339,8 +343,8 @@
                             </p>
                             <div class="question-content">
                                 <div class="question-text">
-                                    <div class="latex-content">${q.KatexMarkdown ? `<span class="katex-render">${q.KatexMarkdown}</span>` : '<em style="color: #888;">No LaTeX available</em>'}</div>
-                                    <pre style="font-size: 12px; color: darkgreen;">${q.KatexMarkdown}</pre>
+                                    <div class="latex-content">${q.LatexMarkdown ? `<span class="katex-render">${q.LatexMarkdown}</span>` : '<em style="color: #888;">No LaTeX available</em>'}</div>
+                                    <pre style="font-size: 12px; color: darkgreen;">${q.LatexMarkdown || ''}</pre>
                                 </div>
                                 <div class="photo-column">
                                     ${q.photo && q.photo.length > 0 ? 
@@ -409,88 +413,3 @@
         }
 
         function deselectAll() {
-            const checkboxes = document.querySelectorAll('.question-checkbox');
-            checkboxes.forEach(cb => cb.checked = false);
-            updateSelection();
-        }
-
-        async function generatePdf() {
-            const selectedQuestions = Array.from(document.querySelectorAll('.question-checkbox:checked'))
-                .map(cb => allQuestions[parseInt(cb.dataset.index)]);
-            const includeAnswerSheet = document.getElementById('includeAnswerSheet').checked;
-            const currentDate = new Date().toLocaleDateString();
-            const worksheet = document.getElementById('worksheet');
-            
-            let worksheetContent = `
-                <h2>ACT Math Practice Worksheet</h2>
-                <p><strong>Skill:</strong> ${skillName}</p>
-                <p><strong>Date:</strong> ${currentDate}</p>
-                <hr>
-                ${selectedQuestions.map((q, index) => `
-                    <div class="question ${q.isClone ? 'clone-question' : ''}">
-                        <p>
-                            <strong>Question ${index + 1}</strong>
-                            (Source: ${q.isClone 
-                                ? `Clone of Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]}` 
-                                : `Test ${q.testNumber}, #${q.questionNumber}`})
-                        </p>
-                        <div class="question-content">
-                            <div class="question-text">
-                                <div class="latex-content">${q.KatexMarkdown ? `<span class="katex-render">${q.KatexMarkdown}</span>` : '<em style="color: #888;">No LaTeX available</em>'}</div>
-                                <pre style="font-size: 12px; color: darkgreen;">${q.KatexMarkdown}</pre>
-                            </div>
-                            <div class="photo-column">
-                                ${q.photo && q.photo.length > 0 ? 
-                                    q.photo.length === 2 ? 
-                                        `<div class="photo-container">
-                                            <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
-                                            <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
-                                        </div>` :
-                                    q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">`).join('')
-                                : ''}
-                            </div>
-                        </div>
-                        <div style="margin: 15px 0; border-bottom: 1px dashed #ccc;"></div>
-                    </div>
-                `).join('')}
-                `;
-
-            if (includeAnswerSheet) {
-                worksheetContent += `
-                    <div style="page-break-before: always;">
-                        <h2>Answer Key</h2>
-                        <p><strong>Skill:</strong> ${skillName}</p>
-                        <p><strong>Date:</strong> ${currentDate}</p>
-                        <hr>
-                        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                            <tr style="background-color: #f8f9fa;">
-                                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Question</th>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Test</th>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Number</th>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Answer</th>
-                            </tr>
-                            ${selectedQuestions.map((q, index) => `
-                                <tr>
-                                    <td style="padding: 10px; border: 1px solid #dee2e6;">${index + 1}</td>
-                                    <td style="padding: 10px; border: 1px solid #dee2e6;">${q.isClone ? q.originalQuestion.split(' - ')[0] : q.testNumber}</td>
-                                    <td style="padding: 10px; border: 1px solid #dee2e6;">${q.isClone ? q.originalQuestion.split(' - ')[1] : q.questionNumber}</td>
-                                    <td style="padding: 10px; border: 1px solid #dee2e6;">${q.answer || 'N/A'}</td>
-                                </tr>
-                            `).join('')}
-                        </table>
-                    </div>`;
-            }
-
-            worksheet.innerHTML = worksheetContent;
-
-            // LaTeX content is already present; just typeset with MathJax, then print
-            if (window.MathJax) {
-                await MathJax.typesetPromise();
-                window.print();
-            } else {
-                window.print();
-            }
-        }
-    </script>
-</body>
-</html> 
