@@ -478,32 +478,44 @@
                 <p><strong>Skill:</strong> ${skillName}</p>
                 <p><strong>Date:</strong> ${currentDate}</p>
                 <hr>
-                ${selectedQuestions.map((q, index) => `
-                    <div class="question ${q.isClone ? 'clone-question' : ''}">
-                        <p>
-                            <strong>Question ${index + 1}</strong>
-                            (Source: ${q.isClone 
-                                ? `Clone of Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]}` 
-                                : `Test ${q.testNumber}, #${q.questionNumber}`})
-                        </p>
-                        <div class="question-content">
-                            <div class="question-text">
-                                <div class="latex-content">${format === 'latex' ? renderMathMarkdown(q.LatexMarkdown) : ''}</div>
+               ${selectedQuestions.map((q, index) => {
+                    const isClone = q.isClone;
+                    const source = isClone
+                        ? `Clone of Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]}`
+                        : `Test ${q.testNumber}, #${q.questionNumber}`;
+
+                    const latexBlock = `
+                        <div class="question-text">
+                            <div class="latex-content">${renderMathMarkdown(q.LatexMarkdown)}</div>
+                        </div>`;
+
+                    const photoBlock = `
+                        <div class="photo-column">
+                            ${q.photo && q.photo.length > 0
+                                ? (q.photo.length === 2
+                                    ? `<div class="photo-container">
+                                        <img src="${q.photo[1].url}" alt="Q${index + 1} Left" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
+                                        <img src="${q.photo[0].url}" alt="Q${index + 1} Right" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
+                                    </div>`
+                                    : q.photo.map(photo => 
+                                        `<img src="${photo.url}" alt="Q${index + 1}" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">`
+                                    ).join('')
+                                )
+                                : '<em>No image available</em>'
+                            }
+                        </div>`;
+
+                    return `
+                        <div class="question ${isClone ? 'clone-question' : ''}">
+                            <p><strong>Question ${index + 1}</strong> (Source: ${source})</p>
+                            <div class="question-content">
+                                ${format === 'latex' ? latexBlock : ''}
+                                ${format === 'photo' ? photoBlock : ''}
                             </div>
-                            <div class="photo-column">
-                                ${q.photo && q.photo.length > 0 ? 
-                                    q.photo.length === 2 ? 
-                                        `<div class="photo-container">
-                                            <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
-                                            <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
-                                        </div>` :
-                                    q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">`).join('')
-                                : ''}
-                            </div>
+                            <div style="margin: 15px 0; border-bottom: 1px dashed #ccc;"></div>
                         </div>
-                        <div style="margin: 15px 0; border-bottom: 1px dashed #ccc;"></div>
-                    </div>
-                `).join('')}
+                    `;
+                }).join('')}
             `;
 
             if (includeAnswerSheet) {
