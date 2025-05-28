@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import KaTeXRender from './KaTeXRender';
+import KaTeXRender from '@public/KatexRender';
 
 const themes = {
   default: 'default.css',

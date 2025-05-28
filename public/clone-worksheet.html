@@ -123,6 +123,31 @@
             border-radius: 4px;
             position: relative;
         }
+        .question-content {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        .question-text {
+            flex: 1;
+            min-width: 0; /* Prevents flex item from overflowing */
+        }
+        .photo-column {
+            flex: 1;
+            min-width: 0; /* Prevents flex item from overflowing */
+        }
+        .photo-container {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-start;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .photo-container img {
+            max-width: 100%;
+            height: auto; /* Ensure aspect ratio is maintained */
+            object-fit: contain;
+        }
         .question.selected {
             background-color: #f8fff9;
             border-color: #28a745;
@@ -131,16 +156,6 @@
             max-width: 100%;
             height: auto;
             margin: 10px 0;
-        }
-        .photo-container {
-            display: flex;
-            gap: 20px;
-            justify-content: flex-start;
-            align-items: center;
-        }
-        .photo-container img {
-            max-width: 45%;
-            object-fit: contain;
         }
         .question-checkbox {
             position: absolute;
@@ -178,7 +193,19 @@
                 background-color: white;
                 border: none;
             }
-            /* Add print-specific styles for photos */
+            .question-content {
+                display: flex;
+                gap: 20px;
+                align-items: flex-start;
+            }
+            .question-text {
+                flex: 1;
+                min-width: 0;
+            }
+            .photo-column {
+                flex: 1;
+                min-width: 0;
+            }
             .photo-container {
                 display: flex;
                 gap: 10px;
@@ -187,9 +214,10 @@
                 margin: 10px 0;
             }
             .photo-container img {
-                max-width: 35%;  /* Reduced from 45% to 35% */
+                max-width: 100%;
+                height: auto; /* Ensure aspect ratio is maintained */
                 object-fit: contain;
-                transform: scale(0.7);  /* Additional 30% reduction */
+                transform: scale(0.7); /* Keep photo size reduction for print */
                 transform-origin: left top;
             }
         }
@@ -310,14 +338,21 @@
                             <p>
                                 <strong>Clone of Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]}</strong>
                             </p>
-                            ${q.photo ? 
-                                q.photo.length === 2 ? 
-                                    `<div class="photo-container">
-                                        <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left">
-                                        <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right">
-                                    </div>` :
-                                    q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('')
-                                : `<div class="latex-content">${q.latexMarkdown}</div>`}
+                            <div class="question-content">
+                                <div class="question-text">
+                                    ${q.latexMarkdown ? `<div class="latex-content">${q.latexMarkdown}</div>` : ''}
+                                </div>
+                                <div class="photo-column">
+                                    ${q.photo && q.photo.length > 0 ? 
+                                        q.photo.length === 2 ? 
+                                            `<div class="photo-container">
+                                                <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left">
+                                                <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right">
+                                            </div>` :
+                                        q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('')
+                                    : ''}
+                                </div>
+                            </div>
                         </div>
                     `).join('')}
                 `;
@@ -387,17 +422,24 @@
                             <strong>Question ${index + 1}</strong>
                             (Clone of Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]})
                         </p>
-                        ${q.photo ? 
-                            q.photo.length === 2 ? 
-                                `<div class="photo-container" style="display: flex; gap: 10px; justify-content: flex-start; align-items: center; margin: 10px 0;">
-                                    <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left" style="max-width: 35%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
-                                    <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right" style="max-width: 35%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
-                                </div>` :
-                                q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}" style="max-width: 35%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">`).join('')
-                            : `<div class="latex-content">${q.latexMarkdown}</div>`}
+                        <div class="question-content">
+                             <div class="question-text">
+                                ${q.latexMarkdown ? `<div class="latex-content">${q.latexMarkdown}</div>` : ''}
+                            </div>
+                             <div class="photo-column">
+                                ${q.photo && q.photo.length > 0 ? 
+                                    q.photo.length === 2 ? 
+                                        `<div class="photo-container">
+                                            <img src="${q.photo[1].url}" alt="Question ${index + 1} - Left" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
+                                            <img src="${q.photo[0].url}" alt="Question ${index + 1} - Right" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">` :
+                                        q.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">`).join('')}
+                                </div>` : ''}
+                            </div>
+                        </div>
                         <div style="margin: 15px 0; border-bottom: 1px dashed #ccc;"></div>
                     </div>
-                `).join('')}`;
+                `).join('')}
+                `;
 
             if (includeAnswerSheet) {
                 worksheetContent += `
