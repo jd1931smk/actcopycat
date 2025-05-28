@@ -335,7 +335,7 @@ exports.handler = async (event) => {
                     const records = await base.table('tbllwZpPeh9yHJ3fM')
                         .select({
                             filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`,
-                            fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
+                            fields: ['Photo', 'Record ID', 'LatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
                         })
                         .all();
 
@@ -344,7 +344,7 @@ exports.handler = async (event) => {
                         photo: record.fields['Photo'] || null,
                         testNumber: record.fields['Test Number'] || "No Test Number",
                         questionNumber: record.fields['Question Number'] || "No Question Number",
-                        katex: record.fields['KatexMarkdown'] || 'No Katex Content',
+                        LatexMarkdown: record.fields['LatexMarkdown'] || 'No LatexMarkdown content',
                         isClone: false
                     }));
 
