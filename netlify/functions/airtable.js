@@ -5,6 +5,11 @@ if (process.env.NODE_ENV !== 'production') {
     console.log("ACT_BASE_ID:", process.env.ACT_BASE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("SAT_BASE_ID:", process.env.SAT_BASE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("AIRTABLE_API_KEY:", process.env.AIRTABLE_API_KEY ? "✅ Loaded" : "❌ MISSING");
+    console.log("SKILLS_TABLE_ID:", process.env.SKILLS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
+    console.log("QUESTIONS_TABLE_ID:", process.env.QUESTIONS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
+    console.log("COPYCATS_TABLE_ID:", process.env.COPYCATS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
+    console.log("SAT_SKILLS_TABLE_ID:", process.env.SAT_SKILLS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
+    console.log("SAT_QUESTIONS_TABLE_ID:", process.env.SAT_QUESTIONS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
 }
 
 // Initialize bases for both ACT and SAT
@@ -52,9 +57,11 @@ exports.handler = async (event) => {
     try {
         switch (action) {
             case 'getTestNumbers':
+                // Note: Hardcoded ACT test numbers. If SAT tests are needed, this needs adjustment.
                 if (process.env.NODE_ENV !== 'production') {
-                    console.log("Returning hardcoded test numbers...");
+                    console.log("Returning hardcoded ACT test numbers...");
                 }
+                // If SAT tests have different numbering, this case needs to be dynamic based on 'database'
                 const testNumbers = [
                     'A9',
                     'A10',
@@ -71,10 +78,12 @@ exports.handler = async (event) => {
                 return formatResponse(200, testNumbers);
 
             case 'getQuestionNumbers':
+                 // Note: Hardcoded 1-60 question numbers. If SAT questions have different numbering, this needs adjustment.
                 if (!testNumber) return formatResponse(400, { error: 'Missing testNumber' });
                 if (process.env.NODE_ENV !== 'production') {
-                    console.log(`Generating question numbers 1-60 for test: ${testNumber}`);
+                    console.log(`Generating question numbers 1-60 for test: ${testNumber} (assuming ACT format)`);
                 }
+                 // If SAT questions have different numbering, this case needs to be dynamic based on 'database'
                 const questionNumbers = Array.from({length: 60}, (_, i) => (i + 1).toString());
                 if (process.env.NODE_ENV !== 'production') {
                     console.log(`Returning ${questionNumbers.length} question numbers`);
@@ -84,13 +93,19 @@ exports.handler = async (event) => {
             case 'getQuestionDetails':
                 if (!testNumber || !questionNumber) return formatResponse(400, { error: 'Missing testNumber or questionNumber' });
                 if (process.env.NODE_ENV !== 'production') {
-                    console.log(`Fetching Question Details for Test: ${testNumber}, Question: ${questionNumber}`);
+                    console.log(`Fetching Question Details for Test: ${testNumber}, Question: ${questionNumber} from ${database} database`);
                 }
                 const filterFormula = `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`;
+                const questionsTableIdDetails = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
+                if (!questionsTableIdDetails) {
+                     console.error('[getQuestionDetails Error]: Questions table ID is not defined for database:', database);
+                     return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
+                }
                 if (process.env.NODE_ENV !== 'production') {
                     console.log('Using filter formula:', filterFormula);
+                    console.log('Using questions table ID:', questionsTableIdDetails);
                 }
-                const question = await base.table(process.env.QUESTIONS_TABLE_ID)
+                const question = await base.table(questionsTableIdDetails)
                     .select({
                         filterByFormula: filterFormula,
                         fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
@@ -137,10 +152,15 @@ exports.handler = async (event) => {
                     return formatResponse(400, { error: 'Test number and question number are required' });
                 }
                 if (process.env.NODE_ENV !== 'production') {
-                    console.log(`Fetching correct answer for Test: ${testNumber}, Question: ${questionNumber}`);
+                    console.log(`Fetching correct answer for Test: ${testNumber}, Question: ${questionNumber} from ${database} database`);
                 }
                 try {
-                    const records = await base.table(process.env.QUESTIONS_TABLE_ID)
+                    const questionsTableIdAnswer = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
+                    if (!questionsTableIdAnswer) {
+                         console.error('[getCorrectAnswer Error]: Questions table ID is not defined for database:', database);
+                         return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
+                    }
+                    const records = await base.table(questionsTableIdAnswer)
                         .select({
                             filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
                             fields: ['Test Number', 'Question Number', 'Answer']
@@ -177,13 +197,18 @@ exports.handler = async (event) => {
                     return formatResponse(400, { error: 'Test number and question number are required' });
                 }
                 if (process.env.NODE_ENV !== 'production') {
-                    console.log(`Fetching explanation for Test: ${testNumber}, Question: ${questionNumber}`);
+                    console.log(`Fetching explanation for Test: ${testNumber}, Question: ${questionNumber} from ${database} database`);
                 }
                 try {
                     if (process.env.NODE_ENV !== 'production') {
                         console.log('Querying Airtable with filter:', `AND({Test Number} = '${testNumber}', {Question Number} = '${questionNumber}')`);
                     }
-                    const records = await base.table(process.env.QUESTIONS_TABLE_ID)
+                    const questionsTableIdExplanation = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
+                     if (!questionsTableIdExplanation) {
+                         console.error('[getExplanation Error]: Questions table ID is not defined for database:', database);
+                         return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
+                    }
+                    const records = await base.table(questionsTableIdExplanation)
                         .select({
                             filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = '${questionNumber}')`,
                             fields: ['Test Number', 'Question Number', 'Explanation 4o']
@@ -236,16 +261,30 @@ exports.handler = async (event) => {
                 }
 
             case 'getCloneQuestions':
+                // Clones are not available for the SAT database yet
+                if (database === 'SAT') {
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log('Skipping getCloneQuestions for SAT database as clones are not available.');
+                    }
+                    return formatResponse(200, []); // Return empty array for SAT
+                }
+
                 if (!testNumber || !questionNumber) {
                     console.error("[getCloneQuestions Error]: Missing testNumber or questionNumber in request:", event.queryStringParameters);
                     return formatResponse(400, { error: "Missing testNumber or questionNumber" });
                 }
                 if (process.env.NODE_ENV !== 'production') {
-                    console.log(`✅ Fetching clones for Test: ${testNumber}, Question: ${questionNumber}`);
+                    console.log(`✅ Fetching clones for Test: ${testNumber}, Question: ${questionNumber} from ${database} database`);
                 }
                 try {
-                    // First check if the question exists and get its Record ID
-                    const questionExists = await base.table(process.env.QUESTIONS_TABLE_ID)
+                    // First check if the question exists and get its Record ID from the correct questions table
+                    const questionsTableIdClones = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
+                    if (!questionsTableIdClones) {
+                         console.error('[getCloneQuestions Error]: Questions table ID is not defined for database:', database);
+                         return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
+                    }
+
+                    const questionExists = await base.table(questionsTableIdClones)
                         .select({
                             filterByFormula: `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`,
                             fields: ['Record ID']
@@ -259,8 +298,16 @@ exports.handler = async (event) => {
                     if (process.env.NODE_ENV !== 'production') {
                         console.log('Original question Record ID:', originalRecordId);
                     }
-                    // Find all CopyCats where Original Question contains the record ID
-                    const records = await base.table(process.env.COPYCATS_TABLE_ID)
+                    // Find all CopyCats where Original Question contains the record ID (only for ACT)
+                    const copycatsTableId = process.env.COPYCATS_TABLE_ID; // Only ACT CopyCats table exists
+                    if (!copycatsTableId) {
+                         console.error('[getCloneQuestions Error]: CopyCats table ID is not defined.');
+                         // Note: We might want to return an empty array here instead of a 500 error if the absence of the table is expected.
+                         // For now, keeping 500 as missing env var is likely config error.
+                         return formatResponse(500, { message: 'CopyCats table ID not configured.' });
+                    }
+
+                    const records = await base.table(copycatsTableId)
                         .select({
                             filterByFormula: `FIND('${originalRecordId}', ARRAYJOIN({Original Question})) > 0`,
                             fields: ['Corrected Clone Question LM', 'AI Model', 'Original Question']
@@ -291,7 +338,15 @@ exports.handler = async (event) => {
 
             case 'getSkills':
                 try {
-                    const records = await base.table(process.env.SKILLS_TABLE_ID).select({
+                    // Use the correct skills table ID based on the database
+                    const skillsTableId = database === 'SAT' ? process.env.SAT_SKILLS_TABLE_ID : process.env.SKILLS_TABLE_ID;
+
+                    if (!skillsTableId) {
+                        console.error('[getSkills Error]: Skills table ID is not defined for database:', database);
+                        return formatResponse(500, { message: 'Skills table ID not configured for this database.' });
+                    }
+
+                    const records = await base.table(skillsTableId).select({
                         fields: ['Record ID', 'Name'],
                     }).all();
                     const skills = records
@@ -314,12 +369,17 @@ exports.handler = async (event) => {
                 try {
                     if (process.env.NODE_ENV !== 'production') {
                         console.log("Fetching worksheet questions...");
-                        console.log(`Attempting to fetch Skill record with ID: ${skillId}`);
-                        console.log(`Using database: ${database}`);
+                        console.log(`Attempting to fetch Skill record with ID: ${skillId} from ${database} database`);
                     }
 
-                    // Fetch the skill record from the skills table
-                    const skillRecord = await base.table(process.env.SKILLS_TABLE_ID)
+                    // Fetch the skill record from the correct skills table
+                    const skillsTableIdWorksheet = database === 'SAT' ? process.env.SAT_SKILLS_TABLE_ID : process.env.SKILLS_TABLE_ID;
+                    if (!skillsTableIdWorksheet) {
+                         console.error('[getWorksheetQuestions Error]: Skills table ID is not defined for database:', database);
+                         return formatResponse(500, { message: 'Skills table ID not configured for this database.' });
+                    }
+
+                    const skillRecord = await base.table(skillsTableIdWorksheet)
                         .find(skillId)
                         .catch(error => {
                             console.error("Error fetching skill record:", error);
@@ -340,8 +400,14 @@ exports.handler = async (event) => {
                         return formatResponse(200, { questions: [], skillName: skillRecord.fields.Name || 'Unknown Skill' });
                     }
 
-                    // Fetch all linked questions from the questions table (tbllwZpPeh9yHJ3fM)
-                    const records = await base.table('tbllwZpPeh9yHJ3fM')
+                    // Fetch all linked questions from the correct questions table
+                    const questionsTableIdWorksheet = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
+                    if (!questionsTableIdWorksheet) {
+                         console.error('[getWorksheetQuestions Error]: Questions table ID is not defined for database:', database);
+                         return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
+                    }
+
+                    const records = await base.table(questionsTableIdWorksheet)
                         .select({
                             filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`,
                             fields: ['Photo', 'Record ID', 'LatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
@@ -357,43 +423,48 @@ exports.handler = async (event) => {
                         isClone: false
                     }));
 
-                    // If includeClones is true, fetch clone questions as well
-                    const includeClones = event.queryStringParameters.includeClones === 'true';
+                    // If includeClones is true, fetch clone questions as well (only for ACT)
+                    const includeClones = event.queryStringParameters.includeClones === 'true' && database !== 'SAT';
                     let allQuestions = fetchedQuestions;
 
                     if (includeClones) {
                         try {
                             // Get the record IDs of the original questions
                             const originalQuestionIds = fetchedQuestions.map(q => q.id);
-                            
-                            // Fetch clone questions from the copycats table
-                            const cloneRecords = await base.table(process.env.COPYCATS_TABLE_ID)
-                                .select({
-                                    filterByFormula: `OR(${originalQuestionIds.map(id => `FIND('${id}', ARRAYJOIN({Original Question})) > 0`).join(', ')})`,
-                                    fields: [
-                                        'Corrected Clone Question LM',
-                                        'Original Question',
-                                        'AI Model'
-                                    ]
-                                })
-                                .all();
 
-                            const cloneQuestions = cloneRecords
-                                .filter(clone => clone.get('Corrected Clone Question LM'))
-                                .map(clone => ({
-                                    id: clone.id,
-                                    katex: clone.get('Corrected Clone Question LM'),
-                                    model: clone.get('AI Model') || 'AI Generated',
-                                    originalQuestion: clone.get('Original Question'),
-                                    isClone: true
-                                }));
+                            // Fetch clone questions from the copycats table (only ACT CopyCats table exists)
+                            const copycatsTableIdWorksheet = process.env.COPYCATS_TABLE_ID;
+                             if (!copycatsTableIdWorksheet) {
+                                 console.error('[getWorksheetQuestions Error]: CopyCats table ID is not defined.');
+                                 // Continue without clones if CopyCats ID is missing
+                             } else {
+                                const cloneRecords = await base.table(copycatsTableIdWorksheet)
+                                    .select({
+                                        filterByFormula: `OR(${originalQuestionIds.map(id => `FIND('${id}', ARRAYJOIN({Original Question})) > 0`).join(', ')})`,
+                                        fields: [
+                                            'Corrected Clone Question LM',
+                                            'Original Question',
+                                            'AI Model'
+                                        ]
+                                    })
+                                    .all();
 
-                            if (process.env.NODE_ENV !== 'production') {
-                                console.log(`Found ${cloneQuestions.length} clone questions`);
-                            }
+                                const cloneQuestions = cloneRecords
+                                    .filter(clone => clone.get('Corrected Clone Question LM'))
+                                    .map(clone => ({
+                                        id: clone.id,
+                                        katex: clone.get('Corrected Clone Question LM'),
+                                        model: clone.get('AI Model') || 'AI Generated',
+                                        originalQuestion: clone.get('Original Question'),
+                                        isClone: true
+                                    }));
 
-                            allQuestions = [...fetchedQuestions, ...cloneQuestions];
+                                if (process.env.NODE_ENV !== 'production') {
+                                    console.log(`Found ${cloneQuestions.length} clone questions`);
+                                }
 
+                                allQuestions = [...fetchedQuestions, ...cloneQuestions];
+                             }
                         } catch (cloneError) {
                             console.error('Error fetching clone questions:', cloneError);
                             // Continue with just the original questions
@@ -432,6 +503,15 @@ exports.handler = async (event) => {
                 }
 
             case 'getWorksheetClones':
+                 // This action is specifically for fetching clones for a worksheet, which are currently only in the ACT CopyCats table
+                 // If the request is for the SAT database, return an empty list
+                if (database === 'SAT') {
+                    if (process.env.NODE_ENV !== 'production') {
+                         console.log('Skipping getWorksheetClones for SAT database as clones are not available.');
+                    }
+                     return formatResponse(200, { questions: [] });
+                 }
+
                 if (!testNumbersJson) {
                     return formatResponse(400, { error: 'Test numbers are required' });
                 }
@@ -447,7 +527,13 @@ exports.handler = async (event) => {
                     if (process.env.NODE_ENV !== 'production') {
                         console.log('Clone filter formula:', filterFormula);
                     }
-                    const cloneRecords = await base.table(process.env.COPYCATS_TABLE_ID)
+                    const copycatsTableIdClones = process.env.COPYCATS_TABLE_ID;
+                     if (!copycatsTableIdClones) {
+                         console.error('[getWorksheetClones Error]: CopyCats table ID is not defined.');
+                         return formatResponse(500, { message: 'CopyCats table ID not configured.' });
+                     }
+
+                    const cloneRecords = await base.table(copycatsTableIdClones)
                         .select({
                             maxRecords: 10,
                             filterByFormula: filterFormula,
