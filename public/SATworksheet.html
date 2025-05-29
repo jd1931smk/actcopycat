@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-title" content="SAT Math">
+    <meta name="mobile-web-app-capable" content="yes">
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <title>SAT Math Worksheet Generator</title>
+    
+    <!-- KaTeX for math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"></script>
+    
+    <!-- Marked for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <style>
+        // ... existing code ...
+    </style>
+</head>
+<body>
+    <!-- Last updated: March 2024 -->
+    <div class="nav-links">
+        <a href="worksheet.html">ACT Worksheet</a>
+        <a href="SATworksheet.html">SAT Worksheet</a>
+        <a href="clone-worksheet.html">Clone Worksheet</a>
+    </div>
+
+    <div class="controls">
+        <h1>SAT Math Worksheet Generator</h1>
+        <div class="form-group">
+            <label for="skillSelect">Select Skill:</label>
+            <select id="skillSelect">
+                <option value="">Loading skills...</option>
+            </select>
+        </div>
+        <div class="button-group">
+            <button onclick="loadQuestions()">Load Questions</button>
+            <button id="generatePdf" onclick="generatePdf()" style="display: none;">Generate PDF</button>
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+            <label>
+                <input type="checkbox" id="includeAnswerSheet" checked>
+                Include Answer Sheet
+            </label>
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+            <label for="questionFormat">Question Format:</label>
+            <select id="questionFormat">
+                <option value="latex">LaTeX Markdown</option>
+                <option value="photo">Photo</option>
+            </select>
+        </div>
+    </div>
+    
+    <div id="loading" class="loading">Loading questions...</div>
+    
+    <div id="selectionControls" class="selection-controls" style="display: none;">
+        <button onclick="selectAll()">Select All</button>
+        <button onclick="deselectAll()">Deselect All</button>
+        <span id="selectedCount" style="margin-left: 20px;">0 questions selected</span>
+    </div>
+
+    <div id="worksheet" class="worksheet"></div>
+
+    <script>
+        let allQuestions = [];
+        let skillName = '';
+
+        // Function to render markdown with math
+        function renderMathMarkdown(content) {
+            // ... existing code ...
+        }
+
+        // Load available skills when the page loads
+        window.onload = async function() {
+            try {
+                const response = await fetch('/.netlify/functions/airtable?action=getSkills&database=SAT');
+                if (!response.ok) throw new Error('Failed to fetch skills');
+                const skills = await response.json();
+                
+                const skillSelect = document.getElementById('skillSelect');
+                skillSelect.innerHTML = skills.map(skill => 
+                    `<option value="${skill.id}">${skill.name}</option>`
+                ).join('');
+            } catch (error) {
+                console.error('Error loading skills:', error);
+                document.getElementById('skillSelect').innerHTML = '<option value="">Error loading skills</option>';
+            }
+        };
+
+        async function loadQuestions() {
+            const skillId = document.getElementById('skillSelect').value;
+            const loading = document.getElementById('loading');
+            const worksheet = document.getElementById('worksheet');
+            const generatePdfButton = document.getElementById('generatePdf');
+            const selectionControls = document.getElementById('selectionControls');
+
+            if (!skillId) {
+                alert('Please select a skill');
+                return;
+            }
+
+            loading.style.display = 'block';
+            worksheet.innerHTML = '';
+            generatePdfButton.style.display = 'none';
+            selectionControls.style.display = 'none';
+
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getWorksheetQuestions&skillId=${encodeURIComponent(skillId)}&includeClones=false&database=SAT`);
+                if (!response.ok) throw new Error('Failed to fetch questions');
+                const data = await response.json();
+                allQuestions = data.questions.filter(q => !q.isClone);
+                skillName = data.skillName;
+
+                // ... rest of the existing loadQuestions function code ...
+            } catch (error) {
+                console.error('Error loading questions:', error);
+                worksheet.innerHTML = '<p>Error loading questions. Please try again.</p>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // ... rest of the existing functions ...
+
+        async function generatePdf() {
+            const selectedQuestions = Array.from(document.querySelectorAll('.question-checkbox:checked'))
+                .map(cb => allQuestions[parseInt(cb.dataset.index)]);
+            const includeAnswerSheet = document.getElementById('includeAnswerSheet').checked;
+            const currentDate = new Date().toLocaleDateString();
+            const worksheet = document.getElementById('worksheet');
+            const format = document.getElementById('questionFormat').value;
+
+            let worksheetContent = `
+                <h2>SAT Math Practice Worksheet</h2>
+                <p><strong>Skill:</strong> ${skillName}</p>
+                <p><strong>Date:</strong> ${currentDate}</p>
+                <hr>
+                // ... rest of the existing generatePdf function code ...
+            `;
+
+            // ... rest of the existing generatePdf function code ...
+        }
+    </script>
+</body>
+</html> 

@@ -2,10 +2,14 @@ const Airtable = require('airtable');
 // Secure environment variable loading debug
 if (process.env.NODE_ENV !== 'production') {
     console.log("Checking environment variables...");
-    console.log("BASE_ID:", process.env.BASE_ID ? "✅ Loaded" : "❌ MISSING");
+    console.log("ACT_BASE_ID:", process.env.ACT_BASE_ID ? "✅ Loaded" : "❌ MISSING");
+    console.log("SAT_BASE_ID:", process.env.SAT_BASE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("AIRTABLE_API_KEY:", process.env.AIRTABLE_API_KEY ? "✅ Loaded" : "❌ MISSING");
 }
-const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.BASE_ID);
+
+// Initialize bases for both ACT and SAT
+const actBase = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.ACT_BASE_ID);
+const satBase = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.SAT_BASE_ID);
 
 exports.handler = async (event) => {
     if (process.env.NODE_ENV !== 'production') {
@@ -18,10 +22,14 @@ exports.handler = async (event) => {
     }
 
     // Consistent query parameter parsing
-    const { action, testNumber, questionNumber, questionId, skillId, testNumbersJson } = event.queryStringParameters || {};
+    const { action, testNumber, questionNumber, questionId, skillId, testNumbersJson, database = 'ACT' } = event.queryStringParameters || {};
+
+    // Select the appropriate base based on the database parameter
+    const base = database === 'SAT' ? satBase : actBase;
 
     if (process.env.NODE_ENV !== 'production') {
         console.log("Action requested:", action);
+        console.log("Database selected:", database);
     }
 
     // Consistent formatResponse function
@@ -307,10 +315,11 @@ exports.handler = async (event) => {
                     if (process.env.NODE_ENV !== 'production') {
                         console.log("Fetching worksheet questions...");
                         console.log(`Attempting to fetch Skill record with ID: ${skillId}`);
+                        console.log(`Using database: ${database}`);
                     }
 
-                    // Fetch the skill record from the skills table (tbl6l9Pu2uHM2XlvV)
-                    const skillRecord = await base.table('tbl6l9Pu2uHM2XlvV')
+                    // Fetch the skill record from the skills table
+                    const skillRecord = await base.table(process.env.SKILLS_TABLE_ID)
                         .find(skillId)
                         .catch(error => {
                             console.error("Error fetching skill record:", error);
