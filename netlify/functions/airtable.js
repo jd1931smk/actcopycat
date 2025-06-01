@@ -108,7 +108,7 @@ exports.handler = async (event) => {
                 const question = await base.table(questionsTableIdDetails)
                     .select({
                         filterByFormula: filterFormula,
-                        fields: ['Photo', 'Record ID', 'KatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
+                        fields: ['Photo', 'Record ID', 'LatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
                     })
                     .firstPage()
                     .then(records => {
@@ -118,12 +118,12 @@ exports.handler = async (event) => {
                                 console.log('First record fields:', {
                                     testNumber: records[0].get('Test Number'),
                                     questionNumber: records[0].get('Question Number'),
-                                    katex: records[0].get('KatexMarkdown') ? 'present' : 'missing'
+                                    katex: records[0].get('LatexMarkdown') ? 'present' : 'missing'
                                 });
                             }
                         }
                         if (!records[0]) return null;
-                        let katexContent = records[0].get('KatexMarkdown');
+                        let katexContent = records[0].get('LatexMarkdown');
                         if (process.env.NODE_ENV !== 'production') {
                             console.log('Raw KaTeX content:', katexContent);
                         }
