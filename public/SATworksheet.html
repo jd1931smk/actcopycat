@@ -224,10 +224,76 @@
                 <p><strong>Skill:</strong> ${skillName}</p>
                 <p><strong>Date:</strong> ${currentDate}</p>
                 <hr>
-                // ... rest of the existing generatePdf function code ...
+               ${selectedQuestions.map((q, index) => {
+                    const isClone = q.isClone;
+                    const source = isClone
+                        ? `Clone of Test ${q.originalQuestion ? q.originalQuestion.split(' - ')[0] : ''}, #${q.originalQuestion ? q.originalQuestion.split(' - ')[1] : ''}`
+                        : `Question #${q.questionNumber || index + 1}`;
+
+                    const latexBlock = `
+                        <div class=\"question-text\">
+                            <div class=\"latex-content\">${renderMathMarkdown(q.latex)}</div>
+                        </div>`;
+
+                    let photoBlock = '';
+                    if (q.photo && Array.isArray(q.photo) && q.photo.length > 0) {
+                        if (q.photo.length === 2) {
+                            photoBlock = `<div class=\"photo-column\"><div class=\"photo-container\">
+                                <img src=\"${q.photo[1].url}\" alt=\"Q${index + 1} Left\" style=\"max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;\">
+                                <img src=\"${q.photo[0].url}\" alt=\"Q${index + 1} Right\" style=\"max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;\">
+                            </div></div>`;
+                        } else {
+                            photoBlock = `<div class=\"photo-column\">` + q.photo.map(photo => `<img src=\"${photo.url}\" alt=\"Q${index + 1}\" style=\"max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;\">`).join('') + `</div>`;
+                        }
+                    } else {
+                        photoBlock = '<div class=\"photo-column\"></div>';
+                    }
+
+                    return `
+                        <div class=\"question ${isClone ? 'clone-question' : ''}\">
+                            <p><strong>Question ${index + 1}</strong> (Source: ${source})</p>
+                            <div class=\"question-content\">
+                                ${format === 'latex' ? latexBlock : ''}
+                                ${format === 'photo' ? photoBlock : ''}
+                            </div>
+                            <div style=\"margin: 15px 0; border-bottom: 1px dashed #ccc;\"></div>
+                        </div>
+                    `;
+                }).join('')}
             `;
 
-            // ... rest of the existing generatePdf function code ...
+            if (includeAnswerSheet) {
+                worksheetContent += `
+                    <div style=\"page-break-before: always;\">
+                        <h2>Answer Key</h2>
+                        <p><strong>Skill:</strong> ${skillName}</p>
+                        <p><strong>Date:</strong> ${currentDate}</p>
+                        <hr>
+                        <table style=\"width: 100%; border-collapse: collapse; margin-top: 20px;\">
+                            <tr style=\"background-color: #f8f9fa;\">
+                                <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Question</th>
+                                <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Test</th>
+                                <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Number</th>
+                                <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Answer</th>
+                            </tr>
+                            ${selectedQuestions.map((q, index) => `
+                                <tr>
+                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${index + 1}</td>
+                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${q.isClone && q.originalQuestion ? q.originalQuestion.split(' - ')[0] : (q.testNumber || '')}</td>
+                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${q.isClone && q.originalQuestion ? q.originalQuestion.split(' - ')[1] : (q.questionNumber || '')}</td>
+                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${q.answer || 'N/A'}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>`;
+            }
+
+            worksheet.innerHTML = worksheetContent;
+
+            // Wait a moment for content to render, then print
+            setTimeout(() => {
+                window.print();
+            }, 500);
         }
     </script>
 </body>
