@@ -490,7 +490,7 @@
                 }
 
                 const data = await response.json();
-                explanationBox.innerHTML = data.explanation;
+                explanationBox.innerHTML = `<h3 style='margin-top: 32px;'>Explanation</h3><div style='margin-top: 16px;'>${data.explanation}</div>`;
                 explanationBox.style.display = 'block';
                 MathJax.typesetPromise([explanationBox]).catch(err => console.error('MathJax Error:', err));
             } catch (error) {
