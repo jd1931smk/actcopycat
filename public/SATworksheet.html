@@ -73,10 +73,12 @@
 
         // Function to render markdown with math
         function renderMathMarkdown(content) {
+            console.log('Rendering content:', content);
             if (!content) return '';
             
             // First parse the markdown
             const htmlContent = marked.parse(content);
+            console.log('Parsed markdown:', htmlContent);
             
             // Create a temporary div to hold the content
             const tempDiv = document.createElement('div');
@@ -91,6 +93,7 @@
                 throwOnError: false
             });
             
+            console.log('Final rendered content:', tempDiv.innerHTML);
             return tempDiv.innerHTML;
         }
 
@@ -132,7 +135,10 @@
                 const response = await fetch(`/.netlify/functions/airtable?action=getWorksheetQuestions&skillId=${encodeURIComponent(skillId)}&includeClones=false&database=SAT`);
                 if (!response.ok) throw new Error('Failed to fetch questions');
                 const data = await response.json();
+                console.log('Received questions data:', data);
+                
                 allQuestions = data.questions.filter(q => !q.isClone);
+                console.log('Filtered questions:', allQuestions);
                 skillName = data.skillName;
 
                 if (allQuestions.length === 0) {
@@ -141,8 +147,15 @@
                 }
 
                 const format = document.getElementById('questionFormat').value;
+                console.log('Selected format:', format);
                 
-                worksheet.innerHTML = allQuestions.map((question, index) => `
+                worksheet.innerHTML = allQuestions.map((question, index) => {
+                    console.log(`Processing question ${index}:`, question);
+                    const content = format === 'photo' && question.photoUrl 
+                        ? `<img src="${question.photoUrl}" alt="Question ${index + 1}" class="question-image">`
+                        : renderMathMarkdown(question.content);
+                    console.log(`Rendered content for question ${index}:`, content);
+                    return `
                     <div class="question-container">
                         <label class="checkbox-container">
                             <input type="checkbox" class="question-checkbox" data-index="${index}" checked>
@@ -151,13 +164,12 @@
                         <div class="question">
                             <div class="question-number">${index + 1}.</div>
                             <div class="question-content">
-                                ${format === 'photo' && question.photoUrl 
-                                    ? `<img src="${question.photoUrl}" alt="Question ${index + 1}" class="question-image">`
-                                    : renderMathMarkdown(question.content)}
+                                ${content}
                             </div>
                         </div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
 
                 generatePdfButton.style.display = 'block';
                 selectionControls.style.display = 'block';
@@ -167,6 +179,7 @@
 
                 // Render any math in the questions
                 if (format === 'latex') {
+                    console.log('Rendering math in worksheet');
                     renderMathInElement(worksheet, {
                         delimiters: [
                             {left: "$$", right: "$$", display: true},
