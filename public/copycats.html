@@ -400,13 +400,21 @@
                     // Create section for the question - simplified approach
                     const questionSection = document.createElement('div');
                     questionSection.className = 'section';
-                    
+
+                    // If a diagram image is present, display it above the question
+                    if (data.diagrams && typeof data.diagrams === 'string' && data.diagrams.startsWith('http')) {
+                        const diagramImg = document.createElement('img');
+                        diagramImg.src = data.diagrams;
+                        diagramImg.alt = 'Diagram';
+                        diagramImg.style.display = 'block';
+                        diagramImg.style.margin = '0 auto 20px auto';
+                        questionSection.appendChild(diagramImg);
+                    }
                     // Create a simple container with the katex-content class
                     // This mirrors how the clone questions are handled
                     const katexDiv = document.createElement('div');
                     katexDiv.className = 'katex-content';
                     katexDiv.textContent = data.katex; // Use textContent to preserve LaTeX
-                    
                     // Add to the section and then to the page
                     questionSection.appendChild(katexDiv);
                     resultContainer.appendChild(questionSection);
