@@ -73,7 +73,25 @@
 
         // Function to render markdown with math
         function renderMathMarkdown(content) {
-            // ... existing code ...
+            if (!content) return '';
+            
+            // First parse the markdown
+            const htmlContent = marked.parse(content);
+            
+            // Create a temporary div to hold the content
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            
+            // Render the math
+            renderMathInElement(tempDiv, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false}
+                ],
+                throwOnError: false
+            });
+            
+            return tempDiv.innerHTML;
         }
 
         // Load available skills when the page loads
