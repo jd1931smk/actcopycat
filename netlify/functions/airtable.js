@@ -108,7 +108,7 @@ exports.handler = async (event) => {
                 const question = await base.table(questionsTableIdDetails)
                     .select({
                         filterByFormula: filterFormula,
-                        fields: ['Photo', 'Record ID', 'LatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
+                        fields: ['Photo', 'Record ID', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number']
                     })
                     .firstPage()
                     .then(records => {
@@ -134,7 +134,7 @@ exports.handler = async (event) => {
                             id: records[0].get('Record ID'),
                             photo: records[0].get('Photo'),
                             katex: katexContent,
-                            diagrams: records[0].get('Diagrams')
+                            diagram: records[0].get('Diagram')
                         };
                         if (process.env.NODE_ENV !== 'production') {
                             console.log('Sending response:', response);
@@ -410,7 +410,7 @@ exports.handler = async (event) => {
                     const records = await base.table(questionsTableIdWorksheet)
                         .select({
                             filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`,
-                            fields: ['Photo', 'Record ID', 'LatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
+                            fields: ['Photo', 'Record ID', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number']
                         })
                         .all();
 

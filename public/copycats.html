@@ -402,9 +402,9 @@
                     questionSection.className = 'section';
 
                     // If a diagram image is present, display it above the question
-                    if (data.diagrams && typeof data.diagrams === 'string' && data.diagrams.startsWith('http')) {
+                    if (data.diagram && typeof data.diagram === 'string' && data.diagram.startsWith('http')) {
                         const diagramImg = document.createElement('img');
-                        diagramImg.src = data.diagrams;
+                        diagramImg.src = data.diagram;
                         diagramImg.alt = 'Diagram';
                         diagramImg.style.display = 'block';
                         diagramImg.style.margin = '0 auto 20px auto';
