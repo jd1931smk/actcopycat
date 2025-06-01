@@ -410,14 +410,14 @@ exports.handler = async (event) => {
                     const records = await base.table(questionsTableIdWorksheet)
                         .select({
                             filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`,
-                            fields: ['Photo', 'KatexMarkdown', 'Diagram', 'Test Number', 'Question Number']
+                            fields: ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number']
                         })
                         .all();
 
                     const fetchedQuestions = records.map(record => ({
                         id: record.id,
                         photo: record.get('Photo'),
-                        latex: record.get('KatexMarkdown'),
+                        latex: record.get('LatexMarkdown'),
                         diagram: record.get('Diagram'),
                         testNumber: record.get('Test Number'),
                         questionNumber: record.get('Question Number'),
