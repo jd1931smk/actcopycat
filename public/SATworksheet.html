@@ -117,7 +117,46 @@
                 allQuestions = data.questions.filter(q => !q.isClone);
                 skillName = data.skillName;
 
-                // ... rest of the existing loadQuestions function code ...
+                if (allQuestions.length === 0) {
+                    worksheet.innerHTML = '<p>No questions found for this skill.</p>';
+                    return;
+                }
+
+                const format = document.getElementById('questionFormat').value;
+                
+                worksheet.innerHTML = allQuestions.map((question, index) => `
+                    <div class="question-container">
+                        <label class="checkbox-container">
+                            <input type="checkbox" class="question-checkbox" data-index="${index}" checked>
+                            <span class="checkmark"></span>
+                        </label>
+                        <div class="question">
+                            <div class="question-number">${index + 1}.</div>
+                            <div class="question-content">
+                                ${format === 'photo' && question.photoUrl 
+                                    ? `<img src="${question.photoUrl}" alt="Question ${index + 1}" class="question-image">`
+                                    : renderMathMarkdown(question.content)}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                generatePdfButton.style.display = 'block';
+                selectionControls.style.display = 'block';
+                
+                // Update selected count
+                document.getElementById('selectedCount').textContent = `${allQuestions.length} questions selected`;
+
+                // Render any math in the questions
+                if (format === 'latex') {
+                    renderMathInElement(worksheet, {
+                        delimiters: [
+                            {left: "$$", right: "$$", display: true},
+                            {left: "$", right: "$", display: false}
+                        ],
+                        throwOnError: false
+                    });
+                }
             } catch (error) {
                 console.error('Error loading questions:', error);
                 worksheet.innerHTML = '<p>Error loading questions. Please try again.</p>';
