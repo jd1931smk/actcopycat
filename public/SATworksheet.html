@@ -151,10 +151,22 @@
                 
                 worksheet.innerHTML = allQuestions.map((question, index) => {
                     console.log(`Processing question ${index}:`, question);
-                    const content = format === 'photo' && question.photo 
-                        ? `<img src="${question.photo}" alt="Question ${index + 1}" class="question-image">`
-                        : renderMathMarkdown(question.latex);
-                    console.log(`Rendered content for question ${index}:`, content);
+                    // LaTeX block
+                    const latexBlock = `<div class="question-text"><div class="latex-content">${renderMathMarkdown(question.latex)}</div></div>`;
+                    // Photo block
+                    let photoBlock = '';
+                    if (question.photo && Array.isArray(question.photo) && question.photo.length > 0) {
+                        if (question.photo.length === 2) {
+                            photoBlock = `<div class="photo-column"><div class="photo-container">
+                                <img src="${question.photo[1].url}" alt="Question ${index + 1} - Left">
+                                <img src="${question.photo[0].url}" alt="Question ${index + 1} - Right">
+                            </div></div>`;
+                        } else {
+                            photoBlock = `<div class="photo-column">` + question.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('') + `</div>`;
+                        }
+                    } else {
+                        photoBlock = '<div class="photo-column"></div>';
+                    }
                     return `
                     <div class="question-container">
                         <label class="checkbox-container">
@@ -163,8 +175,9 @@
                         </label>
                         <div class="question">
                             <div class="question-number">${index + 1}.</div>
-                            <div class="question-content">
-                                ${content}
+                            <div class="question-content" style="display: flex; gap: 20px; align-items: flex-start;">
+                                ${latexBlock}
+                                ${photoBlock}
                             </div>
                         </div>
                     </div>
