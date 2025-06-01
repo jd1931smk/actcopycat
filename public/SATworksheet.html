@@ -151,9 +151,9 @@
                 
                 worksheet.innerHTML = allQuestions.map((question, index) => {
                     console.log(`Processing question ${index}:`, question);
-                    const content = format === 'photo' && question.photoUrl 
-                        ? `<img src="${question.photoUrl}" alt="Question ${index + 1}" class="question-image">`
-                        : renderMathMarkdown(question.content);
+                    const content = format === 'photo' && question.photo 
+                        ? `<img src="${question.photo}" alt="Question ${index + 1}" class="question-image">`
+                        : renderMathMarkdown(question.latex);
                     console.log(`Rendered content for question ${index}:`, content);
                     return `
                     <div class="question-container">
