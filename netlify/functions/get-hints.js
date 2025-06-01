@@ -40,10 +40,10 @@ Please provide a helpful hint that guides the student toward the solution withou
 
         // Get hints from each model independently
         const hints = await Promise.allSettled([
-            deepseek.generateHint(prompt).catch(error => {
-                console.error('DeepSeek API Error:', error);
-                return 'Unable to generate hint at this time.';
-            }),
+            // deepseek.generateHint(prompt).catch(error => {
+            //     console.error('DeepSeek API Error:', error);
+            //     return 'Unable to generate hint at this time.';
+            // }),
             openai.chat.completions.create({
                 model: 'gpt-4-turbo-preview',
                 messages: [{ role: 'user', content: prompt }],
@@ -54,10 +54,10 @@ Please provide a helpful hint that guides the student toward the solution withou
                 console.error('OpenAI API Error:', error);
                 return 'Unable to generate hint at this time.';
             }),
-            anthropic.generateHint(prompt).catch(error => {
-                console.error('Anthropic API Error:', error);
-                return 'Unable to generate hint at this time.';
-            })
+            // anthropic.generateHint(prompt).catch(error => {
+            //     console.error('Anthropic API Error:', error);
+            //     return 'Unable to generate hint at this time.';
+            // })
         ]);
 
         return {
@@ -66,9 +66,9 @@ Please provide a helpful hint that guides the student toward the solution withou
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                deepseek: hints[0].value || 'Unable to generate hint at this time.',
-                gpt4: hints[1].value || 'Unable to generate hint at this time.',
-                claude: hints[2].value || 'Unable to generate hint at this time.'
+                deepseek: 'Temporarily disabled',
+                gpt4: hints[0].value || 'Unable to generate hint at this time.',
+                claude: 'Temporarily disabled'
             })
         };
     } catch (error) {
