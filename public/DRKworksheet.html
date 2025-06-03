@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-title" content="DRK Math">
+    <meta name="mobile-web-app-capable" content="yes">
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <title>DRK Math Worksheet Generator</title>
+    
+    <!-- KaTeX for math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"></script>
+    
+    <!-- Marked for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <link rel="stylesheet" href="worksheet.css">
+</head>
+<body>
+    <!-- Last updated: March 2024 -->
+    <div class="nav-links">
+        <a href="worksheet.html">ACT Worksheet</a>
+        <a href="SATworksheet.html">SAT Worksheet</a>
+        <a href="DRKworksheet.html">DRK Worksheet</a>
+        <a href="clone-worksheet.html">Clone Worksheet</a>
+    </div>
+
+    <div class="controls">
+        <h1>DRK Math Worksheet Generator</h1>
+        <div class="form-group">
+            <label for="skillSelect">Select Skill:</label>
+            <select id="skillSelect">
+                <option value="">Loading skills...</option>
+            </select>
+        </div>
+        <div class="button-group">
+            <button onclick="loadQuestions()">Load Questions</button>
+            <button id="generatePdf" onclick="generatePdf()" style="display: none;">Generate PDF</button>
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+            <label>
+                <input type="checkbox" id="includeAnswerSheet" checked>
+                Include Answer Sheet
+            </label>
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+            <label for="questionFormat">Question Format:</label>
+            <select id="questionFormat">
+                <option value="latex">LaTeX Markdown</option>
+                <option value="photo">Photo</option>
+            </select>
+        </div>
+    </div>
+    
+    <div id="loading" class="loading">Loading questions...</div>
+    
+    <div id="selectionControls" class="selection-controls" style="display: none;">
+        <button onclick="selectAll()">Select All</button>
+        <button onclick="deselectAll()">Deselect All</button>
+        <span id="selectedCount" style="margin-left: 20px;">0 questions selected</span>
+    </div>
+
+    <div id="worksheet" class="worksheet"></div>
+
+    <script>
+        let allQuestions = [];
+        let skillName = '';
+
+        // Function to render markdown with math
+        function renderMathMarkdown(content) {
+            console.log('Rendering content:', content);
+            if (!content) return '';
+            
+            // First parse the markdown
+            const htmlContent = marked.parse(content);
+            console.log('Parsed markdown:', htmlContent);
+            
+            // Create a temporary div to hold the content
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            
+            // Render the math
+            renderMathInElement(tempDiv, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false}
+                ],
+                throwOnError: false
+            });
+            
+            console.log('Final rendered content:', tempDiv.innerHTML);
+            return tempDiv.innerHTML;
+        }
+
+        // Load available skills when the page loads
+        window.onload = async function() {
+            try {
+                const response = await fetch('/.netlify/functions/airtable?action=getSkills&database=DRK');
+                if (!response.ok) throw new Error('Failed to fetch skills');
+                const skills = await response.json();
+                
+                const skillSelect = document.getElementById('skillSelect');
+                skillSelect.innerHTML = skills.map(skill => 
+                    `<option value="${skill.id}">${skill.name}</option>`
+                ).join('');
+            } catch (error) {
+                console.error('Error loading skills:', error);
+                document.getElementById('skillSelect').innerHTML = '<option value="">Error loading skills</option>';
+            }
+        };
+
+        async function loadQuestions() {
+            const skillId = document.getElementById('skillSelect').value;
+            const loading = document.getElementById('loading');
+            const worksheet = document.getElementById('worksheet');
+            const generatePdfButton = document.getElementById('generatePdf');
+            const selectionControls = document.getElementById('selectionControls');
+
+            if (!skillId) {
+                alert('Please select a skill');
+                return;
+            }
+
+            loading.style.display = 'block';
+            worksheet.innerHTML = '';
+            generatePdfButton.style.display = 'none';
+            selectionControls.style.display = 'none';
+
+            try {
+                const response = await fetch(`/.netlify/functions/airtable?action=getWorksheetQuestions&skillId=${encodeURIComponent(skillId)}&includeClones=false&database=DRK`);
+                if (!response.ok) throw new Error('Failed to fetch questions');
+                const data = await response.json();
+                console.log('Received questions data:', data);
+                
+                allQuestions = data.questions.filter(q => !q.isClone);
+                console.log('Filtered questions:', allQuestions);
+                skillName = data.skillName;
+
+                if (allQuestions.length === 0) {
+                    worksheet.innerHTML = '<p>No questions found for this skill.</p>';
+                    return;
+                }
+
+                const format = document.getElementById('questionFormat').value;
+                console.log('Selected format:', format);
+                
+                worksheet.innerHTML = allQuestions.map((question, index) => {
+                    console.log(`Processing question ${index}:`, question);
+                    // LaTeX block
+                    const latexBlock = `<div class="question-text"><div class="latex-content">${renderMathMarkdown(question.latex)}</div></div>`;
+                    // Photo block
+                    let photoBlock = '';
+                    if (question.photo && Array.isArray(question.photo) && question.photo.length > 0) {
+                        if (question.photo.length === 2) {
+                            photoBlock = `<div class="photo-column"><div class="photo-container">
+                                <img src="${question.photo[1].url}" alt="Question ${index + 1} - Left">
+                                <img src="${question.photo[0].url}" alt="Question ${index + 1} - Right">
+                            </div></div>`;
+                        } else {
+                            photoBlock = `<div class="photo-column">` + question.photo.map(photo => `<img src="${photo.url}" alt="Question ${index + 1}">`).join('') + `</div>`;
+                        }
+                    } else {
+                        photoBlock = '<div class="photo-column"></div>';
+                    }
+                    return `
+                    <div class="question-container">
+                        <label class="checkbox-container">
+                            <input type="checkbox" class="question-checkbox" data-index="${index}" checked>
+                            <span class="checkmark"></span>
+                        </label>
+                        <div class="question">
+                            <div class="question-number">${index + 1}.</div>
+                            <div class="question-content" style="display: flex; gap: 20px; align-items: flex-start;">
+                                ${latexBlock}
+                                ${photoBlock}
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+                generatePdfButton.style.display = 'block';
+                selectionControls.style.display = 'block';
+                
+                // Update selected count
+                document.getElementById('selectedCount').textContent = `${allQuestions.length} questions selected`;
+
+                // Render any math in the questions
+                if (format === 'latex') {
+                    console.log('Rendering math in worksheet');
+                    renderMathInElement(worksheet, {
+                        delimiters: [
+                            {left: "$$", right: "$$", display: true},
+                            {left: "$", right: "$", display: false}
+                        ],
+                        throwOnError: false
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading questions:', error);
+                worksheet.innerHTML = '<p>Error loading questions. Please try again.</p>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // ... rest of the existing functions ...
+
+        async function generatePdf() {
+            const selectedQuestions = Array.from(document.querySelectorAll('.question-checkbox:checked'))
+                .map(cb => allQuestions[parseInt(cb.dataset.index)]);
+            const includeAnswerSheet = document.getElementById('includeAnswerSheet').checked;
+            const currentDate = new Date().toLocaleDateString();
+            const worksheet = document.getElementById('worksheet');
+            const format = document.getElementById('questionFormat').value;
+
+            let worksheetContent = `
+                <h2>DRK Math Practice Worksheet</h2>
+                <p><strong>Skill:</strong> ${skillName}</p>
+                <p><strong>Date:</strong> ${currentDate}</p>
+                <hr>
+               ${selectedQuestions.map((q, index) => {
+                    const isClone = q.isClone;
+                    const source = isClone
+                        ? `Clone of Test ${q.originalQuestion ? q.originalQuestion.split(' - ')[0] : ''}, #${q.originalQuestion ? q.originalQuestion.split(' - ')[1] : ''}`
+                        : `Question #${q.questionNumber || index + 1}`;
+
+                    const latexBlock = `
+                        <div class=\"question-text\">
+                            <div class=\"latex-content\">${renderMathMarkdown(q.latex)}</div>
+                        </div>`;
+
+                    let photoBlock = '';
+                    if (q.photo && Array.isArray(q.photo) && q.photo.length > 0) {
+                        if (q.photo.length === 2) {
+                            photoBlock = `<div class=\"photo-column\"><div class=\"photo-container\">
+                                <img src=\"${q.photo[1].url}\" alt=\"Q${index + 1} Left\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">
+                                <img src=\"${q.photo[0].url}\" alt=\"Q${index + 1} Right\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">
+                            </div></div>`;
+                        } else {
+                            photoBlock = `<div class=\"photo-column\">` + q.photo.map(photo => `<img src=\"${photo.url}\" alt=\"Q${index + 1}\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">`).join('') + `</div>`;
+                        }
+                    } else {
+                        photoBlock = '<div class=\"photo-column\"></div>';
+                    }
+
+                    return `
+                        <div class=\"question ${isClone ? 'clone-question' : ''}\">
+                            <p><strong>Question ${index + 1}</strong> (Source: ${source})</p>
+                            <div class=\"question-content\">
+                                ${format === 'latex' ? latexBlock : ''}
+                                ${format === 'photo' ? photoBlock : ''}
+                            </div>
+                            <div style=\"margin: 15px 0; border-bottom: 1px dashed #ccc;\"></div>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+
+            if (includeAnswerSheet) {
+                worksheetContent += `
+                    <div style=\"page-break-before: always;\">
+                        <h2>Answer Key</h2>
+                        <p><strong>Skill:</strong> ${skillName}</p>
+                        <p><strong>Date:</strong> ${currentDate}</p>
+                        <hr>
+                        <table style=\"width: 100%; border-collapse: collapse; margin-top: 20px;\">
+                            <tr style=\"background-color: #f8f9fa;\">
+                                <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Question</th>
+                                <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Test</th>
+                                <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Number</th>
+                                <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Answer</th>
+                            </tr>
+                            ${selectedQuestions.map((q, index) => `
+                                <tr>
+                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${index + 1}</td>
+                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${q.isClone && q.originalQuestion ? q.originalQuestion.split(' - ')[0] : (q.testNumber || '')}</td>
+                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${q.isClone && q.originalQuestion ? q.originalQuestion.split(' - ')[1] : (q.questionNumber || '')}</td>
+                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${q.answer || 'N/A'}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>`;
+            }
+
+            worksheet.innerHTML = worksheetContent;
+
+            // Wait a moment for content to render, then print
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+    </script>
+</body>
+</html> 
