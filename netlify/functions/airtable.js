@@ -109,19 +109,19 @@ exports.handler = async (event) => {
                 if (process.env.NODE_ENV !== 'production') {
                     console.log(`Fetching Question Details for Test: ${testNumber}, Question: ${questionNumber} from ${database} database`);
                 }
-                const filterFormula = `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`;
+                const detailsFilterFormula = `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`;
                 const questionsTableIdDetails = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
                 if (!questionsTableIdDetails) {
                      console.error('[getQuestionDetails Error]: Questions table ID is not defined for database:', database);
                      return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
                 }
                 if (process.env.NODE_ENV !== 'production') {
-                    console.log('Using filter formula:', filterFormula);
+                    console.log('Using filter formula:', detailsFilterFormula);
                     console.log('Using questions table ID:', questionsTableIdDetails);
                 }
                 const question = await base.table(questionsTableIdDetails)
                     .select({
-                        filterByFormula: filterFormula,
+                        filterByFormula: detailsFilterFormula,
                         fields: ['Photo', 'Record ID', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number']
                     })
                     .firstPage()
@@ -390,15 +390,24 @@ exports.handler = async (event) => {
                 }
 
                 let questionsTableId;
+                let filterFormula;
+                let fields;
+
                 switch(database) {
                     case 'SAT':
                         questionsTableId = process.env.SAT_QUESTIONS_TABLE_ID;
+                        filterFormula = `{Skill ID} = '${skillId}'`;
+                        fields = ['Test Number', 'Question Number', 'Photo', 'LatexMarkdown', 'Answer', 'Record ID', 'Skill ID'];
                         break;
                     case 'DRK':
                         questionsTableId = process.env.DRK_QUESTIONS_TABLE_ID;
+                        filterFormula = `{Panda Skills} = '${skillId}'`;
+                        fields = ['Question Number', 'Photo', 'LaTeX', 'Answer', 'Record ID', 'Panda Skills'];
                         break;
                     default:
                         questionsTableId = process.env.QUESTIONS_TABLE_ID;
+                        filterFormula = `{Skill ID} = '${skillId}'`;
+                        fields = ['Test Number', 'Question Number', 'Photo', 'LatexMarkdown', 'Answer', 'Record ID', 'Skill ID'];
                 }
 
                 if (!questionsTableId) {
@@ -407,10 +416,15 @@ exports.handler = async (event) => {
                 }
 
                 try {
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log('Using filter formula:', filterFormula);
+                        console.log('Using fields:', fields);
+                    }
+
                     const records = await base.table(questionsTableId)
                         .select({
-                            filterByFormula: `{Skill ID} = '${skillId}'`,
-                            fields: ['Test Number', 'Question Number', 'Photo', 'LatexMarkdown', 'Answer', 'Record ID', 'Skill ID']
+                            filterByFormula: filterFormula,
+                            fields: fields
                         })
                         .all();
 
@@ -418,24 +432,39 @@ exports.handler = async (event) => {
                         console.log(`Found ${records.length} questions for skill ${skillId}`);
                     }
 
-                    const questions = records.map(record => ({
-                        id: record.get('Record ID'),
-                        testNumber: record.get('Test Number'),
-                        questionNumber: record.get('Question Number'),
-                        photo: record.get('Photo'),
-                        latex: record.get('LatexMarkdown'),
-                        answer: record.get('Answer'),
-                        skillId: record.get('Skill ID')
-                    }));
+                    const questions = records.map(record => {
+                        if (database === 'DRK') {
+                            return {
+                                id: record.get('Record ID'),
+                                questionNumber: record.get('Question Number'),
+                                photo: record.get('Photo'),
+                                latex: record.get('LaTeX'),
+                                answer: record.get('Answer'),
+                                skillId: record.get('Panda Skills')
+                            };
+                        } else {
+                            return {
+                                id: record.get('Record ID'),
+                                testNumber: record.get('Test Number'),
+                                questionNumber: record.get('Question Number'),
+                                photo: record.get('Photo'),
+                                latex: record.get('LatexMarkdown'),
+                                answer: record.get('Answer'),
+                                skillId: record.get('Skill ID')
+                            };
+                        }
+                    });
 
                     // Get the skill name
                     let skillsTableId;
+                    let skillNameField = 'Name';
                     switch(database) {
                         case 'SAT':
                             skillsTableId = process.env.SAT_SKILLS_TABLE_ID;
                             break;
                         case 'DRK':
                             skillsTableId = process.env.DRK_PANDA_SKILLS_TABLE_ID;
+                            skillNameField = 'Name';
                             break;
                         default:
                             skillsTableId = process.env.SKILLS_TABLE_ID;
@@ -444,11 +473,11 @@ exports.handler = async (event) => {
                     const skillRecord = await base.table(skillsTableId)
                         .select({
                             filterByFormula: `{Record ID} = '${skillId}'`,
-                            fields: ['Name']
+                            fields: [skillNameField]
                         })
                         .firstPage();
 
-                    const skillName = skillRecord[0]?.get('Name') || '';
+                    const skillName = skillRecord[0]?.get(skillNameField) || '';
 
                     return formatResponse(200, { questions, skillName });
                 } catch (error) {
