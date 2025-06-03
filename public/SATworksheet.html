@@ -239,11 +239,11 @@
                     if (q.photo && Array.isArray(q.photo) && q.photo.length > 0) {
                         if (q.photo.length === 2) {
                             photoBlock = `<div class=\"photo-column\"><div class=\"photo-container\">
-                                <img src=\"${q.photo[1].url}\" alt=\"Q${index + 1} Left\" style=\"max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;\">
-                                <img src=\"${q.photo[0].url}\" alt=\"Q${index + 1} Right\" style=\"max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;\">
+                                <img src=\"${q.photo[1].url}\" alt=\"Q${index + 1} Left\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">
+                                <img src=\"${q.photo[0].url}\" alt=\"Q${index + 1} Right\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">
                             </div></div>`;
                         } else {
-                            photoBlock = `<div class=\"photo-column\">` + q.photo.map(photo => `<img src=\"${photo.url}\" alt=\"Q${index + 1}\" style=\"max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;\">`).join('') + `</div>`;
+                            photoBlock = `<div class=\"photo-column\">` + q.photo.map(photo => `<img src=\"${photo.url}\" alt=\"Q${index + 1}\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">`).join('') + `</div>`;
                         }
                     } else {
                         photoBlock = '<div class=\"photo-column\"></div>';

@@ -149,6 +149,7 @@ button:disabled {
     max-width: 100%;
     height: auto;
     object-fit: contain;
+    transform-origin: left top;
 }
 .question.selected {
     background-color: #f8f9fa;
@@ -223,7 +224,6 @@ button:disabled {
         max-width: 100%;
         height: auto;
         object-fit: contain;
-        transform: scale(0.7);
         transform-origin: left top;
     }
 }

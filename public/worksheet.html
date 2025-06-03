@@ -494,11 +494,11 @@
                             ${q.photo && q.photo.length > 0
                                 ? (q.photo.length === 2
                                     ? `<div class="photo-container">
-                                        <img src="${q.photo[1].url}" alt="Q${index + 1} Left" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
-                                        <img src="${q.photo[0].url}" alt="Q${index + 1} Right" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">
+                                        <img src="${q.photo[1].url}" alt="Q${index + 1} Left" style="max-width: 100%; object-fit: contain; transform-origin: left top;">
+                                        <img src="${q.photo[0].url}" alt="Q${index + 1} Right" style="max-width: 100%; object-fit: contain; transform-origin: left top;">
                                     </div>`
                                     : q.photo.map(photo => 
-                                        `<img src="${photo.url}" alt="Q${index + 1}" style="max-width: 100%; object-fit: contain; transform: scale(0.7); transform-origin: left top;">`
+                                        `<img src="${photo.url}" alt="Q${index + 1}" style="max-width: 100%; object-fit: contain; transform-origin: left top;">`
                                     ).join('')
                                 )
                                 : '<em>No image available</em>'
