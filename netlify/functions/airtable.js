@@ -4,17 +4,21 @@ if (process.env.NODE_ENV !== 'production') {
     console.log("Checking environment variables...");
     console.log("ACT_BASE_ID:", process.env.ACT_BASE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("SAT_BASE_ID:", process.env.SAT_BASE_ID ? "✅ Loaded" : "❌ MISSING");
+    console.log("DRK_BASE_ID:", process.env.DRK_BASE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("AIRTABLE_API_KEY:", process.env.AIRTABLE_API_KEY ? "✅ Loaded" : "❌ MISSING");
     console.log("SKILLS_TABLE_ID:", process.env.SKILLS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("QUESTIONS_TABLE_ID:", process.env.QUESTIONS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("COPYCATS_TABLE_ID:", process.env.COPYCATS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("SAT_SKILLS_TABLE_ID:", process.env.SAT_SKILLS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("SAT_QUESTIONS_TABLE_ID:", process.env.SAT_QUESTIONS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
+    console.log("DRK_PANDA_SKILLS_TABLE_ID:", process.env.DRK_PANDA_SKILLS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
+    console.log("DRK_QUESTIONS_TABLE_ID:", process.env.DRK_QUESTIONS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
 }
 
-// Initialize bases for both ACT and SAT
+// Initialize bases for ACT, SAT, and DRK
 const actBase = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.ACT_BASE_ID);
 const satBase = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.SAT_BASE_ID);
+const drkBase = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.DRK_BASE_ID);
 
 exports.handler = async (event) => {
     if (process.env.NODE_ENV !== 'production') {
@@ -30,7 +34,17 @@ exports.handler = async (event) => {
     const { action, testNumber, questionNumber, questionId, skillId, testNumbersJson, database = 'ACT' } = event.queryStringParameters || {};
 
     // Select the appropriate base based on the database parameter
-    const base = database === 'SAT' ? satBase : actBase;
+    let base;
+    switch(database) {
+        case 'SAT':
+            base = satBase;
+            break;
+        case 'DRK':
+            base = drkBase;
+            break;
+        default:
+            base = actBase;
+    }
 
     if (process.env.NODE_ENV !== 'production') {
         console.log("Action requested:", action);
@@ -337,170 +351,109 @@ exports.handler = async (event) => {
                 }
 
             case 'getSkills':
-                try {
-                    // Use the correct skills table ID based on the database
-                    const skillsTableId = database === 'SAT' ? process.env.SAT_SKILLS_TABLE_ID : process.env.SKILLS_TABLE_ID;
-
-                    if (!skillsTableId) {
-                        console.error('[getSkills Error]: Skills table ID is not defined for database:', database);
-                        return formatResponse(500, { message: 'Skills table ID not configured for this database.' });
-                    }
-
-                    const records = await base.table(skillsTableId).select({
-                        fields: ['Record ID', 'Name'],
-                    }).all();
-                    const skills = records
-                        .map(record => ({
-                            id: record.id,
-                            name: record.get('Name')
-                        }))
-                        .filter(skill => !!skill.name)
-                        .sort((a, b) => a.name.localeCompare(b.name));
-                    if (skills.length === 0) {
-                        return formatResponse(404, { error: 'No skills found' });
-                    }
-                    return formatResponse(200, skills);
-                } catch (error) {
-                    console.error('[getSkills Error]:', error);
-                    return formatResponse(500, { message: 'Server Error. Please try again later.' });
+                if (process.env.NODE_ENV !== 'production') {
+                    console.log(`Fetching skills from ${database} database`);
+                }
+                let skillsTableId;
+                switch(database) {
+                    case 'SAT':
+                        skillsTableId = process.env.SAT_SKILLS_TABLE_ID;
+                        break;
+                    case 'DRK':
+                        skillsTableId = process.env.DRK_PANDA_SKILLS_TABLE_ID;
+                        break;
+                    default:
+                        skillsTableId = process.env.SKILLS_TABLE_ID;
+                }
+                
+                if (!skillsTableId) {
+                    console.error('[getSkills Error]: Skills table ID is not defined for database:', database);
+                    return formatResponse(500, { message: 'Skills table ID not configured for this database.' });
                 }
 
+                const skills = await base.table(skillsTableId)
+                    .select({
+                        fields: ['Name', 'Record ID']
+                    })
+                    .all()
+                    .then(records => records.map(record => ({
+                        id: record.get('Record ID'),
+                        name: record.get('Name')
+                    })));
+
+                return formatResponse(200, skills);
+
             case 'getWorksheetQuestions':
+                if (!skillId) return formatResponse(400, { error: 'Missing skillId' });
+                if (process.env.NODE_ENV !== 'production') {
+                    console.log(`Fetching worksheet questions for skill: ${skillId} from ${database} database`);
+                }
+
+                let questionsTableId;
+                switch(database) {
+                    case 'SAT':
+                        questionsTableId = process.env.SAT_QUESTIONS_TABLE_ID;
+                        break;
+                    case 'DRK':
+                        questionsTableId = process.env.DRK_QUESTIONS_TABLE_ID;
+                        break;
+                    default:
+                        questionsTableId = process.env.QUESTIONS_TABLE_ID;
+                }
+
+                if (!questionsTableId) {
+                    console.error('[getWorksheetQuestions Error]: Questions table ID is not defined for database:', database);
+                    return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
+                }
+
                 try {
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log("Fetching worksheet questions...");
-                        console.log(`Attempting to fetch Skill record with ID: ${skillId} from ${database} database`);
-                    }
-
-                    // Fetch the skill record from the correct skills table
-                    const skillsTableIdWorksheet = database === 'SAT' ? process.env.SAT_SKILLS_TABLE_ID : process.env.SKILLS_TABLE_ID;
-                    if (!skillsTableIdWorksheet) {
-                         console.error('[getWorksheetQuestions Error]: Skills table ID is not defined for database:', database);
-                         return formatResponse(500, { message: 'Skills table ID not configured for this database.' });
-                    }
-
-                    const skillRecord = await base.table(skillsTableIdWorksheet)
-                        .find(skillId)
-                        .catch(error => {
-                            console.error("Error fetching skill record:", error);
-                            throw new Error("Failed to fetch skill record.");
-                        });
-
-                    if (!skillRecord) {
-                        return formatResponse(404, { message: "Skill not found." });
-                    }
-
-                    // Get the linked questions from the skill record
-                    const linkedQuestions = skillRecord.fields.LinkedQuestions || [];
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log(`Linked Questions: ${JSON.stringify(linkedQuestions)}`);
-                    }
-
-                    if (linkedQuestions.length === 0) {
-                        return formatResponse(200, { questions: [], skillName: skillRecord.fields.Name || 'Unknown Skill' });
-                    }
-
-                    // Fetch all linked questions from the correct questions table
-                    const questionsTableIdWorksheet = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
-                    if (!questionsTableIdWorksheet) {
-                         console.error('[getWorksheetQuestions Error]: Questions table ID is not defined for database:', database);
-                         return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
-                    }
-
-                    const records = await base.table(questionsTableIdWorksheet)
+                    const records = await base.table(questionsTableId)
                         .select({
-                            filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`,
-                            fields: ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number']
+                            filterByFormula: `{Skill ID} = '${skillId}'`,
+                            fields: ['Test Number', 'Question Number', 'Photo', 'LatexMarkdown', 'Answer', 'Record ID', 'Skill ID']
                         })
                         .all();
 
-                    const fetchedQuestions = records.map(record => ({
-                        id: record.id,
-                        photo: record.get('Photo'),
-                        latex: record.get('LatexMarkdown'),
-                        diagram: record.get('Diagram'),
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Found ${records.length} questions for skill ${skillId}`);
+                    }
+
+                    const questions = records.map(record => ({
+                        id: record.get('Record ID'),
                         testNumber: record.get('Test Number'),
                         questionNumber: record.get('Question Number'),
-                        isClone: false
+                        photo: record.get('Photo'),
+                        latex: record.get('LatexMarkdown'),
+                        answer: record.get('Answer'),
+                        skillId: record.get('Skill ID')
                     }));
 
-                    // If includeClones is true, fetch clone questions as well (only for ACT)
-                    const includeClones = event.queryStringParameters.includeClones === 'true' && database !== 'SAT';
-                    let allQuestions = fetchedQuestions;
-
-                    if (includeClones) {
-                        try {
-                            // Get the record IDs of the original questions
-                            const originalQuestionIds = fetchedQuestions.map(q => q.id);
-
-                            // Fetch clone questions from the copycats table (only ACT CopyCats table exists)
-                            const copycatsTableIdWorksheet = process.env.COPYCATS_TABLE_ID;
-                             if (!copycatsTableIdWorksheet) {
-                                 console.error('[getWorksheetQuestions Error]: CopyCats table ID is not defined.');
-                                 // Continue without clones if CopyCats ID is missing
-                             } else {
-                                const cloneRecords = await base.table(copycatsTableIdWorksheet)
-                                    .select({
-                                        filterByFormula: `OR(${originalQuestionIds.map(id => `FIND('${id}', ARRAYJOIN({Original Question})) > 0`).join(', ')})`,
-                                        fields: [
-                                            'Corrected Clone Question LM',
-                                            'Original Question',
-                                            'AI Model'
-                                        ]
-                                    })
-                                    .all();
-
-                                const cloneQuestions = cloneRecords
-                                    .filter(clone => clone.get('Corrected Clone Question LM'))
-                                    .map(clone => ({
-                                        id: clone.id,
-                                        katex: clone.get('Corrected Clone Question LM'),
-                                        model: clone.get('AI Model') || 'AI Generated',
-                                        originalQuestion: clone.get('Original Question'),
-                                        isClone: true
-                                    }));
-
-                                if (process.env.NODE_ENV !== 'production') {
-                                    console.log(`Found ${cloneQuestions.length} clone questions`);
-                                }
-
-                                allQuestions = [...fetchedQuestions, ...cloneQuestions];
-                             }
-                        } catch (cloneError) {
-                            console.error('Error fetching clone questions:', cloneError);
-                            // Continue with just the original questions
-                        }
+                    // Get the skill name
+                    let skillsTableId;
+                    switch(database) {
+                        case 'SAT':
+                            skillsTableId = process.env.SAT_SKILLS_TABLE_ID;
+                            break;
+                        case 'DRK':
+                            skillsTableId = process.env.DRK_PANDA_SKILLS_TABLE_ID;
+                            break;
+                        default:
+                            skillsTableId = process.env.SKILLS_TABLE_ID;
                     }
 
-                    // Sort questions by question number (applied to combined list or just fetched questions)
-                    allQuestions.sort((a, b) => {
-                        const getQuestionNumber = (q) => {
-                            if (!q) return -1; // Handle potential null/undefined gracefully
-                            if (!q.isClone) {
-                                return parseInt(q.questionNumber, 10) || 0; // Parse original question number
-                            } else {
-                                // Parse question number from clone's originalQuestion string (e.g., "Test A11 - #3")
-                                const parts = q.originalQuestion ? q.originalQuestion.split(' - #') : [];
-                                return parts.length > 1 ? parseInt(parts[1], 10) || 0 : 0;
-                            }
-                        };
-                        return getQuestionNumber(a) - getQuestionNumber(b);
-                    });
+                    const skillRecord = await base.table(skillsTableId)
+                        .select({
+                            filterByFormula: `{Record ID} = '${skillId}'`,
+                            fields: ['Name']
+                        })
+                        .firstPage();
 
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log(`Returning ${allQuestions.length} total questions`);
-                    }
+                    const skillName = skillRecord[0]?.get('Name') || '';
 
-                    return formatResponse(200, { 
-                        questions: allQuestions, 
-                        skillName: skillRecord.fields.Name || 'Unknown Skill' 
-                    });
+                    return formatResponse(200, { questions, skillName });
                 } catch (error) {
-                    console.error('Error in getWorksheetQuestions:', error);
-                    return formatResponse(500, {
-                        message: 'Failed to fetch worksheet questions.',
-                        details: error.message
-                    });
+                    console.error('[getWorksheetQuestions Error]:', error);
+                    return formatResponse(500, { message: 'Server Error. Please try again later.' });
                 }
 
             case 'getWorksheetClones':
