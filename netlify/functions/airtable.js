@@ -398,19 +398,31 @@ exports.handler = async (event) => {
                             return formatResponse(500, { message: 'Questions table ID not configured for DRK database.' });
                         }
 
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.log('DRK Questions Table ID:', questionsTableId);
+                            console.log('Skill ID:', skillId);
+                        }
+
                         const records = await drkBase.table(questionsTableId)
                             .select({
                                 filterByFormula: `FIND('${skillId}', ARRAYJOIN({Skill}))`,
-                                fields: ['Name', 'Question Number', 'Photo', 'fldvdTYGVqXpw7PpS'] // Using field ID for Katex Markdown
+                                fields: ['Name', 'Question Number', 'Photo', 'KaTeX Markdown']
                             })
                             .all();
+
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.log('Found records:', records.length);
+                            if (records.length > 0) {
+                                console.log('First record fields:', records[0].fields);
+                            }
+                        }
 
                         const questions = records.map(record => ({
                             id: record.id,
                             name: record.get('Name'),
                             questionNumber: record.get('Question Number'),
                             photo: record.get('Photo'),
-                            latex: record.get('fldvdTYGVqXpw7PpS') // Using field ID for Katex Markdown
+                            latex: record.get('KaTeX Markdown')
                         }));
 
                         // Get the skill name from DRK Skills table
