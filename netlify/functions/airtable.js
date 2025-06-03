@@ -401,8 +401,8 @@ exports.handler = async (event) => {
                         break;
                     case 'DRK':
                         questionsTableId = process.env.DRK_QUESTIONS_TABLE_ID;
-                        filterFormula = `{Panda Skills} = '${skillId}'`;
-                        fields = ['Question Number', 'Photo', 'Katex Markdown', 'Answer', 'Record ID', 'Panda Skills'];
+                        filterFormula = `FIND('${skillId}', ARRAYJOIN({Skill}))`;
+                        fields = ['Question Number', 'Photo', 'Katex Markdown', 'Name', 'Record ID', 'Skill'];
                         break;
                     default:
                         questionsTableId = process.env.QUESTIONS_TABLE_ID;
@@ -439,8 +439,8 @@ exports.handler = async (event) => {
                                 questionNumber: record.get('Question Number'),
                                 photo: record.get('Photo'),
                                 latex: record.get('Katex Markdown'),
-                                answer: record.get('Answer'),
-                                skillId: record.get('Panda Skills')
+                                name: record.get('Name'),
+                                skillId: record.get('Skill')
                             };
                         } else {
                             return {
