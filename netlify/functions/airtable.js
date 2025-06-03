@@ -401,7 +401,7 @@ exports.handler = async (event) => {
                         const records = await drkBase.table(questionsTableId)
                             .select({
                                 filterByFormula: `FIND('${skillId}', ARRAYJOIN({Skill}))`,
-                                fields: ['Name', 'Question Number', 'Photo', 'Katex Markdown']
+                                fields: ['Name', 'Question Number', 'Photo', 'fldvdTYGVqXpw7PpS'] // Using field ID for Katex Markdown
                             })
                             .all();
 
@@ -410,7 +410,7 @@ exports.handler = async (event) => {
                             name: record.get('Name'),
                             questionNumber: record.get('Question Number'),
                             photo: record.get('Photo'),
-                            latex: record.get('Katex Markdown')
+                            latex: record.get('fldvdTYGVqXpw7PpS') // Using field ID for Katex Markdown
                         }));
 
                         // Get the skill name from DRK Skills table
