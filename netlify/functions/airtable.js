@@ -402,7 +402,7 @@ exports.handler = async (event) => {
                     case 'DRK':
                         questionsTableId = process.env.DRK_QUESTIONS_TABLE_ID;
                         filterFormula = `{Panda Skills} = '${skillId}'`;
-                        fields = ['Question Number', 'Photo', 'LaTeX', 'Answer', 'Record ID', 'Panda Skills'];
+                        fields = ['Question Number', 'Photo', 'Katex Markdown', 'Answer', 'Record ID', 'Panda Skills'];
                         break;
                     default:
                         questionsTableId = process.env.QUESTIONS_TABLE_ID;
@@ -438,7 +438,7 @@ exports.handler = async (event) => {
                                 id: record.get('Record ID'),
                                 questionNumber: record.get('Question Number'),
                                 photo: record.get('Photo'),
-                                latex: record.get('LaTeX'),
+                                latex: record.get('Katex Markdown'),
                                 answer: record.get('Answer'),
                                 skillId: record.get('Panda Skills')
                             };
