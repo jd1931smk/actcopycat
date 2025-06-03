@@ -389,97 +389,152 @@ exports.handler = async (event) => {
                     console.log(`Fetching worksheet questions for skill: ${skillId} from ${database} database`);
                 }
 
-                let questionsTableId;
-                let filterFormula;
-                let fields;
-
-                switch(database) {
-                    case 'SAT':
-                        questionsTableId = process.env.SAT_QUESTIONS_TABLE_ID;
-                        filterFormula = `{Skill ID} = '${skillId}'`;
-                        fields = ['Test Number', 'Question Number', 'Photo', 'LatexMarkdown', 'Answer', 'Record ID', 'Skill ID'];
-                        break;
-                    case 'DRK':
-                        questionsTableId = process.env.DRK_QUESTIONS_TABLE_ID;
-                        filterFormula = `FIND('${skillId}', ARRAYJOIN({Skill}))`;
-                        fields = ['Question Number', 'Photo', 'Katex Markdown', 'Name', 'Record ID', 'Skill'];
-                        break;
-                    default:
-                        questionsTableId = process.env.QUESTIONS_TABLE_ID;
-                        filterFormula = `{Skill ID} = '${skillId}'`;
-                        fields = ['Test Number', 'Question Number', 'Photo', 'LatexMarkdown', 'Answer', 'Record ID', 'Skill ID'];
-                }
-
-                if (!questionsTableId) {
-                    console.error('[getWorksheetQuestions Error]: Questions table ID is not defined for database:', database);
-                    return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
-                }
-
                 try {
+                    if (database === 'DRK') {
+                        // Special handling for DRK database
+                        const questionsTableId = process.env.DRK_QUESTIONS_TABLE_ID;
+                        if (!questionsTableId) {
+                            console.error('[getWorksheetQuestions Error]: Questions table ID is not defined for DRK database');
+                            return formatResponse(500, { message: 'Questions table ID not configured for DRK database.' });
+                        }
+
+                        const records = await drkBase.table(questionsTableId)
+                            .select({
+                                filterByFormula: `FIND('${skillId}', ARRAYJOIN({Skill}))`,
+                                fields: ['Name', 'Question Number', 'Photo', 'Katex Markdown']
+                            })
+                            .all();
+
+                        const questions = records.map(record => ({
+                            id: record.id,
+                            name: record.get('Name'),
+                            questionNumber: record.get('Question Number'),
+                            photo: record.get('Photo'),
+                            latex: record.get('Katex Markdown')
+                        }));
+
+                        // Get the skill name from DRK Skills table
+                        const skillsTableId = process.env.DRK_PANDA_SKILLS_TABLE_ID;
+                        const skillRecord = await drkBase.table(skillsTableId)
+                            .select({
+                                filterByFormula: `{Record ID} = '${skillId}'`,
+                                fields: ['Name']
+                            })
+                            .firstPage();
+
+                        const skillName = skillRecord[0]?.get('Name') || '';
+                        return formatResponse(200, { questions, skillName });
+                    }
+
+                    // Original handling for ACT and SAT databases
+                    const skillsTableId = database === 'SAT' ? process.env.SAT_SKILLS_TABLE_ID : process.env.SKILLS_TABLE_ID;
+                    if (!skillsTableId) {
+                        console.error('[getWorksheetQuestions Error]: Skills table ID is not defined for database:', database);
+                        return formatResponse(500, { message: 'Skills table ID not configured for this database.' });
+                    }
+
+                    const skillRecord = await base.table(skillsTableId)
+                        .find(skillId)
+                        .catch(error => {
+                            console.error("Error fetching skill record:", error);
+                            throw new Error("Failed to fetch skill record.");
+                        });
+
+                    if (!skillRecord) {
+                        return formatResponse(404, { message: "Skill not found." });
+                    }
+
+                    const linkedQuestions = skillRecord.fields.LinkedQuestions || [];
                     if (process.env.NODE_ENV !== 'production') {
-                        console.log('Using filter formula:', filterFormula);
-                        console.log('Using fields:', fields);
+                        console.log(`Linked Questions: ${JSON.stringify(linkedQuestions)}`);
+                    }
+
+                    if (linkedQuestions.length === 0) {
+                        return formatResponse(200, { questions: [], skillName: skillRecord.fields.Name || 'Unknown Skill' });
+                    }
+
+                    const questionsTableId = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
+                    if (!questionsTableId) {
+                        console.error('[getWorksheetQuestions Error]: Questions table ID is not defined for database:', database);
+                        return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
                     }
 
                     const records = await base.table(questionsTableId)
                         .select({
-                            filterByFormula: filterFormula,
-                            fields: fields
+                            filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`,
+                            fields: ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number']
                         })
                         .all();
 
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log(`Found ${records.length} questions for skill ${skillId}`);
+                    const fetchedQuestions = records.map(record => ({
+                        id: record.id,
+                        photo: record.get('Photo'),
+                        latex: record.get('LatexMarkdown'),
+                        diagram: record.get('Diagram'),
+                        testNumber: record.get('Test Number'),
+                        questionNumber: record.get('Question Number'),
+                        isClone: false
+                    }));
+
+                    const includeClones = event.queryStringParameters.includeClones === 'true' && database !== 'SAT';
+                    let allQuestions = fetchedQuestions;
+
+                    if (includeClones) {
+                        try {
+                            const originalQuestionIds = fetchedQuestions.map(q => q.id);
+                            const copycatsTableId = process.env.COPYCATS_TABLE_ID;
+                            if (!copycatsTableId) {
+                                console.error('[getWorksheetQuestions Error]: CopyCats table ID is not defined.');
+                            } else {
+                                const cloneRecords = await base.table(copycatsTableId)
+                                    .select({
+                                        filterByFormula: `OR(${originalQuestionIds.map(id => `FIND('${id}', ARRAYJOIN({Original Question})) > 0`).join(', ')})`,
+                                        fields: [
+                                            'Corrected Clone Question LM',
+                                            'Original Question',
+                                            'AI Model'
+                                        ]
+                                    })
+                                    .all();
+
+                                const cloneQuestions = cloneRecords
+                                    .filter(clone => clone.get('Corrected Clone Question LM'))
+                                    .map(clone => ({
+                                        id: clone.id,
+                                        katex: clone.get('Corrected Clone Question LM'),
+                                        model: clone.get('AI Model') || 'AI Generated',
+                                        originalQuestion: clone.get('Original Question'),
+                                        isClone: true
+                                    }));
+
+                                if (process.env.NODE_ENV !== 'production') {
+                                    console.log(`Found ${cloneQuestions.length} clone questions`);
+                                }
+
+                                allQuestions = [...fetchedQuestions, ...cloneQuestions];
+                            }
+                        } catch (cloneError) {
+                            console.error('Error fetching clone questions:', cloneError);
+                        }
                     }
 
-                    const questions = records.map(record => {
-                        if (database === 'DRK') {
-                            return {
-                                id: record.get('Record ID'),
-                                questionNumber: record.get('Question Number'),
-                                photo: record.get('Photo'),
-                                latex: record.get('Katex Markdown'),
-                                name: record.get('Name'),
-                                skillId: record.get('Skill')
-                            };
-                        } else {
-                            return {
-                                id: record.get('Record ID'),
-                                testNumber: record.get('Test Number'),
-                                questionNumber: record.get('Question Number'),
-                                photo: record.get('Photo'),
-                                latex: record.get('LatexMarkdown'),
-                                answer: record.get('Answer'),
-                                skillId: record.get('Skill ID')
-                            };
-                        }
+                    allQuestions.sort((a, b) => {
+                        const getQuestionNumber = (q) => {
+                            if (!q) return -1;
+                            if (!q.isClone) {
+                                return parseInt(q.questionNumber, 10) || 0;
+                            } else {
+                                const parts = q.originalQuestion ? q.originalQuestion.split(' - #') : [];
+                                return parts.length > 1 ? parseInt(parts[1], 10) || 0 : 0;
+                            }
+                        };
+                        return getQuestionNumber(a) - getQuestionNumber(b);
                     });
 
-                    // Get the skill name
-                    let skillsTableId;
-                    let skillNameField = 'Name';
-                    switch(database) {
-                        case 'SAT':
-                            skillsTableId = process.env.SAT_SKILLS_TABLE_ID;
-                            break;
-                        case 'DRK':
-                            skillsTableId = process.env.DRK_PANDA_SKILLS_TABLE_ID;
-                            skillNameField = 'Name';
-                            break;
-                        default:
-                            skillsTableId = process.env.SKILLS_TABLE_ID;
-                    }
-
-                    const skillRecord = await base.table(skillsTableId)
-                        .select({
-                            filterByFormula: `{Record ID} = '${skillId}'`,
-                            fields: [skillNameField]
-                        })
-                        .firstPage();
-
-                    const skillName = skillRecord[0]?.get(skillNameField) || '';
-
-                    return formatResponse(200, { questions, skillName });
+                    return formatResponse(200, {
+                        questions: allQuestions,
+                        skillName: skillRecord.fields.Name || 'Unknown Skill'
+                    });
                 } catch (error) {
                     console.error('[getWorksheetQuestions Error]:', error);
                     return formatResponse(500, { message: 'Server Error. Please try again later.' });
