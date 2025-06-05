@@ -474,7 +474,7 @@ exports.handler = async (event) => {
                     const records = await base.table(questionsTableId)
                         .select({
                             filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`,
-                            fields: ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number']
+                            fields: ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Answer']
                         })
                         .all();
 
@@ -485,6 +485,7 @@ exports.handler = async (event) => {
                         diagram: record.get('Diagram'),
                         testNumber: record.get('Test Number'),
                         questionNumber: record.get('Question Number'),
+                        answer: record.get('Answer'),
                         isClone: false
                     }));
 
