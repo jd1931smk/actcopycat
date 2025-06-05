@@ -453,15 +453,23 @@ exports.handler = async (event) => {
                         });
 
                     if (!skillRecord) {
+                        console.error('[getWorksheetQuestions Error]: Skill not found for ID:', skillId);
                         return formatResponse(404, { message: "Skill not found." });
                     }
 
+                    console.log('[getWorksheetQuestions Debug] Found skill record:', {
+                        skillId,
+                        skillName: skillRecord.fields.Name,
+                        database,
+                        hasLinkedQuestions: Boolean(skillRecord.fields.LinkedQuestions),
+                        linkedQuestionsCount: skillRecord.fields.LinkedQuestions ? skillRecord.fields.LinkedQuestions.length : 0
+                    });
+
                     const linkedQuestions = skillRecord.fields.LinkedQuestions || [];
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log(`Linked Questions: ${JSON.stringify(linkedQuestions)}`);
-                    }
+                    console.log('[getWorksheetQuestions Debug] Linked Questions:', linkedQuestions);
 
                     if (linkedQuestions.length === 0) {
+                        console.log('[getWorksheetQuestions Debug] No linked questions found');
                         return formatResponse(200, { questions: [], skillName: skillRecord.fields.Name || 'Unknown Skill' });
                     }
 
@@ -482,25 +490,33 @@ exports.handler = async (event) => {
                             return `{Name} = '${safeName}'`;
                         }).join(', ')})`;
                         
-                        if (process.env.NODE_ENV !== 'production') {
-                            console.log('SAT Questions filter formula:', filterFormula);
-                            console.log('Linked Questions:', linkedQuestions);
-                        }
+                        console.log('[getWorksheetQuestions Debug] SAT filter formula:', filterFormula);
                     } else {
                         // For ACT, linkedQuestions contains record IDs
                         filterFormula = `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`;
                     }
 
-                    if (process.env.NODE_ENV !== 'production') {
-                        console.log('Using filter formula:', filterFormula);
-                    }
+                    console.log('[getWorksheetQuestions Debug] Querying questions table:', {
+                        questionsTableId,
+                        filterFormula,
+                        database
+                    });
 
                     const records = await base.table(questionsTableId)
                         .select({
                             filterByFormula: filterFormula,
                             fields: ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Answer', 'Name']
                         })
-                        .all();
+                        .all()
+                        .catch(error => {
+                            console.error('[getWorksheetQuestions Error] Failed to fetch questions:', error);
+                            throw error;
+                        });
+
+                    console.log('[getWorksheetQuestions Debug] Found records:', {
+                        count: records.length,
+                        firstRecordFields: records.length > 0 ? Object.keys(records[0].fields) : []
+                    });
 
                     const fetchedQuestions = records.map(record => ({
                         id: record.id,
