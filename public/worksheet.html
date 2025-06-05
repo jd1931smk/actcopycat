@@ -383,12 +383,9 @@
 
                 // Debug: log questions data to see what we're receiving
                 console.log('All questions data:', allQuestions);
-                console.log('First question fields:', allQuestions[0]);
-
-                // Debug: log first question to check field names
                 if (allQuestions.length > 0) {
-                    console.log('First question data:', allQuestions[0]);
-                    console.log('LatexMarkdown field:', allQuestions[0].LatexMarkdown);
+                    console.log('First question LaTeX content:', allQuestions[0].latex);
+                    console.log('First question fields:', Object.keys(allQuestions[0]));
                 }
 
                 worksheet.innerHTML = `
@@ -410,7 +407,7 @@
                             </p>
                             <div class="question-content">
                                 <div class="question-text">
-                                    <div class="latex-content">${renderMathMarkdown(q.LatexMarkdown)}</div>
+                                    <div class="latex-content">${renderMathMarkdown(q.latex)}</div>
                                 </div>
                                 <div class="photo-column">
                                     ${q.photo && q.photo.length > 0 ? 
@@ -490,7 +487,7 @@
 
                     const latexBlock = `
                         <div class="question-text">
-                            <div class="latex-content">${renderMathMarkdown(q.LatexMarkdown)}</div>
+                            <div class="latex-content">${renderMathMarkdown(q.latex)}</div>
                         </div>`;
 
                     const photoBlock = `
