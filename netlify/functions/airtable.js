@@ -483,12 +483,24 @@ exports.handler = async (event) => {
                     let filterFormula;
                     if (database === 'SAT') {
                         // For SAT, linkedQuestions contains full question names (e.g. "2017 May NoCalc 8")
-                        // We need to match this against the Name field which combines Test Year, Test Month, Module, and Question Number
+                        // We need to match this against the Name field which is a formula combining multiple fields
                         filterFormula = `OR(${linkedQuestions.map(fullName => {
-                            // Escape any single quotes in the name
-                            const safeName = fullName.replace(/'/g, "\\'");
-                            return `{Name} = '${safeName}'`;
-                        }).join(', ')})`;
+                            // Parse the question name into components
+                            const parts = fullName.match(/(\d{4})\s+(\w+)\s+(NoCalc|Calc)\s+(\d+)/);
+                            if (!parts) {
+                                console.error('[getWorksheetQuestions Error] Invalid question name format:', fullName);
+                                return null;
+                            }
+                            const [_, year, month, module, number] = parts;
+                            
+                            // Build the filter formula to match the Airtable formula field
+                            return `AND(
+                                {Test Year} = '${year}',
+                                {Test Month} = '${month}',
+                                {Module} = '${module === 'Calc' ? 'Calculator' : 'No Calculator'}',
+                                {Question Number} = '${number}'
+                            )`.replace(/\s+/g, ' ');
+                        }).filter(Boolean).join(', ')})`;
                         
                         console.log('[getWorksheetQuestions Debug] SAT filter formula:', filterFormula);
                     } else {
