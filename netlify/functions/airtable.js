@@ -482,26 +482,8 @@ exports.handler = async (event) => {
                     // Different query logic for SAT vs ACT
                     let filterFormula;
                     if (database === 'SAT') {
-                        // For SAT, linkedQuestions contains full question names (e.g. "2017 May NoCalc 8")
-                        // We need to match this against the Name field which is a formula combining multiple fields
-                        filterFormula = `OR(${linkedQuestions.map(fullName => {
-                            // Parse the question name into components
-                            const parts = fullName.match(/(\d{4})\s+(\w+)\s+(NoCalc|Calc)\s+(\d+)/);
-                            if (!parts) {
-                                console.error('[getWorksheetQuestions Error] Invalid question name format:', fullName);
-                                return null;
-                            }
-                            const [_, year, month, module, number] = parts;
-                            
-                            // Build the filter formula to match the Airtable formula field
-                            return `AND(
-                                {Test Year} = '${year}',
-                                {Test Month} = '${month}',
-                                {Module} = '${module === 'Calc' ? 'Calculator' : 'No Calculator'}',
-                                {Question Number} = '${number}'
-                            )`.replace(/\s+/g, ' ');
-                        }).filter(Boolean).join(', ')})`;
-                        
+                        // For SAT, linkedQuestions contains record IDs just like ACT
+                        filterFormula = `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`;
                         console.log('[getWorksheetQuestions Debug] SAT filter formula:', filterFormula);
                     } else {
                         // For ACT, linkedQuestions contains record IDs
@@ -517,7 +499,7 @@ exports.handler = async (event) => {
                     const records = await base.table(questionsTableId)
                         .select({
                             filterByFormula: filterFormula,
-                            fields: ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Answer', 'Name']
+                            fields: ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Name']
                         })
                         .all()
                         .catch(error => {
@@ -537,7 +519,6 @@ exports.handler = async (event) => {
                         diagram: record.get('Diagram'),
                         testNumber: record.get('Test Number'),
                         questionNumber: record.get('Question Number'),
-                        answer: record.get('Answer'),
                         name: record.get('Name'),
                         isClone: false
                     }));
