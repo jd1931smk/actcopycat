@@ -471,10 +471,24 @@ exports.handler = async (event) => {
                         return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
                     }
 
+                    // Different query logic for SAT vs ACT
+                    let filterFormula;
+                    if (database === 'SAT') {
+                        // For SAT, linkedQuestions contains test names
+                        filterFormula = `OR(${linkedQuestions.map(testName => `{Name} = '${testName}'`).join(', ')})`;
+                    } else {
+                        // For ACT, linkedQuestions contains record IDs
+                        filterFormula = `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`;
+                    }
+
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log('Using filter formula:', filterFormula);
+                    }
+
                     const records = await base.table(questionsTableId)
                         .select({
-                            filterByFormula: `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`,
-                            fields: ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Answer']
+                            filterByFormula: filterFormula,
+                            fields: ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Answer', 'Name']
                         })
                         .all();
 
@@ -486,6 +500,7 @@ exports.handler = async (event) => {
                         testNumber: record.get('Test Number'),
                         questionNumber: record.get('Question Number'),
                         answer: record.get('Answer'),
+                        name: record.get('Name'),
                         isClone: false
                     }));
 
