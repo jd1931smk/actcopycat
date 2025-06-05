@@ -474,8 +474,18 @@ exports.handler = async (event) => {
                     // Different query logic for SAT vs ACT
                     let filterFormula;
                     if (database === 'SAT') {
-                        // For SAT, linkedQuestions contains test names
-                        filterFormula = `OR(${linkedQuestions.map(testName => `{Name} = '${testName}'`).join(', ')})`;
+                        // For SAT, linkedQuestions contains full question names (e.g. "2017 May NoCalc 8")
+                        // We need to match this against the Name field which combines Test Year, Test Month, Module, and Question Number
+                        filterFormula = `OR(${linkedQuestions.map(fullName => {
+                            // Escape any single quotes in the name
+                            const safeName = fullName.replace(/'/g, "\\'");
+                            return `{Name} = '${safeName}'`;
+                        }).join(', ')})`;
+                        
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.log('SAT Questions filter formula:', filterFormula);
+                            console.log('Linked Questions:', linkedQuestions);
+                        }
                     } else {
                         // For ACT, linkedQuestions contains record IDs
                         filterFormula = `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`;
