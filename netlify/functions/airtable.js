@@ -475,7 +475,7 @@ exports.handler = async (event) => {
                     let filterFormula;
                     if (database === 'SAT') {
                         // For SAT, linkedQuestions contains test names
-                        filterFormula = `OR(${linkedQuestions.map(testName => `{Name} = '${testName}'`).join(', ')})`;
+                        filterFormula = `OR(${linkedQuestions.map(testName => `{Test Name} = '${testName}'`).join(', ')})`;
                     } else {
                         // For ACT, linkedQuestions contains record IDs
                         filterFormula = `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`;
