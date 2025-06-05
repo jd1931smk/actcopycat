@@ -224,26 +224,26 @@
                 <p><strong>Skill:</strong> ${skillName}</p>
                 <p><strong>Date:</strong> ${currentDate}</p>
                 <hr>
-               ${selectedQuestions.map((q, index) => {
-                    const isClone = q.isClone;
+               ${selectedQuestions.map((question, index) => {
+                    const isClone = question.isClone;
                     const source = isClone
-                        ? `Clone of Test ${q.originalQuestion ? q.originalQuestion.split(' - ')[0] : ''}, #${q.originalQuestion ? q.originalQuestion.split(' - ')[1] : ''}`
-                        : `Question #${q.questionNumber || index + 1}`;
+                        ? `Clone of Test ${question.originalQuestion ? question.originalQuestion.split(' - ')[0] : ''}, #${question.originalQuestion ? question.originalQuestion.split(' - ')[1] : ''}`
+                        : `Question #${question.questionNumber || index + 1}`;
 
                     const latexBlock = `
                         <div class=\"question-text\">
-                            <div class=\"latex-content\">${renderMathMarkdown(q.latex)}</div>
+                            <div class=\"latex-content\">${renderMathMarkdown(question.latex)}</div>
                         </div>`;
 
                     let photoBlock = '';
-                    if (q.photo && Array.isArray(q.photo) && q.photo.length > 0) {
-                        if (q.photo.length === 2) {
+                    if (question.photo && Array.isArray(question.photo) && question.photo.length > 0) {
+                        if (question.photo.length === 2) {
                             photoBlock = `<div class=\"photo-column\"><div class=\"photo-container\">
-                                <img src=\"${q.photo[1].url}\" alt=\"Q${index + 1} Left\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">
-                                <img src=\"${q.photo[0].url}\" alt=\"Q${index + 1} Right\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">
+                                <img src=\"${question.photo[1].url}\" alt=\"Q${index + 1} Left\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">
+                                <img src=\"${question.photo[0].url}\" alt=\"Q${index + 1} Right\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">
                             </div></div>`;
                         } else {
-                            photoBlock = `<div class=\"photo-column\">` + q.photo.map(photo => `<img src=\"${photo.url}\" alt=\"Q${index + 1}\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">`).join('') + `</div>`;
+                            photoBlock = `<div class=\"photo-column\">` + question.photo.map(photo => `<img src=\"${photo.url}\" alt=\"Q${index + 1}\" style=\"max-width: 100%; object-fit: contain; transform-origin: left top;\">`).join('') + `</div>`;
                         }
                     } else {
                         photoBlock = '<div class=\"photo-column\"></div>';
@@ -272,16 +272,14 @@
                         <table style=\"width: 100%; border-collapse: collapse; margin-top: 20px;\">
                             <tr style=\"background-color: #f8f9fa;\">
                                 <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Question</th>
-                                <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Test</th>
+                                <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Test Name</th>
                                 <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Number</th>
-                                <th style=\"padding: 10px; text-align: left; border: 1px solid #dee2e6;\">Answer</th>
                             </tr>
                             ${selectedQuestions.map((q, index) => `
                                 <tr>
                                     <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${index + 1}</td>
-                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${q.isClone && q.originalQuestion ? q.originalQuestion.split(' - ')[0] : (q.testNumber || '')}</td>
-                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${q.isClone && q.originalQuestion ? q.originalQuestion.split(' - ')[1] : (q.questionNumber || '')}</td>
-                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${q.answer || 'N/A'}</td>
+                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${q.testName || ''}</td>
+                                    <td style=\"padding: 10px; border: 1px solid #dee2e6;\">${q.questionNumber || ''}</td>
                                 </tr>
                             `).join('')}
                         </table>

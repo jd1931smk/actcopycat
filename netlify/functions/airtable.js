@@ -499,7 +499,9 @@ exports.handler = async (event) => {
                     const records = await base.table(questionsTableId)
                         .select({
                             filterByFormula: filterFormula,
-                            fields: ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Name']
+                            fields: database === 'SAT' 
+                                ? ['Photo', 'LatexMarkdown', 'Diagram', 'Test Name', 'Question Number', 'Name']
+                                : ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Name']
                         })
                         .all()
                         .catch(error => {
@@ -517,7 +519,7 @@ exports.handler = async (event) => {
                         photo: record.get('Photo'),
                         latex: record.get('LatexMarkdown'),
                         diagram: record.get('Diagram'),
-                        testNumber: record.get('Test Number'),
+                        testName: database === 'SAT' ? record.get('Test Name') : record.get('Test Number'),
                         questionNumber: record.get('Question Number'),
                         name: record.get('Name'),
                         isClone: false
