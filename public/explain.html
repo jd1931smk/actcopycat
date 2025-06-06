@@ -246,7 +246,7 @@
     </div>
 
     <script>
-        // Static test numbers - strictly alphabetized
+        // Static test numbers as fallback
         const staticTestNumbers = [
             '1MC', '2MC', '3MC', '4MC', '5MC',
             '52C', '52D', '52F', '52G',
@@ -268,23 +268,42 @@
         ];
 
         // Load test numbers on page load
-        window.onload = function() {
-            populateTestNumbers();
+        window.onload = async function() {
+            await populateTestNumbers();
             populateQuestionNumbers();
         };
 
         // Populate test numbers dropdown
-        function populateTestNumbers() {
+        async function populateTestNumbers() {
             const dropdown = document.getElementById('testNumberDropdown');
             dropdown.innerHTML = '<option value="">Select Test</option>';
             
-            // Just add the pre-sorted test numbers
-            staticTestNumbers.forEach(testNumber => {
-                const option = document.createElement('option');
-                option.value = testNumber;
-                option.textContent = testNumber;
-                dropdown.appendChild(option);
-            });
+            try {
+                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
+                if (!response.ok) throw new Error('Failed to fetch test numbers');
+                const testNumbers = await response.json();
+                
+                // Sort the test numbers alphabetically
+                testNumbers.sort();
+                
+                testNumbers.forEach(testNumber => {
+                    const option = document.createElement('option');
+                    option.value = testNumber;
+                    option.textContent = testNumber;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading test numbers from API:', error);
+                console.log('Falling back to static test numbers list');
+                
+                // Use static list as fallback
+                staticTestNumbers.forEach(testNumber => {
+                    const option = document.createElement('option');
+                    option.value = testNumber;
+                    option.textContent = testNumber;
+                    dropdown.appendChild(option);
+                });
+            }
         }
 
         // Populate question numbers dropdown (1-60)

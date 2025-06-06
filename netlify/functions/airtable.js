@@ -75,13 +75,13 @@ exports.handler = async (event) => {
                     console.log("Fetching test numbers from database...");
                 }
                 try {
-                    const questionsTableId = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
+                    const questionsTableId = process.env.QUESTIONS_TABLE_ID;
                     if (!questionsTableId) {
-                        console.error('[getTestNumbers Error]: Questions table ID is not defined for database:', database);
-                        return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
+                        console.error('[getTestNumbers Error]: Questions table ID is not defined');
+                        return formatResponse(500, { message: 'Questions table ID not configured.' });
                     }
 
-                    const records = await base.table(questionsTableId)
+                    const records = await actBase.table(questionsTableId)
                         .select({
                             fields: ['Test Number'],
                             sort: [{ field: 'Test Number', direction: 'asc' }]
