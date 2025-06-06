@@ -71,25 +71,34 @@ exports.handler = async (event) => {
     try {
         switch (action) {
             case 'getTestNumbers':
-                // Note: Hardcoded ACT test numbers. If SAT tests are needed, this needs adjustment.
                 if (process.env.NODE_ENV !== 'production') {
-                    console.log("Returning hardcoded ACT test numbers...");
+                    console.log("Fetching test numbers from database...");
                 }
-                // If SAT tests have different numbering, this case needs to be dynamic based on 'database'
-                const testNumbers = [
-                    'A9',
-                    'A10',
-                    'A11',
-                    'B02',
-                    'B04',
-                    'D06',
-                    'Z04',
-                    'Z15'
-                ];
-                if (process.env.NODE_ENV !== 'production') {
-                    console.log("Final sorted test numbers:", testNumbers);
+                try {
+                    const questionsTableId = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
+                    if (!questionsTableId) {
+                        console.error('[getTestNumbers Error]: Questions table ID is not defined for database:', database);
+                        return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
+                    }
+
+                    const records = await base.table(questionsTableId)
+                        .select({
+                            fields: ['Test Number'],
+                            sort: [{ field: 'Test Number', direction: 'asc' }]
+                        })
+                        .all();
+
+                    // Extract unique test numbers
+                    const testNumbers = [...new Set(records.map(record => record.get('Test Number')))];
+
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log("Final test numbers:", testNumbers);
+                    }
+                    return formatResponse(200, testNumbers);
+                } catch (error) {
+                    console.error('[getTestNumbers Error]:', error);
+                    return formatResponse(500, { message: 'Failed to fetch test numbers' });
                 }
-                return formatResponse(200, testNumbers);
 
             case 'getQuestionNumbers':
                  // Note: Hardcoded 1-60 question numbers. If SAT questions have different numbering, this needs adjustment.
