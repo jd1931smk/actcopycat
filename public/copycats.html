@@ -395,6 +395,15 @@
                 
                 const data = await response.json();
                 console.log('Raw API Response:', data);
+                
+                // Enhanced debugging for diagram field
+                console.log('Diagram field exists:', 'diagram' in data);
+                console.log('Diagram field value:', data.diagram);
+                console.log('Diagram field type:', typeof data.diagram);
+                if (data.diagram) {
+                    console.log('Diagram field length:', data.diagram.length);
+                    console.log('Diagram field trimmed:', data.diagram.trim());
+                }
 
                 if (data.katex) {
                     // Create section for the question - simplified approach
@@ -402,16 +411,20 @@
                     questionSection.className = 'section';
 
                     // Enhanced diagram handling - display image from Diagram field if present
+                    console.log('Checking diagram field...');
                     if (data.diagram) {
+                        console.log('Diagram field found!');
                         let diagramUrl = data.diagram;
                         
                         // Handle different diagram field formats
                         if (typeof diagramUrl === 'string' && diagramUrl.trim()) {
+                            console.log('Diagram URL is valid string:', diagramUrl);
                             // Clean up the URL if needed
                             diagramUrl = diagramUrl.trim();
                             
-                            // Check if it's a valid URL (http/https) or relative path
-                            if (diagramUrl.startsWith('http') || diagramUrl.startsWith('/') || diagramUrl.startsWith('./')) {
+                            // More lenient URL checking - also allow data: URLs and other formats
+                            if (diagramUrl.startsWith('http') || diagramUrl.startsWith('/') || diagramUrl.startsWith('./') || diagramUrl.startsWith('data:')) {
+                                console.log('Creating image element for:', diagramUrl);
                                 const diagramImg = document.createElement('img');
                                 diagramImg.src = diagramUrl;
                                 diagramImg.alt = 'Question Diagram';
@@ -424,7 +437,8 @@
                                 
                                 // Add error handling for broken images
                                 diagramImg.onerror = function() {
-                                    console.log('Failed to load diagram:', diagramUrl);
+                                    console.error('Failed to load diagram:', diagramUrl);
+                                    console.error('Image error event triggered');
                                     this.style.display = 'none';
                                 };
                                 
@@ -434,8 +448,15 @@
                                 };
                                 
                                 questionSection.appendChild(diagramImg);
+                                console.log('Image element added to question section');
+                            } else {
+                                console.log('Diagram URL does not match expected patterns:', diagramUrl);
                             }
+                        } else {
+                            console.log('Diagram field is not a valid string or is empty');
                         }
+                    } else {
+                        console.log('No diagram field found in data');
                     }
 
                     // Create a simple container with the katex-content class
