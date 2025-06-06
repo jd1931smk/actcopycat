@@ -397,12 +397,12 @@
                 console.log('Raw API Response:', data);
                 
                 // Enhanced debugging for diagram field
-                console.log('Diagram field exists:', 'diagram' in data);
-                console.log('Diagram field value:', data.diagram);
-                console.log('Diagram field type:', typeof data.diagram);
-                if (data.diagram) {
-                    console.log('Diagram field length:', data.diagram.length);
-                    console.log('Diagram field trimmed:', data.diagram.trim());
+                console.log('Diagrams field exists:', 'Diagrams' in data);
+                console.log('Diagrams field value:', data.Diagrams);
+                console.log('Diagrams field type:', typeof data.Diagrams);
+                if (data.Diagrams) {
+                    console.log('Diagrams field length:', data.Diagrams.length);
+                    console.log('Diagrams field trimmed:', data.Diagrams.trim());
                 }
 
                 if (data.katex) {
@@ -410,11 +410,11 @@
                     const questionSection = document.createElement('div');
                     questionSection.className = 'section';
 
-                    // Enhanced diagram handling - display image from Diagram field if present
-                    console.log('Checking diagram field...');
-                    if (data.diagram) {
-                        console.log('Diagram field found!');
-                        let diagramUrl = data.diagram;
+                    // Enhanced diagram handling - display image from Diagrams field if present
+                    console.log('Checking Diagrams field...');
+                    if (data.Diagrams) {
+                        console.log('Diagrams field found!');
+                        let diagramUrl = data.Diagrams;
                         
                         // Handle different diagram field formats
                         if (typeof diagramUrl === 'string' && diagramUrl.trim()) {
@@ -453,10 +453,10 @@
                                 console.log('Diagram URL does not match expected patterns:', diagramUrl);
                             }
                         } else {
-                            console.log('Diagram field is not a valid string or is empty');
+                            console.log('Diagrams field is not a valid string or is empty');
                         }
                     } else {
-                        console.log('No diagram field found in data');
+                        console.log('No Diagrams field found in data');
                     }
 
                     // Create a simple container with the katex-content class
