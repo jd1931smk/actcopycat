@@ -214,7 +214,7 @@
     <div class="question-area">
         <div id="questionDisplay"></div>
         <div class="answer-area">
-            <label for="answerInput">Your Answer (A-E): </label>
+            <label for="answerInput">Your Answer (A-E or F-K): </label>
             <input type="text" id="answerInput" maxlength="1" style="text-transform: uppercase;">
             <div class="button-group">
                 <button class="submit-btn" onclick="checkAnswer()">Check Answer</button>
@@ -368,9 +368,9 @@
             const answer = document.getElementById('answerInput').value.toUpperCase();
             const feedback = document.getElementById('feedback');
 
-            if (!answer || !/^[A-E]$/.test(answer)) {
+            if (!answer || !(/^[A-E]$|^[F-K]$/.test(answer))) {
                 feedback.className = 'feedback incorrect';
-                feedback.textContent = 'Please enter a valid answer (A-E)';
+                feedback.textContent = 'Please enter a valid answer (A-E or F-K)';
                 feedback.style.display = 'block';
                 return;
             }
