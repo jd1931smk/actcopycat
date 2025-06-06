@@ -401,15 +401,43 @@
                     const questionSection = document.createElement('div');
                     questionSection.className = 'section';
 
-                    // If a diagram image is present, display it above the question
-                    if (data.diagram && typeof data.diagram === 'string' && data.diagram.startsWith('http')) {
-                        const diagramImg = document.createElement('img');
-                        diagramImg.src = data.diagram;
-                        diagramImg.alt = 'Diagram';
-                        diagramImg.style.display = 'block';
-                        diagramImg.style.margin = '0 auto 20px auto';
-                        questionSection.appendChild(diagramImg);
+                    // Enhanced diagram handling - display image from Diagram field if present
+                    if (data.diagram) {
+                        let diagramUrl = data.diagram;
+                        
+                        // Handle different diagram field formats
+                        if (typeof diagramUrl === 'string' && diagramUrl.trim()) {
+                            // Clean up the URL if needed
+                            diagramUrl = diagramUrl.trim();
+                            
+                            // Check if it's a valid URL (http/https) or relative path
+                            if (diagramUrl.startsWith('http') || diagramUrl.startsWith('/') || diagramUrl.startsWith('./')) {
+                                const diagramImg = document.createElement('img');
+                                diagramImg.src = diagramUrl;
+                                diagramImg.alt = 'Question Diagram';
+                                diagramImg.style.display = 'block';
+                                diagramImg.style.margin = '0 auto 20px auto';
+                                diagramImg.style.maxWidth = '100%';
+                                diagramImg.style.height = 'auto';
+                                diagramImg.style.borderRadius = '4px';
+                                diagramImg.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+                                
+                                // Add error handling for broken images
+                                diagramImg.onerror = function() {
+                                    console.log('Failed to load diagram:', diagramUrl);
+                                    this.style.display = 'none';
+                                };
+                                
+                                // Add loading placeholder
+                                diagramImg.onload = function() {
+                                    console.log('Diagram loaded successfully:', diagramUrl);
+                                };
+                                
+                                questionSection.appendChild(diagramImg);
+                            }
+                        }
                     }
+
                     // Create a simple container with the katex-content class
                     // This mirrors how the clone questions are handled
                     const katexDiv = document.createElement('div');
