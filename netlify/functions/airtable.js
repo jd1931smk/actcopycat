@@ -131,7 +131,7 @@ exports.handler = async (event) => {
                 const question = await base.table(questionsTableIdDetails)
                     .select({
                         filterByFormula: detailsFilterFormula,
-                        fields: ['Photo', 'Record ID', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number']
+                        fields: ['Photo', 'Record ID', 'LatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
                     })
                     .firstPage()
                     .then(records => {
@@ -141,7 +141,8 @@ exports.handler = async (event) => {
                                 console.log('First record fields:', {
                                     testNumber: records[0].get('Test Number'),
                                     questionNumber: records[0].get('Question Number'),
-                                    katex: records[0].get('LatexMarkdown') ? 'present' : 'missing'
+                                    katex: records[0].get('LatexMarkdown') ? 'present' : 'missing',
+                                    diagrams: records[0].get('Diagrams') ? 'present' : 'missing'
                                 });
                             }
                         }
@@ -153,11 +154,26 @@ exports.handler = async (event) => {
                         if (katexContent) {
                             katexContent = katexContent.trim();
                         }
+                        
+                        // Handle Diagrams field - Airtable attachments come as arrays
+                        let diagramUrl = null;
+                        const diagramsField = records[0].get('Diagrams');
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.log('Raw Diagrams field:', diagramsField);
+                        }
+                        if (diagramsField && Array.isArray(diagramsField) && diagramsField.length > 0) {
+                            // Get the URL from the first attachment
+                            diagramUrl = diagramsField[0].url;
+                            if (process.env.NODE_ENV !== 'production') {
+                                console.log('Extracted diagram URL:', diagramUrl);
+                            }
+                        }
+                        
                         const response = {
                             id: records[0].get('Record ID'),
                             photo: records[0].get('Photo'),
                             katex: katexContent,
-                            diagram: records[0].get('Diagram')
+                            Diagrams: diagramUrl
                         };
                         if (process.env.NODE_ENV !== 'production') {
                             console.log('Sending response:', response);
