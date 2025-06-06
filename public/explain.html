@@ -224,18 +224,22 @@
             <div id="feedback" class="feedback"></div>
             <div id="loading" class="loading">Processing</div>
             <div id="hintBox" class="hint-box">
+                <!-- Commenting out DeepSeek hint section
                 <div id="deepseekHint" class="model-hint">
                     <h3>DeepSeek Hint</h3>
                     <div class="hint-content"></div>
                 </div>
+                -->
                 <div id="gpt4Hint" class="model-hint">
                     <h3>GPT-4 Hint</h3>
                     <div class="hint-content"></div>
                 </div>
+                <!-- Commenting out Claude 3.5 hint section
                 <div id="claude35Hint" class="model-hint">
                     <h3>Claude 3.5 Hint</h3>
                     <div class="hint-content"></div>
                 </div>
+                -->
             </div>
             <div id="explanationBox" class="explanation-box"></div>
         </div>
@@ -442,24 +446,28 @@
                 const data = await response.json();
 
                 // Display hints from each model
-                document.querySelector('#deepseekHint .hint-content').innerHTML = data.deepseek || 'No hint available';
+                // Commenting out DeepSeek hint display
+                // document.querySelector('#deepseekHint .hint-content').innerHTML = data.deepseek || 'No hint available';
                 document.querySelector('#gpt4Hint .hint-content').innerHTML = data.gpt4 || 'No hint available';
-                document.querySelector('#claude35Hint .hint-content').innerHTML = data.claude || 'No hint available';
+                // Commenting out Claude hint display
+                // document.querySelector('#claude35Hint .hint-content').innerHTML = data.claude || 'No hint available';
                 
                 hintBox.style.display = 'block';
                 
                 // Rerun MathJax on all hint boxes
                 const hintElements = [
-                    document.querySelector('#deepseekHint .hint-content'),
+                    // document.querySelector('#deepseekHint .hint-content'),
                     document.querySelector('#gpt4Hint .hint-content'),
-                    document.querySelector('#claude35Hint .hint-content')
+                    // document.querySelector('#claude35Hint .hint-content')
                 ];
                 MathJax.typesetPromise(hintElements).catch(err => console.error('MathJax Error:', err));
             } catch (error) {
                 console.error('Error getting hints:', error);
-                document.querySelector('#deepseekHint .hint-content').innerHTML = 'Failed to get hint';
+                // Commenting out DeepSeek hint display
+                // document.querySelector('#deepseekHint .hint-content').innerHTML = 'Failed to get hint';
                 document.querySelector('#gpt4Hint .hint-content').innerHTML = 'Failed to get hint';
-                document.querySelector('#claude35Hint .hint-content').innerHTML = 'Failed to get hint';
+                // Commenting out Claude hint display
+                // document.querySelector('#claude35Hint .hint-content').innerHTML = 'Failed to get hint';
                 hintBox.style.display = 'block';
             } finally {
                 loading.style.display = 'none';
