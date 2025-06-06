@@ -500,8 +500,8 @@ exports.handler = async (event) => {
                         .select({
                             filterByFormula: filterFormula,
                             fields: database === 'SAT' 
-                                ? ['Photo', 'LatexMarkdown', 'Diagram', 'Test Name', 'Question Number', 'Name']
-                                : ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Name']
+                                ? ['Photo', 'LatexMarkdown', 'Diagram', 'Test Name', 'Question Number', 'Name', 'Answer']
+                                : ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Name', 'Answer']
                         })
                         .all()
                         .catch(error => {
@@ -519,9 +519,10 @@ exports.handler = async (event) => {
                         photo: record.get('Photo'),
                         latex: record.get('LatexMarkdown'),
                         diagram: record.get('Diagram'),
-                        testName: database === 'SAT' ? record.get('Test Name') : record.get('Test Number'),
+                        testNumber: database === 'SAT' ? record.get('Test Name') : record.get('Test Number'),
                         questionNumber: record.get('Question Number'),
                         name: record.get('Name'),
+                        answer: record.get('Answer'),
                         isClone: false
                     }));
 
