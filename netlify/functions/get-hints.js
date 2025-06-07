@@ -15,7 +15,15 @@ exports.handler = async function(event, context) {
     try {
         const { testNumber, questionNumber, question } = JSON.parse(event.body);
         
+        console.log('=== BACKEND HINT DEBUG START ===');
+        console.log('Received testNumber:', testNumber);
+        console.log('Received questionNumber:', questionNumber);
+        console.log('Received question content:', question);
+        console.log('Question content length:', question ? question.length : 'undefined');
+        console.log('First 300 chars of question:', question ? question.substring(0, 300) : 'undefined');
+        
         if (!testNumber || !questionNumber || !question) {
+            console.log('Missing required parameters!');
             return {
                 statusCode: 400,
                 body: JSON.stringify({ error: 'Missing required parameters' })
@@ -37,6 +45,10 @@ Please provide a helpful hint that guides the student toward the solution withou
 2. Suggest a problem-solving approach
 3. Help identify what mathematical principles to apply
 4. NOT reveal the actual answer or solution steps`;
+
+        console.log('Full prompt being sent to GPT-4:');
+        console.log(prompt);
+        console.log('=== BACKEND HINT DEBUG END ===');
 
         // Get hints from each model independently
         const hints = await Promise.allSettled([
