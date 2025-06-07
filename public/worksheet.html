@@ -514,13 +514,20 @@
                     return `
                         <div class="question ${isClone ? 'clone-question' : ''}">
                             <p><strong>Question ${index + 1}</strong> (Source: ${source})</p>
-                            <p style="font-size: 14px; margin: 5px 0;">
-                                📖 <strong>For explanation:</strong> 
-                                <a href="${window.location.origin}/explain.html?test=${encodeURIComponent(isClone ? q.originalQuestion.split(' - ')[0] : q.testNumber)}&question=${encodeURIComponent(isClone ? q.originalQuestion.split(' - ')[1] : q.questionNumber)}" 
-                                   style="color: #007bff; text-decoration: underline;">
-                                    Click here to explain this question
-                                </a>
-                            </p>
+                            <div style="display: flex; align-items: center; gap: 15px; font-size: 14px; margin: 5px 0;">
+                                <div>
+                                    📖 <strong>For explanation:</strong> 
+                                    <a href="${window.location.origin}/explain.html?test=${encodeURIComponent(isClone ? q.originalQuestion.split(' - ')[0] : q.testNumber)}&question=${encodeURIComponent(isClone ? q.originalQuestion.split(' - ')[1] : q.questionNumber)}" 
+                                       style="color: #007bff; text-decoration: underline;">
+                                        Click here to explain this question
+                                    </a>
+                                    <br>
+                                    <span style="font-size: 12px; color: #666;">Or scan QR code →</span>
+                                </div>
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(window.location.origin + '/explain.html?test=' + encodeURIComponent(isClone ? q.originalQuestion.split(' - ')[0] : q.testNumber) + '&question=' + encodeURIComponent(isClone ? q.originalQuestion.split(' - ')[1] : q.questionNumber))}" 
+                                     alt="QR code for explanation" 
+                                     style="border: 1px solid #ddd; padding: 2px;">
+                            </div>
                             <div class="question-content">
                                 ${format === 'latex' ? latexBlock : ''}
                                 ${format === 'photo' ? photoBlock : ''}
