@@ -490,7 +490,7 @@
             try {
                 // Always send the actual latex content if available, regardless of whether there are photos
                 // Most questions have both photos and latex text
-                const questionContent = currentQuestionDetails.latex || `Test ${testNumber}, Question ${questionNumber}`;
+                const questionContent = currentQuestionDetails.katex || `Test ${testNumber}, Question ${questionNumber}`;
                 
                 console.log('Question content being sent to API:', questionContent);
                 console.log('Question content length:', questionContent.length);
