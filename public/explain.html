@@ -366,6 +366,9 @@
             const questionNumber = this.value;
             if (!testNumber || !questionNumber) return;
 
+            console.log('=== QUESTION LOADING DEBUG START ===');
+            console.log('Loading question - Test:', testNumber, 'Question:', questionNumber);
+
             try {
                 const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
                 if (!response.ok) throw new Error('Failed to fetch question details');
@@ -373,7 +376,12 @@
 
                 // Store the full question details
                 currentQuestionDetails = data;
-                console.log('Question details:', data);
+                console.log('Fetched question details:', data);
+                console.log('Question latex content:', data.latex);
+                console.log('Question has photos:', data.photo && data.photo.length > 0);
+                if (data.photo && data.photo.length > 0) {
+                    console.log('Number of photos:', data.photo.length);
+                }
 
                 const questionDisplay = document.getElementById('questionDisplay');
                 let questionHtml = '';
@@ -381,11 +389,13 @@
                 // Add the image if available
                 if (data.photo && data.photo.length > 0) {
                     questionHtml += `<img src="${data.photo[0].url}" alt="Question ${questionNumber}">`;
+                    console.log('Displaying photo:', data.photo[0].url);
                 }
 
                 // Add the question text/latex if available
                 if (data.latex) {
                     questionHtml += `<div class="question-text">${data.latex}</div>`;
+                    console.log('Displaying latex content (first 200 chars):', data.latex.substring(0, 200));
                 }
 
                 if (questionHtml) {
@@ -394,7 +404,10 @@
                     MathJax.typesetPromise([questionDisplay]).catch(err => console.error('MathJax Error:', err));
                 } else {
                     questionDisplay.innerHTML = 'Question content not found';
+                    console.log('No question content found to display');
                 }
+
+                console.log('=== QUESTION LOADING DEBUG END ===');
 
                 // Reset UI elements
                 document.getElementById('feedback').style.display = 'none';
@@ -403,6 +416,7 @@
                 document.getElementById('answerInput').value = '';
             } catch (error) {
                 console.error('Error loading question:', error);
+                console.log('=== QUESTION LOADING DEBUG END (ERROR) ===');
             }
         });
 
@@ -460,6 +474,11 @@
             const testNumber = document.getElementById('testNumberDropdown').value;
             const questionNumber = document.getElementById('questionNumberDropdown').value;
 
+            console.log('=== HINT DEBUG START ===');
+            console.log('Selected Test Number:', testNumber);
+            console.log('Selected Question Number:', questionNumber);
+            console.log('Current Question Details:', currentQuestionDetails);
+
             if (!testNumber || !questionNumber || !currentQuestionDetails) {
                 alert('Please select both test and question numbers');
                 return;
@@ -473,20 +492,33 @@
                 // Most questions have both photos and latex text
                 const questionContent = currentQuestionDetails.latex || `Test ${testNumber}, Question ${questionNumber}`;
                 
+                console.log('Question content being sent to API:', questionContent);
+                console.log('Question content length:', questionContent.length);
+                console.log('First 200 chars of question content:', questionContent.substring(0, 200));
+                
+                const requestBody = {
+                    testNumber,
+                    questionNumber,
+                    question: questionContent
+                };
+                
+                console.log('Full request body:', requestBody);
+                
                 const response = await fetch('/.netlify/functions/get-hints', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        testNumber,
-                        questionNumber,
-                        question: questionContent
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
+                console.log('API Response status:', response.status);
+                
                 if (!response.ok) throw new Error('Failed to get hints');
                 const data = await response.json();
+
+                console.log('API Response data:', data);
+                console.log('=== HINT DEBUG END ===');
 
                 // Display hints from each model
                 // Commenting out DeepSeek hint display
@@ -506,6 +538,7 @@
                 MathJax.typesetPromise(hintElements).catch(err => console.error('MathJax Error:', err));
             } catch (error) {
                 console.error('Error getting hints:', error);
+                console.log('=== HINT DEBUG END (ERROR) ===');
                 // Commenting out DeepSeek hint display
                 // document.querySelector('#deepseekHint .hint-content').innerHTML = 'Failed to get hint';
                 document.querySelector('#gpt4Hint .hint-content').innerHTML = 'Failed to get hint';
