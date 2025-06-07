@@ -251,6 +251,14 @@
                 transform: scale(0.7); /* Keep photo size reduction for print */
                 transform-origin: left top;
             }
+            /* Ensure QR codes print properly */
+            img[src*="qrserver.com"] {
+                display: block !important;
+                visibility: visible !important;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
         }
         .loading {
             display: none;
@@ -570,10 +578,41 @@
 
             worksheet.innerHTML = worksheetContent;
 
-            // Wait a moment for content to render, then print
-            setTimeout(() => {
-                window.print();
-            }, 500);
+            // Wait for all QR code images to load before printing
+            const qrImages = worksheet.querySelectorAll('img[src*="qrserver.com"]');
+            if (qrImages.length > 0) {
+                let loadedCount = 0;
+                const totalImages = qrImages.length;
+                
+                const checkAllLoaded = () => {
+                    loadedCount++;
+                    if (loadedCount === totalImages) {
+                        // All QR codes loaded, now print
+                        setTimeout(() => {
+                            window.print();
+                        }, 200); // Small additional delay for rendering
+                    }
+                };
+                
+                qrImages.forEach(img => {
+                    if (img.complete) {
+                        checkAllLoaded();
+                    } else {
+                        img.onload = checkAllLoaded;
+                        img.onerror = checkAllLoaded; // Continue even if some images fail to load
+                    }
+                });
+                
+                // Fallback: print after 3 seconds even if images haven't loaded
+                setTimeout(() => {
+                    window.print();
+                }, 3000);
+            } else {
+                // No QR codes, print immediately
+                setTimeout(() => {
+                    window.print();
+                }, 500);
+            }
         }
     </script>
 </body>
