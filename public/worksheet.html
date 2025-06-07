@@ -404,6 +404,11 @@
                                         ? `Clone Question (Original: Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]})` 
                                         : `Test ${q.testNumber}, #${q.questionNumber}`}
                                 </strong>
+                                <a href="explain.html?test=${encodeURIComponent(q.isClone ? q.originalQuestion.split(' - ')[0] : q.testNumber)}&question=${encodeURIComponent(q.isClone ? q.originalQuestion.split(' - ')[1] : q.questionNumber)}" 
+                                   target="_blank" 
+                                   style="margin-left: 15px; color: #007bff; text-decoration: none; font-size: 14px;">
+                                    📖 Explain
+                                </a>
                             </p>
                             <div class="question-content">
                                 <div class="question-text">

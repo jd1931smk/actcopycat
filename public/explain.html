@@ -271,6 +271,28 @@
         window.onload = async function() {
             await populateTestNumbers();
             populateQuestionNumbers();
+            
+            // Check for URL parameters and auto-populate dropdowns
+            const urlParams = new URLSearchParams(window.location.search);
+            const testParam = urlParams.get('test');
+            const questionParam = urlParams.get('question');
+            
+            if (testParam && questionParam) {
+                // Wait a moment for dropdowns to be populated
+                setTimeout(() => {
+                    const testDropdown = document.getElementById('testNumberDropdown');
+                    const questionDropdown = document.getElementById('questionNumberDropdown');
+                    
+                    // Set the test number
+                    testDropdown.value = testParam;
+                    
+                    // Set the question number
+                    questionDropdown.value = questionParam;
+                    
+                    // Trigger the change event for question dropdown to load the question
+                    questionDropdown.dispatchEvent(new Event('change'));
+                }, 500);
+            }
         };
 
         // Populate test numbers dropdown
