@@ -469,6 +469,10 @@
             hintBox.style.display = 'none';
 
             try {
+                // Always send the actual latex content if available, regardless of whether there are photos
+                // Most questions have both photos and latex text
+                const questionContent = currentQuestionDetails.latex || `Test ${testNumber}, Question ${questionNumber}`;
+                
                 const response = await fetch('/.netlify/functions/get-hints', {
                     method: 'POST',
                     headers: {
@@ -477,9 +481,7 @@
                     body: JSON.stringify({
                         testNumber,
                         questionNumber,
-                        question: currentQuestionDetails.photo && currentQuestionDetails.photo.length > 0 
-                            ? `[Image Question] Test ${testNumber}, Question ${questionNumber}`
-                            : currentQuestionDetails.latex || `Test ${testNumber}, Question ${questionNumber}`
+                        question: questionContent
                     })
                 });
 
