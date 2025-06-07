@@ -514,6 +514,10 @@
                     return `
                         <div class="question ${isClone ? 'clone-question' : ''}">
                             <p><strong>Question ${index + 1}</strong> (Source: ${source})</p>
+                            <p style="font-size: 14px; color: #666; margin: 5px 0;">
+                                📖 <strong>For explanation, visit:</strong> 
+                                explain.html?test=${encodeURIComponent(isClone ? q.originalQuestion.split(' - ')[0] : q.testNumber)}&question=${encodeURIComponent(isClone ? q.originalQuestion.split(' - ')[1] : q.questionNumber)}
+                            </p>
                             <div class="question-content">
                                 ${format === 'latex' ? latexBlock : ''}
                                 ${format === 'photo' ? photoBlock : ''}
