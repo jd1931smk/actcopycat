@@ -460,7 +460,7 @@ exports.handler = async (event) => {
                         const records = await drkBase.table(questionsTableId)
                             .select({
                                 filterByFormula: `FIND('${skillId}', ARRAYJOIN({Skill}))`,
-                                fields: ['Name', 'Question Number', 'Photo', 'LatexMarkdown']
+                                fields: ['Name', 'Question Number', 'Photo', 'PNG', 'LatexMarkdown']
                             })
                             .all();
 
@@ -471,13 +471,35 @@ exports.handler = async (event) => {
                             }
                         }
 
-                        const questions = records.map(record => ({
-                            id: record.id,
-                            name: record.get('Name'),
-                            questionNumber: record.get('Question Number'),
-                            photo: record.get('Photo'),
-                            latex: record.get('LatexMarkdown')
-                        }));
+                        const questions = records.map(record => {
+                            // Handle image fields - PNG takes priority over Photo
+                            let imageUrl = null;
+                            const pngField = record.get('PNG');
+                            const photoField = record.get('Photo');
+                            
+                            // Check PNG field first
+                            if (pngField && Array.isArray(pngField) && pngField.length > 0) {
+                                imageUrl = pngField;
+                                if (process.env.NODE_ENV !== 'production') {
+                                    console.log('Using PNG field for DRK question:', record.id);
+                                }
+                            }
+                            // Fall back to Photo field if PNG is empty
+                            else if (photoField && Array.isArray(photoField) && photoField.length > 0) {
+                                imageUrl = photoField;
+                                if (process.env.NODE_ENV !== 'production') {
+                                    console.log('Falling back to Photo field for DRK question:', record.id);
+                                }
+                            }
+                            
+                            return {
+                                id: record.id,
+                                name: record.get('Name'),
+                                questionNumber: record.get('Question Number'),
+                                photo: imageUrl, // This will be PNG if available, otherwise Photo
+                                latex: record.get('LatexMarkdown')
+                            };
+                        });
 
                         // Get the skill name from DRK Skills table
                         const skillsTableId = process.env.DRK_PANDA_SKILLS_TABLE_ID;
@@ -554,8 +576,8 @@ exports.handler = async (event) => {
                         .select({
                             filterByFormula: filterFormula,
                             fields: database === 'SAT' 
-                                ? ['Photo', 'LatexMarkdown', 'Diagram', 'Test Name', 'Question Number', 'Name', 'Answer']
-                                : ['Photo', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Name', 'Answer']
+                                ? ['Photo', 'PNG', 'LatexMarkdown', 'Diagram', 'Test Name', 'Question Number', 'Name', 'Answer']
+                                : ['Photo', 'PNG', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Name', 'Answer']
                         })
                         .all()
                         .catch(error => {
@@ -568,17 +590,39 @@ exports.handler = async (event) => {
                         firstRecordFields: records.length > 0 ? Object.keys(records[0].fields) : []
                     });
 
-                    const fetchedQuestions = records.map(record => ({
-                        id: record.id,
-                        photo: record.get('Photo'),
-                        latex: record.get('LatexMarkdown'),
-                        diagram: record.get('Diagram'),
-                        testNumber: database === 'SAT' ? record.get('Test Name') : record.get('Test Number'),
-                        questionNumber: record.get('Question Number'),
-                        name: record.get('Name'),
-                        answer: record.get('Answer'),
-                        isClone: false
-                    }));
+                    const fetchedQuestions = records.map(record => {
+                        // Handle image fields - PNG takes priority over Photo
+                        let imageUrl = null;
+                        const pngField = record.get('PNG');
+                        const photoField = record.get('Photo');
+                        
+                        // Check PNG field first
+                        if (pngField && Array.isArray(pngField) && pngField.length > 0) {
+                            imageUrl = pngField;
+                            if (process.env.NODE_ENV !== 'production') {
+                                console.log(`Using PNG field for ${database} question:`, record.id);
+                            }
+                        }
+                        // Fall back to Photo field if PNG is empty
+                        else if (photoField && Array.isArray(photoField) && photoField.length > 0) {
+                            imageUrl = photoField;
+                            if (process.env.NODE_ENV !== 'production') {
+                                console.log(`Falling back to Photo field for ${database} question:`, record.id);
+                            }
+                        }
+                        
+                        return {
+                            id: record.id,
+                            photo: imageUrl, // This will be PNG if available, otherwise Photo
+                            latex: record.get('LatexMarkdown'),
+                            diagram: record.get('Diagram'),
+                            testNumber: database === 'SAT' ? record.get('Test Name') : record.get('Test Number'),
+                            questionNumber: record.get('Question Number'),
+                            name: record.get('Name'),
+                            answer: record.get('Answer'),
+                            isClone: false
+                        };
+                    });
 
                     const includeClones = event.queryStringParameters.includeClones === 'true' && database !== 'SAT';
                     let allQuestions = fetchedQuestions;

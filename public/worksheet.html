@@ -1,5 +1,35 @@
-<!-- Trivial change: for git commit test -->
 <!DOCTYPE html>
+<!--
+    ACT Math Worksheet Generator - CopyCat ACT Application
+    
+    This page provides functionality to generate practice worksheets from ACT Math questions with:
+    
+    MAIN FUNCTIONALITY:
+    - Select questions by skill category from multiple databases (ACT, SAT, DRK)
+    - Generate printable worksheets with selected questions
+    - Include QR codes for explanations
+    - Option to include answer sheets
+    - Support for both LaTeX and photo formats
+    
+    IMAGE HANDLING:
+    - Backend automatically prioritizes PNG field over Photo field for better image quality
+    - Frontend displays the prioritized image data seamlessly
+    - Maintains support for multiple images per question
+    - Special handling for 2-image layouts (side-by-side display)
+    
+    KEY FEATURES:
+    - Question selection interface with checkboxes
+    - LaTeX mathematical rendering with KaTeX
+    - Responsive print layouts optimized for worksheets
+    - QR code generation for quick access to explanations
+    - Progressive Web App (PWA) capabilities for mobile use
+    
+    TECHNICAL DETAILS:
+    - Fetches data via Netlify Functions from Airtable
+    - Supports ACT, SAT, and DRK question databases
+    - Print-optimized CSS with proper page breaks
+    - Mobile-friendly interface with safe area support
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
