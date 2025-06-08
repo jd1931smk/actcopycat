@@ -385,8 +385,12 @@
                 if (!response.ok) throw new Error('Failed to fetch skills');
                 const skills = await response.json();
                 
-                // Sort skills alphabetically by name
-                skills.sort((a, b) => a.name.localeCompare(b.name));
+                // Sort skills alphabetically by name (with safety checks)
+                skills.sort((a, b) => {
+                    const nameA = a.name || '';
+                    const nameB = b.name || '';
+                    return nameA.localeCompare(nameB);
+                });
                 
                 const skillSelect = document.getElementById('skillSelect');
                 skillSelect.innerHTML = skills.map(skill => 
