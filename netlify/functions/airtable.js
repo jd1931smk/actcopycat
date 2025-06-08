@@ -446,8 +446,11 @@ exports.handler = async (event) => {
                 // Use environment variable for Panda Skills table ID
                 const pandaSkillsTableId = process.env.PANDA_SKILLS_TABLE_ID;
                 if (!pandaSkillsTableId) {
-                    console.error('[getPandaSkills Error]: Panda Skills table ID is not defined');
-                    return formatResponse(500, { message: 'Panda Skills table ID not configured.' });
+                    console.error('[getPandaSkills Error]: PANDA_SKILLS_TABLE_ID environment variable is not set');
+                    console.error('[getPandaSkills Error]: Please set PANDA_SKILLS_TABLE_ID to tblN3Jr1BtB7IsoVv in Netlify environment variables');
+                    return formatResponse(500, { 
+                        message: 'Panda Skills table ID not configured. Please set PANDA_SKILLS_TABLE_ID environment variable to tblN3Jr1BtB7IsoVv' 
+                    });
                 }
 
                 const pandaSkills = await actBase.table(pandaSkillsTableId)
