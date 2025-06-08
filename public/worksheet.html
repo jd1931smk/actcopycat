@@ -316,6 +316,13 @@
     <div class="controls">
         <h1>ACT Math Worksheet Generator</h1>
         <div class="form-group">
+            <label for="skillType">Skill Type:</label>
+            <select id="skillType" onchange="handleSkillTypeChange()">
+                <option value="skills">Regular Skills</option>
+                <option value="pandaSkills">Panda Skills</option>
+            </select>
+        </div>
+        <div class="form-group">
             <label for="skillSelect">Select Skill:</label>
             <select id="skillSelect">
                 <option value="">Loading skills...</option>
@@ -380,9 +387,16 @@
 
         // Load available skills when the page loads
         window.onload = async function() {
+            await loadSkills();
+        };
+
+        async function loadSkills() {
+            const skillType = document.getElementById('skillType').value;
+            const action = skillType === 'pandaSkills' ? 'getPandaSkills' : 'getSkills';
+            
             try {
-                const response = await fetch('/.netlify/functions/airtable?action=getSkills');
-                if (!response.ok) throw new Error('Failed to fetch skills');
+                const response = await fetch(`/.netlify/functions/airtable?action=${action}`);
+                if (!response.ok) throw new Error(`Failed to fetch ${skillType}`);
                 const skills = await response.json();
                 
                 // Sort skills alphabetically by name (with safety checks)
@@ -397,13 +411,24 @@
                     `<option value="${skill.id}">${skill.name}</option>`
                 ).join('');
             } catch (error) {
-                console.error('Error loading skills:', error);
+                console.error(`Error loading ${skillType}:`, error);
                 document.getElementById('skillSelect').innerHTML = '<option value="">Error loading skills</option>';
             }
-        };
+        }
+
+        function handleSkillTypeChange() {
+            // Clear current worksheet when switching skill types
+            document.getElementById('worksheet').innerHTML = '';
+            document.getElementById('generatePdf').style.display = 'none';
+            document.getElementById('selectionControls').style.display = 'none';
+            
+            // Reload skills for the new type
+            loadSkills();
+        }
 
         async function loadQuestions() {
             const skillId = document.getElementById('skillSelect').value;
+            const skillType = document.getElementById('skillType').value;
             const loading = document.getElementById('loading');
             const worksheet = document.getElementById('worksheet');
             const generatePdfButton = document.getElementById('generatePdf');
@@ -420,7 +445,19 @@
             selectionControls.style.display = 'none';
 
             try {
-                const response = await fetch(`/.netlify/functions/airtable?action=getWorksheetQuestions&skillId=${encodeURIComponent(skillId)}&includeClones=false`);
+                // Build query parameters based on skill type
+                const queryParams = new URLSearchParams({
+                    action: 'getWorksheetQuestions',
+                    includeClones: 'false'
+                });
+                
+                if (skillType === 'pandaSkills') {
+                    queryParams.append('pandaSkillId', skillId);
+                } else {
+                    queryParams.append('skillId', skillId);
+                }
+                
+                const response = await fetch(`/.netlify/functions/airtable?${queryParams.toString()}`);
                 if (!response.ok) throw new Error('Failed to fetch questions');
                 const data = await response.json();
                 allQuestions = data.questions.filter(q => !q.isClone); // Filter out any clone questions

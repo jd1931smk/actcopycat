@@ -7,6 +7,7 @@ if (process.env.NODE_ENV !== 'production') {
     console.log("DRK_BASE_ID:", process.env.DRK_BASE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("AIRTABLE_API_KEY:", process.env.AIRTABLE_API_KEY ? "✅ Loaded" : "❌ MISSING");
     console.log("SKILLS_TABLE_ID:", process.env.SKILLS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
+    console.log("PANDA_SKILLS_TABLE_ID:", process.env.PANDA_SKILLS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("QUESTIONS_TABLE_ID:", process.env.QUESTIONS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("COPYCATS_TABLE_ID:", process.env.COPYCATS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
     console.log("SAT_SKILLS_TABLE_ID:", process.env.SAT_SKILLS_TABLE_ID ? "✅ Loaded" : "❌ MISSING");
@@ -31,7 +32,7 @@ exports.handler = async (event) => {
     }
 
     // Consistent query parameter parsing
-    const { action, testNumber, questionNumber, questionId, skillId, testNumbersJson, database = 'ACT' } = event.queryStringParameters || {};
+    const { action, testNumber, questionNumber, questionId, skillId, pandaSkillId, testNumbersJson, database = 'ACT' } = event.queryStringParameters || {};
 
     // Select the appropriate base based on the database parameter
     let base;
@@ -437,10 +438,34 @@ exports.handler = async (event) => {
 
                 return formatResponse(200, skills);
 
-            case 'getWorksheetQuestions':
-                if (!skillId) return formatResponse(400, { error: 'Missing skillId' });
+            case 'getPandaSkills':
                 if (process.env.NODE_ENV !== 'production') {
-                    console.log(`Fetching worksheet questions for skill: ${skillId} from ${database} database`);
+                    console.log('Fetching Panda Skills from ACT database');
+                }
+                
+                // Use environment variable for Panda Skills table ID
+                const pandaSkillsTableId = process.env.PANDA_SKILLS_TABLE_ID;
+                if (!pandaSkillsTableId) {
+                    console.error('[getPandaSkills Error]: Panda Skills table ID is not defined');
+                    return formatResponse(500, { message: 'Panda Skills table ID not configured.' });
+                }
+
+                const pandaSkills = await actBase.table(pandaSkillsTableId)
+                    .select({
+                        fields: ['Name', 'Record ID']
+                    })
+                    .all()
+                    .then(records => records.map(record => ({
+                        id: record.get('Record ID'),
+                        name: record.get('Name')
+                    })));
+
+                return formatResponse(200, pandaSkills);
+
+            case 'getWorksheetQuestions':
+                if (!skillId && !pandaSkillId) return formatResponse(400, { error: 'Missing skillId or pandaSkillId' });
+                if (process.env.NODE_ENV !== 'production') {
+                    console.log(`Fetching worksheet questions for ${pandaSkillId ? 'panda skill: ' + pandaSkillId : 'skill: ' + skillId} from ${database} database`);
                 }
 
                 try {
@@ -515,55 +540,89 @@ exports.handler = async (event) => {
                     }
 
                     // Original handling for ACT and SAT databases
-                    const skillsTableId = database === 'SAT' ? process.env.SAT_SKILLS_TABLE_ID : process.env.SKILLS_TABLE_ID;
-                    if (!skillsTableId) {
-                        console.error('[getWorksheetQuestions Error]: Skills table ID is not defined for database:', database);
-                        return formatResponse(500, { message: 'Skills table ID not configured for this database.' });
-                    }
+                    let skillRecord, skillName, filterFormula;
+                    
+                    if (pandaSkillId && database === 'ACT') {
+                        // Handle Panda Skills for ACT database
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.log('Using Panda Skills approach for ACT database');
+                        }
+                        
+                        const pandaSkillsTableId = process.env.PANDA_SKILLS_TABLE_ID;
+                        if (!pandaSkillsTableId) {
+                            console.error('[getWorksheetQuestions Error]: Panda Skills table ID is not defined');
+                            return formatResponse(500, { message: 'Panda Skills table ID not configured.' });
+                        }
 
-                    const skillRecord = await base.table(skillsTableId)
-                        .find(skillId)
-                        .catch(error => {
-                            console.error("Error fetching skill record:", error);
-                            throw new Error("Failed to fetch skill record.");
-                        });
+                        skillRecord = await base.table(pandaSkillsTableId)
+                            .find(pandaSkillId)
+                            .catch(error => {
+                                console.error("Error fetching panda skill record:", error);
+                                throw new Error("Failed to fetch panda skill record.");
+                            });
 
-                    if (!skillRecord) {
-                        console.error('[getWorksheetQuestions Error]: Skill not found for ID:', skillId);
-                        return formatResponse(404, { message: "Skill not found." });
-                    }
+                        if (!skillRecord) {
+                            console.error('[getWorksheetQuestions Error]: Panda Skill not found for ID:', pandaSkillId);
+                            return formatResponse(404, { message: "Panda Skill not found." });
+                        }
 
-                    console.log('[getWorksheetQuestions Debug] Found skill record:', {
-                        skillId,
-                        skillName: skillRecord.fields.Name,
-                        database,
-                        hasLinkedQuestions: Boolean(skillRecord.fields.LinkedQuestions),
-                        linkedQuestionsCount: skillRecord.fields.LinkedQuestions ? skillRecord.fields.LinkedQuestions.length : 0
-                    });
+                        skillName = skillRecord.fields.Name || 'Unknown Panda Skill';
+                        
+                        // For Panda Skills, we need to search by the Panda Skill field in questions
+                        const questionsTableId = process.env.QUESTIONS_TABLE_ID;
+                        if (!questionsTableId) {
+                            console.error('[getWorksheetQuestions Error]: Questions table ID is not defined for ACT database');
+                            return formatResponse(500, { message: 'Questions table ID not configured for ACT database.' });
+                        }
 
-                    const linkedQuestions = skillRecord.fields.LinkedQuestions || [];
-                    console.log('[getWorksheetQuestions Debug] Linked Questions:', linkedQuestions);
+                        // Use Panda Skill field to filter questions
+                        filterFormula = `FIND('${pandaSkillId}', ARRAYJOIN({Panda Skill}))`;
+                        
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.log('[getWorksheetQuestions Debug] Panda Skill filter formula:', filterFormula);
+                        }
 
-                    if (linkedQuestions.length === 0) {
-                        console.log('[getWorksheetQuestions Debug] No linked questions found');
-                        return formatResponse(200, { questions: [], skillName: skillRecord.fields.Name || 'Unknown Skill' });
+                    } else {
+                        // Handle regular Skills for ACT and SAT databases
+                        const skillsTableId = database === 'SAT' ? process.env.SAT_SKILLS_TABLE_ID : process.env.SKILLS_TABLE_ID;
+                        if (!skillsTableId) {
+                            console.error('[getWorksheetQuestions Error]: Skills table ID is not defined for database:', database);
+                            return formatResponse(500, { message: 'Skills table ID not configured for this database.' });
+                        }
+
+                        skillRecord = await base.table(skillsTableId)
+                            .find(skillId)
+                            .catch(error => {
+                                console.error("Error fetching skill record:", error);
+                                throw new Error("Failed to fetch skill record.");
+                            });
+
+                        if (!skillRecord) {
+                            console.error('[getWorksheetQuestions Error]: Skill not found for ID:', skillId);
+                            return formatResponse(404, { message: "Skill not found." });
+                        }
+
+                        skillName = skillRecord.fields.Name || 'Unknown Skill';
+                        
+                        const linkedQuestions = skillRecord.fields.LinkedQuestions || [];
+                        
+                        if (linkedQuestions.length === 0) {
+                            console.log('[getWorksheetQuestions Debug] No linked questions found');
+                            return formatResponse(200, { questions: [], skillName });
+                        }
+
+                        // Different query logic for SAT vs ACT
+                        if (database === 'SAT') {
+                            filterFormula = `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`;
+                        } else {
+                            filterFormula = `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`;
+                        }
                     }
 
                     const questionsTableId = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
                     if (!questionsTableId) {
                         console.error('[getWorksheetQuestions Error]: Questions table ID is not defined for database:', database);
                         return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
-                    }
-
-                    // Different query logic for SAT vs ACT
-                    let filterFormula;
-                    if (database === 'SAT') {
-                        // For SAT, linkedQuestions contains record IDs just like ACT
-                        filterFormula = `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`;
-                        console.log('[getWorksheetQuestions Debug] SAT filter formula:', filterFormula);
-                    } else {
-                        // For ACT, linkedQuestions contains record IDs
-                        filterFormula = `OR(${linkedQuestions.map(id => `RECORD_ID() = '${id}'`).join(', ')})`;
                     }
 
                     console.log('[getWorksheetQuestions Debug] Querying questions table:', {
@@ -577,7 +636,7 @@ exports.handler = async (event) => {
                             filterByFormula: filterFormula,
                             fields: database === 'SAT' 
                                 ? ['Photo', 'PNG', 'LatexMarkdown', 'Diagram', 'Test Name', 'Question Number', 'Name', 'Answer']
-                                : ['Photo', 'PNG', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Name', 'Answer']
+                                : ['Photo', 'PNG', 'LatexMarkdown', 'Diagram', 'Test Number', 'Question Number', 'Name', 'Answer', 'Panda Skill']
                         })
                         .all()
                         .catch(error => {
@@ -681,7 +740,7 @@ exports.handler = async (event) => {
 
                     return formatResponse(200, {
                         questions: allQuestions,
-                        skillName: skillRecord.fields.Name || 'Unknown Skill'
+                        skillName: skillName
                     });
                 } catch (error) {
                     console.error('[getWorksheetQuestions Error]:', error);
