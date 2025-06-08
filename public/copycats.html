@@ -1,4 +1,41 @@
 <!DOCTYPE html>
+<!--
+    ACT Math Question Viewer - CopyCat ACT Application
+    
+    This page provides an interactive viewer for ACT Math questions with the following features:
+    
+    MAIN FUNCTIONALITY:
+    - Browse authentic ACT Math questions from multiple test forms (A11, B04, B05, C01, etc.)
+    - Select questions by test number and question number (1-60 for each test)
+    - View questions with proper mathematical notation rendered using KaTeX
+    - Display question diagrams and images when available
+    - Navigate between questions using Previous/Next buttons
+    
+    KEY FEATURES:
+    - Dark-themed, modern UI optimized for readability
+    - Full LaTeX/KaTeX support for mathematical expressions and formulas
+    - Responsive design that works on desktop and mobile devices
+    - Integration with Airtable database via Netlify Functions
+    - Display of AI-generated "clone" questions (similar practice problems)
+    - Support for multiple question databases (ACT, SAT, DRK)
+    
+    TECHNICAL DETAILS:
+    - Pure HTML/JavaScript application (no frameworks)
+    - Uses Netlify Functions for serverless API calls to Airtable
+    - KaTeX library for mathematical rendering
+    - Real-time question fetching and display
+    - Image handling for question diagrams
+    
+    DATA SOURCES:
+    - Original ACT questions stored in Airtable with LaTeX markup
+    - Question diagrams and images from Airtable attachments
+    - AI-generated similar questions from various models
+    
+    NAVIGATION:
+    - Dropdown selectors for test and question numbers
+    - Previous/Next buttons for sequential browsing
+    - Direct question fetching via "Fetch and Render" button
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -410,21 +447,55 @@
                     const questionSection = document.createElement('div');
                     questionSection.className = 'section';
 
-                    // Enhanced diagram handling - display image from Diagrams field if present
-                    console.log('Checking Diagrams field...');
-                    if (data.Diagrams) {
-                        console.log('Diagrams field found!');
+                    // Enhanced image handling - PNG takes priority over Photo, then Diagrams
+                    console.log('Checking for question images...');
+                    
+                    // First check for imageUrl (PNG with Photo fallback)
+                    if (data.imageUrl) {
+                        console.log('Main image found (PNG/Photo):', data.imageUrl);
+                        let imageUrl = data.imageUrl;
+                        
+                        if (typeof imageUrl === 'string' && imageUrl.trim()) {
+                            console.log('Image URL is valid string:', imageUrl);
+                            imageUrl = imageUrl.trim();
+                            
+                            if (imageUrl.startsWith('http') || imageUrl.startsWith('/') || imageUrl.startsWith('./') || imageUrl.startsWith('data:')) {
+                                console.log('Creating main image element for:', imageUrl);
+                                const mainImg = document.createElement('img');
+                                mainImg.src = imageUrl;
+                                mainImg.alt = 'Question Image';
+                                mainImg.style.display = 'block';
+                                mainImg.style.margin = '0 auto 20px auto';
+                                mainImg.style.maxWidth = '100%';
+                                mainImg.style.height = 'auto';
+                                mainImg.style.borderRadius = '4px';
+                                mainImg.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+                                
+                                mainImg.onerror = function() {
+                                    console.error('Failed to load main image:', imageUrl);
+                                    this.style.display = 'none';
+                                };
+                                
+                                mainImg.onload = function() {
+                                    console.log('Main image loaded successfully:', imageUrl);
+                                };
+                                
+                                questionSection.appendChild(mainImg);
+                                console.log('Main image element added to question section');
+                            }
+                        }
+                    }
+                    // Then check for Diagrams field if no main image
+                    else if (data.Diagrams) {
+                        console.log('Diagrams field found as fallback!');
                         let diagramUrl = data.Diagrams;
                         
-                        // Handle different diagram field formats
                         if (typeof diagramUrl === 'string' && diagramUrl.trim()) {
                             console.log('Diagram URL is valid string:', diagramUrl);
-                            // Clean up the URL if needed
                             diagramUrl = diagramUrl.trim();
                             
-                            // More lenient URL checking - also allow data: URLs and other formats
                             if (diagramUrl.startsWith('http') || diagramUrl.startsWith('/') || diagramUrl.startsWith('./') || diagramUrl.startsWith('data:')) {
-                                console.log('Creating image element for:', diagramUrl);
+                                console.log('Creating diagram image element for:', diagramUrl);
                                 const diagramImg = document.createElement('img');
                                 diagramImg.src = diagramUrl;
                                 diagramImg.alt = 'Question Diagram';
@@ -435,28 +506,21 @@
                                 diagramImg.style.borderRadius = '4px';
                                 diagramImg.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
                                 
-                                // Add error handling for broken images
                                 diagramImg.onerror = function() {
                                     console.error('Failed to load diagram:', diagramUrl);
-                                    console.error('Image error event triggered');
                                     this.style.display = 'none';
                                 };
                                 
-                                // Add loading placeholder
                                 diagramImg.onload = function() {
                                     console.log('Diagram loaded successfully:', diagramUrl);
                                 };
                                 
                                 questionSection.appendChild(diagramImg);
-                                console.log('Image element added to question section');
-                            } else {
-                                console.log('Diagram URL does not match expected patterns:', diagramUrl);
+                                console.log('Diagram image element added to question section');
                             }
-                        } else {
-                            console.log('Diagrams field is not a valid string or is empty');
                         }
                     } else {
-                        console.log('No Diagrams field found in data');
+                        console.log('No images found in data (checked imageUrl and Diagrams)');
                     }
 
                     // Create a simple container with the katex-content class

@@ -131,7 +131,7 @@ exports.handler = async (event) => {
                 const question = await base.table(questionsTableIdDetails)
                     .select({
                         filterByFormula: detailsFilterFormula,
-                        fields: ['Photo', 'Record ID', 'LatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
+                        fields: ['Photo', 'PNG', 'Record ID', 'LatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
                     })
                     .firstPage()
                     .then(records => {
@@ -142,6 +142,8 @@ exports.handler = async (event) => {
                                     testNumber: records[0].get('Test Number'),
                                     questionNumber: records[0].get('Question Number'),
                                     katex: records[0].get('LatexMarkdown') ? 'present' : 'missing',
+                                    png: records[0].get('PNG') ? 'present' : 'missing',
+                                    photo: records[0].get('Photo') ? 'present' : 'missing',
                                     diagrams: records[0].get('Diagrams') ? 'present' : 'missing'
                                 });
                             }
@@ -153,6 +155,31 @@ exports.handler = async (event) => {
                         }
                         if (katexContent) {
                             katexContent = katexContent.trim();
+                        }
+                        
+                        // Handle image fields - PNG takes priority over Photo
+                        let imageUrl = null;
+                        const pngField = records[0].get('PNG');
+                        const photoField = records[0].get('Photo');
+                        
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.log('Raw PNG field:', pngField);
+                            console.log('Raw Photo field:', photoField);
+                        }
+                        
+                        // Check PNG field first
+                        if (pngField && Array.isArray(pngField) && pngField.length > 0) {
+                            imageUrl = pngField[0].url;
+                            if (process.env.NODE_ENV !== 'production') {
+                                console.log('Using PNG field for image:', imageUrl);
+                            }
+                        }
+                        // Fall back to Photo field if PNG is empty
+                        else if (photoField && Array.isArray(photoField) && photoField.length > 0) {
+                            imageUrl = photoField[0].url;
+                            if (process.env.NODE_ENV !== 'production') {
+                                console.log('Falling back to Photo field for image:', imageUrl);
+                            }
                         }
                         
                         // Handle Diagrams field - Airtable attachments come as arrays
@@ -172,6 +199,8 @@ exports.handler = async (event) => {
                         const response = {
                             id: records[0].get('Record ID'),
                             photo: records[0].get('Photo'),
+                            png: records[0].get('PNG'),
+                            imageUrl: imageUrl, // This will be PNG if available, otherwise Photo
                             katex: katexContent,
                             Diagrams: diagramUrl
                         };
