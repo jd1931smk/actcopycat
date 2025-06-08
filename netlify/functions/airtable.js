@@ -578,11 +578,13 @@ exports.handler = async (event) => {
                             return formatResponse(500, { message: 'Questions table ID not configured for ACT database.' });
                         }
 
-                        // Use Panda Skill field to filter questions
-                        filterFormula = `FIND('${pandaSkillId}', ARRAYJOIN({Panda Skill}))`;
+                        // Use Panda Skill field to filter questions - try both ID and name
+                        filterFormula = `OR(FIND('${pandaSkillId}', ARRAYJOIN({Panda Skill})), FIND('${skillName}', ARRAYJOIN({Panda Skill})))`;
                         
                         if (process.env.NODE_ENV !== 'production') {
                             console.log('[getWorksheetQuestions Debug] Panda Skill filter formula:', filterFormula);
+                            console.log('[getWorksheetQuestions Debug] Searching for Panda Skill ID:', pandaSkillId);
+                            console.log('[getWorksheetQuestions Debug] Panda Skill Name:', skillName);
                         }
 
                     } else {
@@ -651,6 +653,14 @@ exports.handler = async (event) => {
                         count: records.length,
                         firstRecordFields: records.length > 0 ? Object.keys(records[0].fields) : []
                     });
+                    
+                    // Debug Panda Skill field values if using Panda Skills
+                    if (pandaSkillId && records.length > 0) {
+                        console.log('[getWorksheetQuestions Debug] Sample Panda Skill field values:');
+                        records.slice(0, 3).forEach((record, index) => {
+                            console.log(`Record ${index + 1} Panda Skill:`, record.get('Panda Skill'));
+                        });
+                    }
 
                     const fetchedQuestions = records.map(record => {
                         // Handle image fields - PNG takes priority over Photo
