@@ -449,20 +449,40 @@
 
                     // Enhanced image handling - PNG takes priority over Photo, then Diagrams
                     console.log('Checking for question images...');
+                    console.log('Available image fields:', {
+                        imageUrl: data.imageUrl,
+                        png: data.png,
+                        photo: data.photo
+                    });
                     
-                    // First check for imageUrl (PNG with Photo fallback)
-                    if (data.imageUrl) {
-                        console.log('Main image found (PNG/Photo):', data.imageUrl);
-                        let imageUrl = data.imageUrl;
-                        
-                        if (typeof imageUrl === 'string' && imageUrl.trim()) {
-                            console.log('Image URL is valid string:', imageUrl);
-                            imageUrl = imageUrl.trim();
+                    // Determine the best image to use (PNG first, then Photo)
+                    let bestImageUrl = null;
+                    
+                    // First priority: PNG field
+                    if (data.png && Array.isArray(data.png) && data.png.length > 0) {
+                        bestImageUrl = data.png[0].url;
+                        console.log('Using PNG image:', bestImageUrl);
+                    }
+                    // Second priority: Photo field
+                    else if (data.photo && Array.isArray(data.photo) && data.photo.length > 0) {
+                        bestImageUrl = data.photo[0].url;
+                        console.log('Using Photo image (PNG not available):', bestImageUrl);
+                    }
+                    // Third priority: imageUrl (fallback from server logic)
+                    else if (data.imageUrl) {
+                        bestImageUrl = data.imageUrl;
+                        console.log('Using server-provided imageUrl:', bestImageUrl);
+                    }
+                    
+                    // Display the selected image
+                    if (bestImageUrl) {
+                        if (typeof bestImageUrl === 'string' && bestImageUrl.trim()) {
+                            console.log('Creating image element for:', bestImageUrl);
+                            bestImageUrl = bestImageUrl.trim();
                             
-                            if (imageUrl.startsWith('http') || imageUrl.startsWith('/') || imageUrl.startsWith('./') || imageUrl.startsWith('data:')) {
-                                console.log('Creating main image element for:', imageUrl);
+                            if (bestImageUrl.startsWith('http') || bestImageUrl.startsWith('/') || bestImageUrl.startsWith('./') || bestImageUrl.startsWith('data:')) {
                                 const mainImg = document.createElement('img');
-                                mainImg.src = imageUrl;
+                                mainImg.src = bestImageUrl;
                                 mainImg.alt = 'Question Image';
                                 mainImg.style.display = 'block';
                                 mainImg.style.margin = '0 auto 20px auto';
@@ -472,12 +492,12 @@
                                 mainImg.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
                                 
                                 mainImg.onerror = function() {
-                                    console.error('Failed to load main image:', imageUrl);
+                                    console.error('Failed to load main image:', bestImageUrl);
                                     this.style.display = 'none';
                                 };
                                 
                                 mainImg.onload = function() {
-                                    console.log('Main image loaded successfully:', imageUrl);
+                                    console.log('Main image loaded successfully:', bestImageUrl);
                                 };
                                 
                                 questionSection.appendChild(mainImg);
