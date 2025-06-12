@@ -99,6 +99,22 @@
             box-sizing: border-box;
         }
         
+        /* Autocomplete input styling */
+        #testNumberInput, #questionNumberInput {
+            margin-bottom: 15px;
+        }
+        
+        #testNumberInput::placeholder, #questionNumberInput::placeholder {
+            color: #888;
+            font-style: italic;
+        }
+        
+        /* Datalist dropdown styling for better contrast */
+        datalist {
+            background-color: #333;
+            color: #f0f0f0;
+        }
+        
         button {
             background-color: #6557ed;
             color: white;
@@ -203,12 +219,17 @@
 </head>
 <body>
     <div class="selection-area">
-        <select id="testNumberDropdown">
-            <option value="">Select Test</option>
-        </select>
-        <select id="questionNumberDropdown">
-            <option value="">Select Question</option>
-        </select>
+        <label for="testNumberInput">Test Number:</label>
+        <input type="text" id="testNumberInput" list="testNumberList" placeholder="Type test number (e.g. A11, 72C)" autocomplete="off">
+        <datalist id="testNumberList">
+            <!-- Test numbers populated by JavaScript -->
+        </datalist>
+        
+        <label for="questionNumberInput">Question Number:</label>
+        <input type="number" id="questionNumberInput" list="questionNumberList" placeholder="Question 1-60" min="1" max="60" autocomplete="off">
+        <datalist id="questionNumberList">
+            <!-- Question numbers 1-60 populated by JavaScript -->
+        </datalist>
     </div>
 
     <div class="question-area">
@@ -266,62 +287,60 @@
             populateTestNumbers();
             populateQuestionNumbers();
             
-            // Check for URL parameters and auto-populate dropdowns
+            // Check for URL parameters and auto-populate inputs
             const urlParams = new URLSearchParams(window.location.search);
             const testParam = urlParams.get('test');
             const questionParam = urlParams.get('question');
             
             if (testParam && questionParam) {
-                // Dropdowns are populated immediately (no async wait needed)
-                const testDropdown = document.getElementById('testNumberDropdown');
-                const questionDropdown = document.getElementById('questionNumberDropdown');
+                // Inputs are populated immediately (no async wait needed)
+                const testInput = document.getElementById('testNumberInput');
+                const questionInput = document.getElementById('questionNumberInput');
                 
                 // Set the test number
-                testDropdown.value = testParam;
+                testInput.value = testParam;
                 
                 // Set the question number
-                questionDropdown.value = questionParam;
+                questionInput.value = questionParam;
                 
-                // Trigger the change event for question dropdown to load the question
-                questionDropdown.dispatchEvent(new Event('change'));
+                // Trigger the change event for question input to load the question
+                questionInput.dispatchEvent(new Event('change'));
             }
         };
 
-        // Populate test numbers dropdown (using hardcoded data for fast loading)
+        // Populate test numbers datalist (using hardcoded data for fast loading)
         function populateTestNumbers() {
-            const dropdown = document.getElementById('testNumberDropdown');
-            dropdown.innerHTML = '<option value="">Select Test</option>';
+            const datalist = document.getElementById('testNumberList');
+            datalist.innerHTML = '';
             
             // Use hardcoded test numbers (no API call needed)
             testNumbers.forEach(testNumber => {
                 const option = document.createElement('option');
                 option.value = testNumber;
-                option.textContent = testNumber;
-                dropdown.appendChild(option);
+                datalist.appendChild(option);
             });
         }
 
-        // Populate question numbers dropdown (hardcoded 1-60 for fast loading)
+        // Populate question numbers datalist (hardcoded 1-60 for fast loading)
         function populateQuestionNumbers() {
-            const dropdown = document.getElementById('questionNumberDropdown');
-            dropdown.innerHTML = '<option value="">Select Question</option>';
+            const datalist = document.getElementById('questionNumberList');
+            datalist.innerHTML = '';
             
             // ACT Math tests always have questions 1-60
             for (let i = 1; i <= 60; i++) {
                 const option = document.createElement('option');
                 option.value = i;
-                option.textContent = i;
-                dropdown.appendChild(option);
+                datalist.appendChild(option);
             }
         }
 
-        // Event listener for test number selection
-        document.getElementById('testNumberDropdown').addEventListener('change', async function() {
-            const testNumber = this.value;
+        // Event listener for test number input
+        document.getElementById('testNumberInput').addEventListener('input', function() {
+            const testNumber = this.value.trim();
             if (!testNumber) return;
 
-            // Reset question number dropdown selection
-            document.getElementById('questionNumberDropdown').value = '';
+            // Reset question number input selection
+            document.getElementById('questionNumberInput').value = '';
             
             // Reset UI elements
             document.getElementById('feedback').style.display = 'none';
@@ -334,10 +353,10 @@
         // Add a variable to store the current question details
         let currentQuestionDetails = null;
 
-        // Event listener for question number selection
-        document.getElementById('questionNumberDropdown').addEventListener('change', async function() {
-            const testNumber = document.getElementById('testNumberDropdown').value;
-            const questionNumber = this.value;
+        // Event listener for question number input
+        document.getElementById('questionNumberInput').addEventListener('change', async function() {
+            const testNumber = document.getElementById('testNumberInput').value.trim();
+            const questionNumber = this.value.trim();
             if (!testNumber || !questionNumber) return;
 
             console.log('=== QUESTION LOADING DEBUG START ===');
@@ -396,8 +415,8 @@
 
         // Check answer function
         async function checkAnswer() {
-            const testNumber = document.getElementById('testNumberDropdown').value;
-            const questionNumber = document.getElementById('questionNumberDropdown').value;
+            const testNumber = document.getElementById('testNumberInput').value.trim();
+            const questionNumber = document.getElementById('questionNumberInput').value.trim();
             const answer = document.getElementById('answerInput').value.toUpperCase();
             const feedback = document.getElementById('feedback');
 
@@ -445,8 +464,8 @@
         async function getHint() {
             const hintBox = document.getElementById('hintBox');
             const loading = document.getElementById('loading');
-            const testNumber = document.getElementById('testNumberDropdown').value;
-            const questionNumber = document.getElementById('questionNumberDropdown').value;
+            const testNumber = document.getElementById('testNumberInput').value.trim();
+            const questionNumber = document.getElementById('questionNumberInput').value.trim();
 
             console.log('=== HINT DEBUG START ===');
             console.log('Selected Test Number:', testNumber);
@@ -526,8 +545,8 @@
 
         // Get explanation function
         async function getExplanation() {
-            const testNumber = document.getElementById('testNumberDropdown').value;
-            const questionNumber = document.getElementById('questionNumberDropdown').value;
+            const testNumber = document.getElementById('testNumberInput').value.trim();
+            const questionNumber = document.getElementById('questionNumberInput').value.trim();
 
             if (!testNumber || !questionNumber) {
                 alert('Please select both test and question numbers');
