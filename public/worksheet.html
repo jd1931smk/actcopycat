@@ -345,6 +345,23 @@
                 <option value="photo">Photo</option>
             </select>
         </div>
+        <div class="form-group" style="margin-top: 15px;">
+            <label>Difficulty Level (by Question Number):</label>
+            <div style="display: flex; gap: 15px; margin-top: 8px;">
+                <label style="display: flex; align-items: center; font-weight: normal;">
+                    <input type="checkbox" id="easyDifficulty" checked style="margin-right: 5px;">
+                    Easy (1-20)
+                </label>
+                <label style="display: flex; align-items: center; font-weight: normal;">
+                    <input type="checkbox" id="mediumDifficulty" checked style="margin-right: 5px;">
+                    Medium (21-40)
+                </label>
+                <label style="display: flex; align-items: center; font-weight: normal;">
+                    <input type="checkbox" id="hardDifficulty" checked style="margin-right: 5px;">
+                    Hard (41-60)
+                </label>
+            </div>
+        </div>
     </div>
     
 
@@ -360,7 +377,25 @@
 
     <script>
         let allQuestions = [];
+        let filteredQuestions = [];
         let skillName = '';
+
+        // Function to filter questions by difficulty based on question number
+        function filterQuestionsByDifficulty(questions) {
+            const easyChecked = document.getElementById('easyDifficulty').checked;
+            const mediumChecked = document.getElementById('mediumDifficulty').checked;
+            const hardChecked = document.getElementById('hardDifficulty').checked;
+            
+            return questions.filter(q => {
+                const questionNum = parseInt(q.questionNumber);
+                if (isNaN(questionNum)) return true; // Include questions without valid numbers
+                
+                if (questionNum >= 1 && questionNum <= 20 && easyChecked) return true;
+                if (questionNum >= 21 && questionNum <= 40 && mediumChecked) return true;
+                if (questionNum >= 41 && questionNum <= 60 && hardChecked) return true;
+                return false;
+            });
+        }
 
         // Function to render markdown with math
         function renderMathMarkdown(content) {
@@ -463,17 +498,45 @@
                 allQuestions = data.questions.filter(q => !q.isClone); // Filter out any clone questions
                 skillName = data.skillName;
 
+                // Apply difficulty filtering
+                filteredQuestions = filterQuestionsByDifficulty(allQuestions);
+
                 // Debug: log questions data to see what we're receiving
                 console.log('All questions data:', allQuestions);
+                console.log('Filtered questions by difficulty:', filteredQuestions);
                 if (allQuestions.length > 0) {
                     console.log('First question LaTeX content:', allQuestions[0].latex);
                     console.log('First question fields:', Object.keys(allQuestions[0]));
                 }
 
+                displayQuestions();
+            } catch (error) {
+                console.error('Error loading questions:', error);
+                worksheet.innerHTML = '<p>Error loading questions. Please try again.</p>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayQuestions() {
+            const worksheet = document.getElementById('worksheet');
+            const selectionControls = document.getElementById('selectionControls');
+            const generatePdfButton = document.getElementById('generatePdf');
+
+            if (filteredQuestions.length === 0) {
                 worksheet.innerHTML = `
                     <h2>Question Selection for ${skillName}</h2>
-                    <p>Select the questions you want to include in your worksheet:</p>
-                    ${allQuestions.map((q, index) => `
+                    <p>No questions found for the selected difficulty levels. Please adjust your difficulty selection.</p>
+                `;
+                selectionControls.style.display = 'none';
+                generatePdfButton.style.display = 'none';
+                return;
+            }
+
+            worksheet.innerHTML = `
+                <h2>Question Selection for ${skillName}</h2>
+                <p>Select the questions you want to include in your worksheet (${filteredQuestions.length} questions available):</p>
+                                 ${filteredQuestions.map((q, index) => `
                         <div class="question ${q.isClone ? 'clone-question' : ''}" id="question-${q.id}">
                             <input type="checkbox" 
                                    class="question-checkbox" 
@@ -485,6 +548,9 @@
                                     ${q.isClone 
                                         ? `Clone Question (Original: Test ${q.originalQuestion.split(' - ')[0]}, #${q.originalQuestion.split(' - ')[1]})` 
                                         : `Test ${q.testNumber}, #${q.questionNumber}`}
+                                    <span style="font-size: 14px; color: #666; margin-left: 10px;">
+                                        [${q.questionNumber <= 20 ? 'Easy' : q.questionNumber <= 40 ? 'Medium' : 'Hard'}]
+                                    </span>
                                 </strong>
                                 <a href="explain.html?test=${encodeURIComponent(q.isClone ? q.originalQuestion.split(' - ')[0] : q.testNumber)}&question=${encodeURIComponent(q.isClone ? q.originalQuestion.split(' - ')[1] : q.questionNumber)}" 
                                    target="_blank" 
@@ -514,12 +580,6 @@
                 selectionControls.style.display = 'block';
                 generatePdfButton.style.display = 'inline-block';
                 updateSelection();
-            } catch (error) {
-                console.error('Error loading questions:', error);
-                worksheet.innerHTML = '<p>Error loading questions. Please try again.</p>';
-            } finally {
-                loading.style.display = 'none';
-            }
         }
 
         function updateSelection() {
@@ -553,9 +613,24 @@
             updateSelection();
         }
 
+        // Function to refresh the question display when difficulty filters change
+        function refreshQuestionDisplay() {
+            if (allQuestions.length > 0) {
+                filteredQuestions = filterQuestionsByDifficulty(allQuestions);
+                displayQuestions();
+            }
+        }
+
+        // Add event listeners for difficulty checkboxes
+        window.addEventListener('load', function() {
+            document.getElementById('easyDifficulty').addEventListener('change', refreshQuestionDisplay);
+            document.getElementById('mediumDifficulty').addEventListener('change', refreshQuestionDisplay);
+            document.getElementById('hardDifficulty').addEventListener('change', refreshQuestionDisplay);
+        });
+
         async function generatePdf() {
             const selectedQuestions = Array.from(document.querySelectorAll('.question-checkbox:checked'))
-                .map(cb => allQuestions[parseInt(cb.dataset.index)]);
+                .map(cb => filteredQuestions[parseInt(cb.dataset.index)]);
             const includeAnswerSheet = document.getElementById('includeAnswerSheet').checked;
             const currentDate = new Date().toLocaleDateString();
             const worksheet = document.getElementById('worksheet');
