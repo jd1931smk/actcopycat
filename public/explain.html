@@ -246,30 +246,24 @@
     </div>
 
     <script>
-        // Static test numbers as fallback
-        const staticTestNumbers = [
-            '1MC', '2MC', '3MC', '4MC', '5MC',
-            '52C', '52D', '52F', '52G',
-            '67A', '67B', '67C', '67D', '67E', '67F',
-            '71C', '71E', '71H',
-            '72C', '72E', '72F', '72G', '72H',
-            '73C', '73E', '73G', '73H',
-            '74C', '74D', '74E', '74F', '74G', '74H',
-            '75A', '75D', '75E', '75F',
-            'A9', 'A10', 'A11',
-            'B02', 'B04', 'B05',
-            'C01', 'C02', 'C03-2',
-            'D03', 'D06',
-            'F12',
-            'MC1', 'MC2', 'MC3', 'MC4', 'MC5',
-            'Red Book 1', 'Red Book 2', 'Red Book 3',
-            'SATX',
-            'Z04', 'Z15'
-        ];
+        // Hardcoded test numbers (updated December 2024) - only needs updating ~every 3 months
+        // To update: run `curl -s "https://actcopycat.netlify.app/.netlify/functions/airtable?action=getTestNumbers"`
+        const testNumbers = [
+            "1MC", "2MC", "3MC", "4MC", "5MC", "16MC2", "52C", "54D", "55C", "56A", "56B",
+            "57B", "58E", "59C", "59F", "60B", "60C", "60E", "60F", "61B", "61C", "61D", "61E",
+            "61F", "62D", "63A", "63C", "63D", "63E", "63F", "64A", "64E", "65B", "65C", "65D",
+            "65E", "65F", "66A", "66C", "66D", "66F", "67A", "67B", "67C", "67F", "68A", "68C",
+            "68G", "69A", "69F", "70A", "70B", "70C", "70G", "71A", "71C", "71E", "71G", "71H",
+            "72C", "72E", "72F", "72G", "73C", "73E", "73G", "74C", "74F", "74H", "A9", "A10",
+            "A11", "B02", "B04", "B05", "B62", "C01", "C02", "C03-2", "D03", "D05", "D06", "F07",
+            "F12", "H18", "H31", "Red Book 1", "Red Book 2", "Red Book 3", "SATX", "SHMM1",
+            "SHMM2", "SHMM3", "SHMM4", "SHMM5", "SHMM6", "SHMM7", "SHMM8", "SHMM9", "Z04",
+            "Z08", "Z13", "Z15"
+        ].filter(test => test !== null).sort(); // Remove null entries and sort alphabetically
 
-        // Load test numbers on page load
-        window.onload = async function() {
-            await populateTestNumbers();
+        // Load test numbers on page load (now using hardcoded data for faster loading)
+        window.onload = function() {
+            populateTestNumbers();
             populateQuestionNumbers();
             
             // Check for URL parameters and auto-populate dropdowns
@@ -278,61 +272,41 @@
             const questionParam = urlParams.get('question');
             
             if (testParam && questionParam) {
-                // Wait a moment for dropdowns to be populated
-                setTimeout(() => {
-                    const testDropdown = document.getElementById('testNumberDropdown');
-                    const questionDropdown = document.getElementById('questionNumberDropdown');
-                    
-                    // Set the test number
-                    testDropdown.value = testParam;
-                    
-                    // Set the question number
-                    questionDropdown.value = questionParam;
-                    
-                    // Trigger the change event for question dropdown to load the question
-                    questionDropdown.dispatchEvent(new Event('change'));
-                }, 500);
+                // Dropdowns are populated immediately (no async wait needed)
+                const testDropdown = document.getElementById('testNumberDropdown');
+                const questionDropdown = document.getElementById('questionNumberDropdown');
+                
+                // Set the test number
+                testDropdown.value = testParam;
+                
+                // Set the question number
+                questionDropdown.value = questionParam;
+                
+                // Trigger the change event for question dropdown to load the question
+                questionDropdown.dispatchEvent(new Event('change'));
             }
         };
 
-        // Populate test numbers dropdown
-        async function populateTestNumbers() {
+        // Populate test numbers dropdown (using hardcoded data for fast loading)
+        function populateTestNumbers() {
             const dropdown = document.getElementById('testNumberDropdown');
             dropdown.innerHTML = '<option value="">Select Test</option>';
             
-            try {
-                const response = await fetch('/.netlify/functions/airtable?action=getTestNumbers');
-                if (!response.ok) throw new Error('Failed to fetch test numbers');
-                const testNumbers = await response.json();
-                
-                // Sort the test numbers alphabetically
-                testNumbers.sort();
-                
-                testNumbers.forEach(testNumber => {
-                    const option = document.createElement('option');
-                    option.value = testNumber;
-                    option.textContent = testNumber;
-                    dropdown.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error loading test numbers from API:', error);
-                console.log('Falling back to static test numbers list');
-                
-                // Use static list as fallback
-                staticTestNumbers.forEach(testNumber => {
-                    const option = document.createElement('option');
-                    option.value = testNumber;
-                    option.textContent = testNumber;
-                    dropdown.appendChild(option);
-                });
-            }
+            // Use hardcoded test numbers (no API call needed)
+            testNumbers.forEach(testNumber => {
+                const option = document.createElement('option');
+                option.value = testNumber;
+                option.textContent = testNumber;
+                dropdown.appendChild(option);
+            });
         }
 
-        // Populate question numbers dropdown (1-60)
+        // Populate question numbers dropdown (hardcoded 1-60 for fast loading)
         function populateQuestionNumbers() {
             const dropdown = document.getElementById('questionNumberDropdown');
             dropdown.innerHTML = '<option value="">Select Question</option>';
             
+            // ACT Math tests always have questions 1-60
             for (let i = 1; i <= 60; i++) {
                 const option = document.createElement('option');
                 option.value = i;
