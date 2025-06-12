@@ -362,6 +362,31 @@
                 </label>
             </div>
         </div>
+        <div class="form-group" style="margin-top: 15px;">
+            <label>Exclude tests starting with:</label>
+            <div style="display: flex; gap: 15px; margin-top: 8px;">
+                <label style="display: flex; align-items: center; font-weight: normal;">
+                    <input type="checkbox" id="excludeD" style="margin-right: 5px;">
+                    D
+                </label>
+                <label style="display: flex; align-items: center; font-weight: normal;">
+                    <input type="checkbox" id="excludeE" style="margin-right: 5px;">
+                    E
+                </label>
+                <label style="display: flex; align-items: center; font-weight: normal;">
+                    <input type="checkbox" id="excludeF" style="margin-right: 5px;">
+                    F
+                </label>
+                <label style="display: flex; align-items: center; font-weight: normal;">
+                    <input type="checkbox" id="excludeG" style="margin-right: 5px;">
+                    G
+                </label>
+                <label style="display: flex; align-items: center; font-weight: normal;">
+                    <input type="checkbox" id="excludeH" style="margin-right: 5px;">
+                    H
+                </label>
+            </div>
+        </div>
     </div>
     
 
@@ -461,6 +486,34 @@
             loadSkills();
         }
 
+        // Function to get excluded test prefixes
+        function getExcludedPrefixes() {
+            const prefixes = [];
+            if (document.getElementById('excludeD').checked) prefixes.push('D');
+            if (document.getElementById('excludeE').checked) prefixes.push('E');
+            if (document.getElementById('excludeF').checked) prefixes.push('F');
+            if (document.getElementById('excludeG').checked) prefixes.push('G');
+            if (document.getElementById('excludeH').checked) prefixes.push('H');
+            return prefixes;
+        }
+
+        // Function to filter questions by excluded test prefixes
+        function filterQuestionsByExcludedTests(questions) {
+            const excluded = getExcludedPrefixes();
+            if (excluded.length === 0) return questions;
+            return questions.filter(q => {
+                if (!q.testNumber || typeof q.testNumber !== 'string') return true;
+                return !excluded.some(prefix => q.testNumber.startsWith(prefix));
+            });
+        }
+
+        // Update the main filtering logic to include test exclusion
+        function applyAllFilters(questions) {
+            let filtered = filterQuestionsByExcludedTests(questions);
+            filtered = filterQuestionsByDifficulty(filtered);
+            return filtered;
+        }
+
         async function loadQuestions() {
             const skillId = document.getElementById('skillSelect').value;
             const skillType = document.getElementById('skillType').value;
@@ -498,12 +551,12 @@
                 allQuestions = data.questions.filter(q => !q.isClone); // Filter out any clone questions
                 skillName = data.skillName;
 
-                // Apply difficulty filtering
-                filteredQuestions = filterQuestionsByDifficulty(allQuestions);
+                // Apply all filters (test exclusion and difficulty)
+                filteredQuestions = applyAllFilters(allQuestions);
 
                 // Debug: log questions data to see what we're receiving
                 console.log('All questions data:', allQuestions);
-                console.log('Filtered questions by difficulty:', filteredQuestions);
+                console.log('Filtered questions after all filters:', filteredQuestions);
                 if (allQuestions.length > 0) {
                     console.log('First question LaTeX content:', allQuestions[0].latex);
                     console.log('First question fields:', Object.keys(allQuestions[0]));
@@ -613,19 +666,24 @@
             updateSelection();
         }
 
-        // Function to refresh the question display when difficulty filters change
+        // Update refreshQuestionDisplay to use applyAllFilters
         function refreshQuestionDisplay() {
             if (allQuestions.length > 0) {
-                filteredQuestions = filterQuestionsByDifficulty(allQuestions);
+                filteredQuestions = applyAllFilters(allQuestions);
                 displayQuestions();
             }
         }
 
-        // Add event listeners for difficulty checkboxes
+        // Add event listeners for difficulty checkboxes and exclude checkboxes
         window.addEventListener('load', function() {
             document.getElementById('easyDifficulty').addEventListener('change', refreshQuestionDisplay);
             document.getElementById('mediumDifficulty').addEventListener('change', refreshQuestionDisplay);
             document.getElementById('hardDifficulty').addEventListener('change', refreshQuestionDisplay);
+            document.getElementById('excludeD').addEventListener('change', refreshQuestionDisplay);
+            document.getElementById('excludeE').addEventListener('change', refreshQuestionDisplay);
+            document.getElementById('excludeF').addEventListener('change', refreshQuestionDisplay);
+            document.getElementById('excludeG').addEventListener('change', refreshQuestionDisplay);
+            document.getElementById('excludeH').addEventListener('change', refreshQuestionDisplay);
         });
 
         async function generatePdf() {
