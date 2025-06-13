@@ -318,16 +318,25 @@
         });
 
         function initializeEventListeners() {
-            document.getElementById('testNumberDropdown').addEventListener('change', function() {
-                const selectedTest = this.value;
-                if (selectedTest) {
-                    currentTestNumber = selectedTest;
-                    currentQuestionNumber = '';
-                    populateQuestionNumbers(selectedTest);
-                }
+            document.getElementById('testNumberInput').addEventListener('input', function() {
+                const value = this.value.trim().toLowerCase();
+                if (!value) return;
+                // Filter test numbers case-insensitively
+                const matching = testNumbers.filter(t => t.toLowerCase().includes(value));
+                // If exact match, auto-correct case
+                const exact = testNumbers.find(t => t.toLowerCase() === value);
+                if (exact) this.value = exact;
+                // Update datalist
+                const datalist = document.getElementById('testNumberList');
+                datalist.innerHTML = '';
+                matching.forEach(test => {
+                    const option = document.createElement('option');
+                    option.value = test;
+                    datalist.appendChild(option);
+                });
             });
             
-            document.getElementById('questionNumberDropdown').addEventListener('change', function() {
+            document.getElementById('questionNumberInput').addEventListener('change', function() {
                 const selectedQuestion = this.value;
                 if (selectedQuestion) {
                     currentQuestionNumber = selectedQuestion;
@@ -379,55 +388,31 @@
             populateQuestionNumbers();
         };
 
-        // Case-insensitive autocomplete and auto-correct for test numbers
-        const testNumberInput = document.getElementById('testNumberInput');
-        testNumberInput.addEventListener('input', function() {
-            const value = this.value.trim().toLowerCase();
-            if (!value) return;
-            // Filter test numbers case-insensitively
-            const matching = testNumbers.filter(t => t.toLowerCase().includes(value));
-            // If exact match, auto-correct case
-            const exact = testNumbers.find(t => t.toLowerCase() === value);
-            if (exact) this.value = exact;
-            // Update datalist
-            const datalist = document.getElementById('testNumberList');
-            datalist.innerHTML = '';
-            matching.forEach(test => {
-                const option = document.createElement('option');
-                option.value = test;
-                datalist.appendChild(option);
-            });
-        });
-
+        // Update navigation buttons (disable/enable as needed)
         function updateNavigationButtons() {
-            const questionDropdown = document.getElementById('questionNumberDropdown');
-            const prevButton = document.getElementById('previousButton');
-            const nextButton = document.getElementById('nextButton');
-            
-            const currentIndex = Array.from(questionDropdown.options).findIndex(option => option.value === currentQuestionNumber);
-            
-            prevButton.disabled = currentIndex <= 1;
-            nextButton.disabled = currentIndex === -1 || currentIndex === questionDropdown.options.length - 1;
+            const questionInput = document.getElementById('questionNumberInput');
+            const prevButton = document.querySelector('button[onclick*="navigateQuestion(\'prev\')"]');
+            const nextButton = document.querySelector('button[onclick*="navigateQuestion(\'next\')"]');
+            let current = parseInt(questionInput.value);
+            prevButton.disabled = isNaN(current) || current <= 1;
+            nextButton.disabled = isNaN(current) || current >= 60;
         }
 
         function navigateQuestion(direction) {
-            const questionDropdown = document.getElementById('questionNumberDropdown');
-            const currentIndex = Array.from(questionDropdown.options).findIndex(option => option.value === currentQuestionNumber);
-            
-            if (currentIndex === -1) return;
-            
-            const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
-            if (newIndex > 0 && newIndex < questionDropdown.options.length) {
-                questionDropdown.value = questionDropdown.options[newIndex].value;
-                currentQuestionNumber = questionDropdown.value;
+            const questionInput = document.getElementById('questionNumberInput');
+            let current = parseInt(questionInput.value);
+            if (isNaN(current)) return;
+            let newIndex = direction === 'prev' ? current - 1 : current + 1;
+            if (newIndex >= 1 && newIndex <= 60) {
+                questionInput.value = newIndex;
                 updateNavigationButtons();
                 fetchAndDisplayQuestion();
             }
         }
 
         async function fetchAndDisplayQuestion() {
-            const testNumber = document.getElementById('testNumberDropdown').value;
-            const questionNumber = document.getElementById('questionNumberDropdown').value;
+            const testNumber = document.getElementById('testNumberInput').value;
+            const questionNumber = document.getElementById('questionNumberInput').value;
             const resultContainer = document.getElementById('resultContainer');
             const spinner = document.getElementById('spinner');
 
