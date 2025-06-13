@@ -342,6 +342,12 @@
             // Find matching test numbers (case-insensitive)
             const matchingTests = testNumbers.filter(t => t.toLowerCase().includes(testNumber));
             
+            // If there's an exact match (case-insensitive), set the input to the correct case
+            const exactMatch = testNumbers.find(t => t.toLowerCase() === testNumber);
+            if (exactMatch) {
+                this.value = exactMatch; // Set to the correct case
+            }
+            
             // Update datalist with matching tests
             const datalist = document.getElementById('testNumberList');
             datalist.innerHTML = '';
