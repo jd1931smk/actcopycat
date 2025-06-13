@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<!--
+    ACT Math Question Viewer - CopyCat ACT Application
+    
+    This page provides an interactive viewer for ACT Math questions with the following features:
+    
+    MAIN FUNCTIONALITY:
+    - Browse authentic ACT Math questions from multiple test forms (A11, B04, B05, C01, etc.)
+    - Select questions by test number and question number (1-60 for each test)
+    - View questions with proper mathematical notation rendered using KaTeX
+    - Display question diagrams and images when available
+    - Navigate between questions using Previous/Next buttons
+    
+    KEY FEATURES:
+    - Dark-themed, modern UI optimized for readability
+    - Full LaTeX/KaTeX support for mathematical expressions and formulas
+    - Responsive design that works on desktop and mobile devices
+    - Integration with Airtable database via Netlify Functions
+    - Display of AI-generated "clone" questions (similar practice problems)
+    - Support for multiple question databases (ACT, SAT, DRK)
+    
+    TECHNICAL DETAILS:
+    - Pure HTML/JavaScript application (no frameworks)
+    - Uses Netlify Functions for serverless API calls to Airtable
+    - KaTeX library for mathematical rendering
+    - Real-time question fetching and display
+    - Image handling for question diagrams
+    
+    DATA SOURCES:
+    - Original ACT questions stored in Airtable with LaTeX markup
+    - Question diagrams and images from Airtable attachments
+    - AI-generated similar questions from various models
+    
+    NAVIGATION:
+    - Dropdown selectors for test and question numbers
+    - Previous/Next buttons for sequential browsing
+    - Direct question fetching via "Fetch and Render" button
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT Math Question Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+    <style>
+        /* Base Styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #1e1e1e;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+        }
+
+        /* Navigation */
+        .nav-links {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .nav-links a {
+            color: #f0f0f0;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 8px 15px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .nav-links a:hover {
+            background-color: #3d3d3d;
+        }
+        
+        /* Selection Area */
+        .selection-area {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #f0f0f0;
+        }
+        
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: #333;
+            border: 1px solid #444;
+            color: #f0f0f0;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button {
+            background-color: #6557ed;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        button:hover:not(:disabled) {
+            background-color: #7466ff;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Question Display */
+        .questions-container {
+            background-color: #2b2b2b;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .section {
+            background-color: #2d2d2d;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        
+        .section h4 {
+            color: #fff;
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+        
+        .section img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 10px auto;
+            border-radius: 4px;
+        }
+        
+        .katex-content {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 4px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #f0f0f0;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: inherit;
+        }
+        
+        /* KaTeX Styling */
+        .katex {
+            font-size: 1.1em;
+            color: #f0f0f0;
+        }
+        
+        /* Loading Spinner */
+        #spinner {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid #6557ed;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Question and Answer Styling */
+        .question-text {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #333;
+            border-radius: 4px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+        
+        .answer-choices {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .answer-choice {
+            display: block;
+            background-color: #383838;
+            padding: 12px 15px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .answer-choice:hover {
+            background-color: #404040;
+        }
+
+        /* KaTeX specific styling */
+        .katex-display {
+            margin: 0.5em 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0.5em 0;
+        }
+
+        .katex {
+            font-size: 1.1em;
+            line-height: 1.2;
+            text-indent: 0;
+            text-rendering: auto;
+        }
+
+        /* Clone Questions Section */
+        .clone-section {
+            background-color: #2d2d2d;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+
+        .clone-section h4 {
+            color: #fff;
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+
+        .clone-question {
+            background-color: #333;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .clone-model {
+            color: #6557ed;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="nav-links">
+            <a href='/'>Home</a>
+            <a href='/worksheet'>Generate Worksheet</a>
+            <a href='/explain'>Explain Questions</a>
+        </nav>
+
+        <h1>ACT Math Question Viewer</h1>
+
+        <div class="selection-area">
+            <label for="testNumberInput">Test Number:</label>
+            <input type="text" id="testNumberInput" list="testNumberList" placeholder="Type test number (e.g. A11, 72C)" autocomplete="off" style="width: 320px; font-size: 1.2em; margin-bottom: 18px;">
+            <datalist id="testNumberList"></datalist>
+            <br>
+            <label for="questionNumberInput">Question Number:</label>
+            <input type="number" id="questionNumberInput" list="questionNumberList" placeholder="Question 1-60" min="1" max="60" autocomplete="off" style="width: 160px; font-size: 1.2em; margin-bottom: 18px;">
+            <datalist id="questionNumberList"></datalist>
+            <br>
+            <button id="fetchButton" onclick="fetchAndDisplayQuestion()">Fetch and Render</button>
+            <button onclick="navigateQuestion('prev')">Previous</button>
+            <button onclick="navigateQuestion('next')">Next</button>
+        </div>
+
+        <div id="spinner"></div>
+        <div id="resultContainer"></div>
+    </div>
+
+     <script>
+        let currentTestNumber = '';
+        let currentQuestionNumber = '';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+            populateTestNumbers();
+        });
+
+        function initializeEventListeners() {
+            document.getElementById('testNumberInput').addEventListener('input', function() {
+                const value = this.value.trim().toLowerCase();
+                if (!value) return;
+                // Filter test numbers case-insensitively
+                const matching = testNumbers.filter(t => t.toLowerCase().includes(value));
+                // If exact match, auto-correct case
+                const exact = testNumbers.find(t => t.toLowerCase() === value);
+                if (exact) this.value = exact;
+                // Update datalist
+                const datalist = document.getElementById('testNumberList');
+                datalist.innerHTML = '';
+                matching.forEach(test => {
+                    const option = document.createElement('option');
+                    option.value = test;
+                    datalist.appendChild(option);
+                });
+            });
+            
+            document.getElementById('questionNumberInput').addEventListener('change', function() {
+                const selectedQuestion = this.value;
+                if (selectedQuestion) {
+                    currentQuestionNumber = selectedQuestion;
+                    updateNavigationButtons();
+                }
+            });
+            
+            document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
+            document.getElementById('questionNumberInput').addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    console.log('Enter pressed in questionNumberInput');
+                    fetchAndDisplayQuestion();
+                }
+            });
+        }
+
+        // Hardcoded test numbers (copied from worksheet.html)
+        const testNumbers = [
+            "1MC", "2MC", "3MC", "4MC", "5MC", "16MC2", "52C", "54D", "55C", "56A", "56B",
+            "57B", "58E", "59C", "59F", "60B", "60C", "60E", "60F", "61B", "61C", "61D", "61E",
+            "61F", "62D", "63A", "63C", "63D", "63E", "63F", "64A", "64E", "65B", "65C", "65D",
+            "65E", "65F", "66A", "66C", "66D", "66F", "67A", "67B", "67C", "67F", "68A", "68C",
+            "68G", "69A", "69F", "70A", "70B", "70C", "70G", "71A", "71C", "71E", "71G", "71H",
+            "72C", "72E", "72F", "72G", "73C", "73E", "73G", "74C", "74F", "74H", "A9", "A10",
+            "A11", "B02", "B04", "B05", "B62", "C01", "C02", "C03-2", "D03", "D05", "D06", "F07",
+            "F12", "H18", "H31", "Red Book 1", "Red Book 2", "Red Book 3", "SATX", "SHMM1",
+            "SHMM2", "SHMM3", "SHMM4", "SHMM5", "SHMM6", "SHMM7", "SHMM8", "SHMM9", "Z04",
+            "Z08", "Z13", "Z15"
+        ].filter(test => test !== null).sort();
+
+        // Populate test numbers datalist
+        function populateTestNumbers() {
+            const datalist = document.getElementById('testNumberList');
+            datalist.innerHTML = '';
+            testNumbers.forEach(testNumber => {
+                const option = document.createElement('option');
+                option.value = testNumber;
+                datalist.appendChild(option);
+            });
+        }
+
+        // Populate question numbers datalist (1-60)
+        function populateQuestionNumbers() {
+            const datalist = document.getElementById('questionNumberList');
+            datalist.innerHTML = '';
+            for (let i = 1; i <= 60; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                datalist.appendChild(option);
+            }
+        }
+
+        window.onload = function() {
+            populateTestNumbers();
+            populateQuestionNumbers();
+        };
+
+        // Update navigation buttons (disable/enable as needed)
+        function updateNavigationButtons() {
+            const questionInput = document.getElementById('questionNumberInput');
+            const prevButton = document.querySelector('button[onclick*="navigateQuestion(\'prev\')"]');
+            const nextButton = document.querySelector('button[onclick*="navigateQuestion(\'next\')"]');
+            let current = parseInt(questionInput.value);
+            prevButton.disabled = isNaN(current) || current <= 1;
+            nextButton.disabled = isNaN(current) || current >= 60;
+        }
+
+        function navigateQuestion(direction) {
+            const questionInput = document.getElementById('questionNumberInput');
+            let current = parseInt(questionInput.value);
+            if (isNaN(current)) return;
+            let newIndex = direction === 'prev' ? current - 1 : current + 1;
+            if (newIndex >= 1 && newIndex <= 60) {
+                questionInput.value = newIndex;
+                updateNavigationButtons();
+                fetchAndDisplayQuestion();
+            }
+        }
+
+        async function fetchAndDisplayQuestion() {
+            const testNumber = document.getElementById('testNumberInput').value;
+            const questionNumber = document.getElementById('questionNumberInput').value;
+            const resultContainer = document.getElementById('resultContainer');
+            const spinner = document.getElementById('spinner');
+
+            if (!testNumber || !questionNumber) {
+                alert('Please select both a test number and question number.');
+                return;
+            }
+
+            spinner.style.display = 'block';
+            resultContainer.innerHTML = '';
+
+            try {
+                // Fetch original question
+                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Raw API Response:', data);
+                
+                // Enhanced debugging for diagram field
+                console.log('Diagrams field exists:', 'Diagrams' in data);
+                console.log('Diagrams field value:', data.Diagrams);
+                console.log('Diagrams field type:', typeof data.Diagrams);
+                if (data.Diagrams) {
+                    console.log('Diagrams field length:', data.Diagrams.length);
+                    console.log('Diagrams field trimmed:', data.Diagrams.trim());
+                }
+
+                if (data.katex) {
+                    // Create section for the question - simplified approach
+                    const questionSection = document.createElement('div');
+                    questionSection.className = 'section';
+
+                    // Only use Diagrams field for images
+                    if (data.Diagrams) {
+                        let diagrams = data.Diagrams;
+                        // If Diagrams is a string, make it an array
+                        if (typeof diagrams === 'string') {
+                            diagrams = [diagrams];
+                        }
+                        // If Diagrams is an array, display all images
+                        if (Array.isArray(diagrams)) {
+                            diagrams.forEach(diagramUrl => {
+                                if (typeof diagramUrl === 'string' && diagramUrl.trim() && (diagramUrl.startsWith('http') || diagramUrl.startsWith('/') || diagramUrl.startsWith('./') || diagramUrl.startsWith('data:'))) {
+                                    const diagramImg = document.createElement('img');
+                                    diagramImg.src = diagramUrl.trim();
+                                    diagramImg.alt = 'Question Diagram';
+                                    diagramImg.style.display = 'block';
+                                    diagramImg.style.margin = '0 auto 20px auto';
+                                    diagramImg.style.maxWidth = '100%';
+                                    diagramImg.style.height = 'auto';
+                                    diagramImg.style.borderRadius = '4px';
+                                    diagramImg.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+                                    diagramImg.onerror = function() {
+                                        console.error('Failed to load diagram:', diagramUrl);
+                                        this.style.display = 'none';
+                                    };
+                                    diagramImg.onload = function() {
+                                        console.log('Diagram loaded successfully:', diagramUrl);
+                                    };
+                                    questionSection.appendChild(diagramImg);
+                                }
+                            });
+                        }
+                    }
+
+                    // Create a simple container with the katex-content class
+                    const katexDiv = document.createElement('div');
+                    katexDiv.className = 'katex-content';
+                    katexDiv.textContent = data.katex; // Use textContent to preserve LaTeX
+                    questionSection.appendChild(katexDiv);
+                    resultContainer.appendChild(questionSection);
+                    
+                    // Render KaTeX on just the question section, similar to clone questions
+                    renderMathInElement(questionSection, {
+                        delimiters: [
+                            {left: "\\[", right: "\\]", display: true},
+                            {left: "\\(", right: "\\)", display: false},
+                            {left: "$", right: "$", display: false},
+                            {left: "$$", right: "$$", display: true},
+                            {left: "\\begin{array}", right: "\\end{array}", display: true},
+                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+                        ],
+                        throwOnError: false,
+                        output: 'html'
+                    });
+
+                    // Fetch and display clone questions
+                    fetchAndDisplayCloneQuestions(testNumber, questionNumber);
+                } else {
+                    resultContainer.innerHTML = '<p>No question data found.</p>';
+                }
+
+                spinner.style.display = 'none';
+            } catch (error) {
+                console.error('Error:', error);
+                spinner.style.display = 'none';
+                resultContainer.innerHTML = `<p>Error loading question: ${error.message}</p>`;
+            }
+        }
+
+        async function fetchAndDisplayCloneQuestions(testNumber, questionNumber) {
+            try {
+                const cloneResponse = await fetch(`/.netlify/functions/airtable?action=getCloneQuestions&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
+                
+                if (!cloneResponse.ok) {
+                    throw new Error(`HTTP error! status: ${cloneResponse.status}`);
+                }
+                
+                const cloneData = await cloneResponse.json();
+                console.log('Clone data received:', cloneData);
+                
+                if (cloneData && cloneData.length > 0) {
+                    const cloneSection = document.createElement('div');
+                    cloneSection.className = 'clone-section';
+                    cloneSection.innerHTML = '<h4>Similar Questions</h4>';
+                    
+                    cloneData.forEach(item => {
+                        console.log('Processing clone item:', item);
+                        
+                        const cloneContainer = document.createElement('div');
+                        cloneContainer.className = 'clone-question';
+                        
+                        const modelDiv = document.createElement('div');
+                        modelDiv.className = 'clone-model';
+                        modelDiv.textContent = item.model;
+                        cloneContainer.appendChild(modelDiv);
+                        
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'katex-content';
+                        contentDiv.textContent = item.clone || '';
+                        cloneContainer.appendChild(contentDiv);
+                        
+                        cloneSection.appendChild(cloneContainer);
+                    });
+                    
+                    document.getElementById('resultContainer').appendChild(cloneSection);
+                    
+                    // Render KaTeX in clone section
+                    renderMathInElement(cloneSection, {
+                        delimiters: [
+                            {left: "\\[", right: "\\]", display: true},
+                            {left: "\\(", right: "\\)", display: false},
+                            {left: "$", right: "$", display: false},
+                            {left: "$$", right: "$$", display: true},
+                            {left: "\\begin{array}", right: "\\end{array}", display: true},
+                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+                        ],
+                        throwOnError: false,
+                        output: 'html'
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching clone questions:', error);
+                console.log('Failed to load clone questions:', error);
+            }
+        }
+    </script>
+</body>
+</html>
