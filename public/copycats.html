@@ -291,26 +291,15 @@
         <h1>ACT Math Question Viewer</h1>
 
         <div class="selection-area">
-            <div class="form-group">
-                <label for="testNumberDropdown">Test Number:</label>
-                <select id="testNumberDropdown">
-                    <option value="">Select a test number</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="questionNumberDropdown">Question Number:</label>
-                <select id="questionNumberDropdown">
-                    <option value="">Select a question number</option>
-                </select>
-            </div>
-
-            <button id="fetchButton">Fetch and Render</button>
-            
-            <div class="nav-buttons">
-                <button id="previousButton" onclick="navigateQuestion('prev')" disabled>Previous</button>
-                <button id="nextButton" onclick="navigateQuestion('next')" disabled>Next</button>
-            </div>
+            <label for="testNumberInput">Test Number:</label>
+            <input type="text" id="testNumberInput" list="testNumberList" placeholder="Type test number (e.g. A11, 72C)" autocomplete="off">
+            <datalist id="testNumberList"></datalist>
+            <label for="questionNumberInput">Question Number:</label>
+            <input type="number" id="questionNumberInput" list="questionNumberList" placeholder="Question 1-60" min="1" max="60" autocomplete="off">
+            <datalist id="questionNumberList"></datalist>
+            <button onclick="fetchAndDisplayQuestion()">Fetch and Render</button>
+            <button onclick="navigateQuestion('prev')">Previous</button>
+            <button onclick="navigateQuestion('next')">Next</button>
         </div>
 
         <div id="spinner"></div>
@@ -347,40 +336,66 @@
             document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
         }
 
-        async function populateTestNumbers() {
-            const dropdown = document.getElementById('testNumberDropdown');
-            dropdown.innerHTML = '<option value="">Select a test number</option>';
-            
-            const testNumbers = ['A11', 'B04', 'B05', 'C01', 'C02', 'C03', 'C04', 'D01', 'D02', 'D03', 'D04', 'E01', 'E02', 'E03', 'E04', 'F01', 'F02', 'F03', 'F04', 'G01', 'G02', 'H31'];
-            
+        // Hardcoded test numbers (copied from worksheet.html)
+        const testNumbers = [
+            "1MC", "2MC", "3MC", "4MC", "5MC", "16MC2", "52C", "54D", "55C", "56A", "56B",
+            "57B", "58E", "59C", "59F", "60B", "60C", "60E", "60F", "61B", "61C", "61D", "61E",
+            "61F", "62D", "63A", "63C", "63D", "63E", "63F", "64A", "64E", "65B", "65C", "65D",
+            "65E", "65F", "66A", "66C", "66D", "66F", "67A", "67B", "67C", "67F", "68A", "68C",
+            "68G", "69A", "69F", "70A", "70B", "70C", "70G", "71A", "71C", "71E", "71G", "71H",
+            "72C", "72E", "72F", "72G", "73C", "73E", "73G", "74C", "74F", "74H", "A9", "A10",
+            "A11", "B02", "B04", "B05", "B62", "C01", "C02", "C03-2", "D03", "D05", "D06", "F07",
+            "F12", "H18", "H31", "Red Book 1", "Red Book 2", "Red Book 3", "SATX", "SHMM1",
+            "SHMM2", "SHMM3", "SHMM4", "SHMM5", "SHMM6", "SHMM7", "SHMM8", "SHMM9", "Z04",
+            "Z08", "Z13", "Z15"
+        ].filter(test => test !== null).sort();
+
+        // Populate test numbers datalist
+        function populateTestNumbers() {
+            const datalist = document.getElementById('testNumberList');
+            datalist.innerHTML = '';
             testNumbers.forEach(testNumber => {
                 const option = document.createElement('option');
                 option.value = testNumber;
-                option.textContent = testNumber;
-                dropdown.appendChild(option);
+                datalist.appendChild(option);
             });
         }
 
-        async function populateQuestionNumbers(testNumber) {
-            const dropdown = document.getElementById('questionNumberDropdown');
-            dropdown.innerHTML = '<option value="">Select a question number</option>';
-            
-            try {
-                const response = await fetch(`/.netlify/functions/airtable?action=getQuestionNumbers&testNumber=${encodeURIComponent(testNumber)}`);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const questionNumbers = await response.json();
-                
-                questionNumbers.forEach(number => {
-                    const option = document.createElement('option');
-                    option.value = number;
-                    option.textContent = number;
-                    dropdown.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error fetching question numbers:', error);
-                alert('Error loading question numbers. Please try selecting a different test number.');
+        // Populate question numbers datalist (1-60)
+        function populateQuestionNumbers() {
+            const datalist = document.getElementById('questionNumberList');
+            datalist.innerHTML = '';
+            for (let i = 1; i <= 60; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                datalist.appendChild(option);
             }
         }
+
+        window.onload = function() {
+            populateTestNumbers();
+            populateQuestionNumbers();
+        };
+
+        // Case-insensitive autocomplete and auto-correct for test numbers
+        const testNumberInput = document.getElementById('testNumberInput');
+        testNumberInput.addEventListener('input', function() {
+            const value = this.value.trim().toLowerCase();
+            if (!value) return;
+            // Filter test numbers case-insensitively
+            const matching = testNumbers.filter(t => t.toLowerCase().includes(value));
+            // If exact match, auto-correct case
+            const exact = testNumbers.find(t => t.toLowerCase() === value);
+            if (exact) this.value = exact;
+            // Update datalist
+            const datalist = document.getElementById('testNumberList');
+            datalist.innerHTML = '';
+            matching.forEach(test => {
+                const option = document.createElement('option');
+                option.value = test;
+                datalist.appendChild(option);
+            });
+        });
 
         function updateNavigationButtons() {
             const questionDropdown = document.getElementById('questionNumberDropdown');
