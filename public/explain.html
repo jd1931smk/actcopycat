@@ -336,8 +336,20 @@
 
         // Event listener for test number input
         document.getElementById('testNumberInput').addEventListener('input', function() {
-            const testNumber = this.value.trim();
+            const testNumber = this.value.trim().toLowerCase();
             if (!testNumber) return;
+
+            // Find matching test numbers (case-insensitive)
+            const matchingTests = testNumbers.filter(t => t.toLowerCase().includes(testNumber));
+            
+            // Update datalist with matching tests
+            const datalist = document.getElementById('testNumberList');
+            datalist.innerHTML = '';
+            matchingTests.forEach(test => {
+                const option = document.createElement('option');
+                option.value = test; // Keep original case in the value
+                datalist.appendChild(option);
+            });
 
             // Reset question number input selection
             document.getElementById('questionNumberInput').value = '';
