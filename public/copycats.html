@@ -292,11 +292,13 @@
 
         <div class="selection-area">
             <label for="testNumberInput">Test Number:</label>
-            <input type="text" id="testNumberInput" list="testNumberList" placeholder="Type test number (e.g. A11, 72C)" autocomplete="off">
+            <input type="text" id="testNumberInput" list="testNumberList" placeholder="Type test number (e.g. A11, 72C)" autocomplete="off" style="width: 320px; font-size: 1.2em; margin-bottom: 18px;">
             <datalist id="testNumberList"></datalist>
+            <br>
             <label for="questionNumberInput">Question Number:</label>
-            <input type="number" id="questionNumberInput" list="questionNumberList" placeholder="Question 1-60" min="1" max="60" autocomplete="off">
+            <input type="number" id="questionNumberInput" list="questionNumberList" placeholder="Question 1-60" min="1" max="60" autocomplete="off" style="width: 160px; font-size: 1.2em; margin-bottom: 18px;">
             <datalist id="questionNumberList"></datalist>
+            <br>
             <button onclick="fetchAndDisplayQuestion()">Fetch and Render</button>
             <button onclick="navigateQuestion('prev')">Previous</button>
             <button onclick="navigateQuestion('next')">Next</button>
