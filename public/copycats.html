@@ -299,7 +299,7 @@
             <input type="number" id="questionNumberInput" list="questionNumberList" placeholder="Question 1-60" min="1" max="60" autocomplete="off" style="width: 160px; font-size: 1.2em; margin-bottom: 18px;">
             <datalist id="questionNumberList"></datalist>
             <br>
-            <button onclick="fetchAndDisplayQuestion()">Fetch and Render</button>
+            <button id="fetchButton" onclick="fetchAndDisplayQuestion()">Fetch and Render</button>
             <button onclick="navigateQuestion('prev')">Previous</button>
             <button onclick="navigateQuestion('next')">Next</button>
         </div>
