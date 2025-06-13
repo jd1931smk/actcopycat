@@ -347,6 +347,7 @@
             document.getElementById('fetchButton').addEventListener('click', fetchAndDisplayQuestion);
             document.getElementById('questionNumberInput').addEventListener('keydown', function(event) {
                 if (event.key === 'Enter') {
+                    event.preventDefault();
                     fetchAndDisplayQuestion();
                 }
             });
