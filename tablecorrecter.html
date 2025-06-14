@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<!--
+    ACT Math Table Corrector - Specialized editor for table corrections
+    
+    This page provides an interactive editor specifically for correcting table formatting
+    in ACT Math questions that contain "table below" references.
+    
+    MAIN FUNCTIONALITY:
+    - Cycles through only the 171 records that contain "table below"
+    - Left column: displays the rendered question with diagrams
+    - Right column: editable textarea for LatexMarkdown with live preview
+    - Sequential navigation through the problematic records
+    
+    KEY FEATURES:
+    - Hardcoded list of 171 record IDs from matching_record_ids.csv
+    - Previous/Next buttons to navigate through records sequentially
+    - Real-time LaTeX rendering with KaTeX
+    - Save and rerender functionality for immediate feedback
+    - Progress indicator showing current position in the list
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT Math Table Corrector</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+    <style>
+        /* Base Styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #1e1e1e;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+        }
+
+        /* Navigation */
+        .nav-links {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .nav-links a {
+            color: #f0f0f0;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 8px 15px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .nav-links a:hover {
+            background-color: #3d3d3d;
+        }
+        
+        /* Progress and Controls */
+        .controls-area {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .progress-info {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #f0f0f0;
+        }
+        
+        .record-id {
+            font-family: monospace;
+            background-color: #333;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #6557ed;
+        }
+        
+        button {
+            background-color: #6557ed;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        
+        button:hover:not(:disabled) {
+            background-color: #7466ff;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Two-column layout */
+        #editorFlex {
+            display: flex;
+            gap: 32px;
+            align-items: flex-start;
+        }
+        
+        #questionColumn, #editColumn {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        /* Question Display */
+        .section {
+            background-color: #2d2d2d;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        
+        .section h4 {
+            color: #fff;
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+        
+        .section img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 10px auto;
+            border-radius: 4px;
+        }
+        
+        .katex-content {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 4px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #f0f0f0;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: inherit;
+        }
+        
+        /* Editor */
+        #latexEditor {
+            width: 100%;
+            height: 400px;
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            background-color: #333;
+            color: #f0f0f0;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+        
+        /* KaTeX Styling */
+        .katex {
+            font-size: 1.1em;
+            color: #f0f0f0;
+        }
+        
+        /* Loading Spinner */
+        #spinner {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid #6557ed;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="nav-links">
+            <a href='/'>Home</a>
+            <a href='/worksheet'>Generate Worksheet</a>
+            <a href='/explain'>Explain Questions</a>
+            <a href='/Correcter'>Full Editor</a>
+        </nav>
+
+        <h1>ACT Math Table Corrector</h1>
+
+        <div class="controls-area">
+            <div class="progress-info">
+                Record <span id="currentIndex">1</span> of <span id="totalRecords">171</span>
+                <br>
+                Current Record ID: <span class="record-id" id="currentRecordId">Loading...</span>
+            </div>
+            <button id="prevButton" onclick="navigateRecord(-1)">← Previous</button>
+            <button id="loadButton" onclick="loadCurrentRecord()">Load Record</button>
+            <button id="nextButton" onclick="navigateRecord(1)">Next →</button>
+        </div>
+
+        <div id="spinner"></div>
+        <div id="editorFlex" style="display: flex; gap: 32px; align-items: flex-start;">
+            <div id="questionColumn" style="flex: 1; min-width: 0;">
+                <div id="resultContainer"></div>
+            </div>
+            <div id="editColumn" style="flex: 1; min-width: 0;">
+                <label for="latexEditor" style="font-weight: bold; display: block; margin-bottom: 8px;">Edit LaTeX/Markdown:</label>
+                <textarea id="latexEditor" placeholder="LaTeX content will appear here..."></textarea>
+                <button id="saveLatexButton" style="width: 100%;">Save and Rerender</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Hardcoded list of 171 record IDs that contain "table below"
+  const recordIds = [
+        "rec0PaBwbEBtCIHMg",
+        "rec0gaytKRAiyyudz",
+        "rec1BsT9FTkRZkx34",
+        "rec1ftIPkEKiHj9iN",
+        "rec1tuZ5lNX7mAC8Y",
+        "rec2BgPpUWLwafS2B",
+        "rec2SJpfba4aQm0XB",
+        "rec2YZHOfUZ82A1IY",
+        "rec2YdqEyOPbzn4ze",
+        "rec3zyxlu9LeWUi5B",
+        "rec4pjGqOwSVFrFWV",
+        "rec4rUSALuPfUaaDv",
+        "rec528F8WgZXRuQvS",
+        "rec5sZDTq5jk0Tw9H",
+        "rec6QgtvGIb6PZcDP",
+        "rec6XyPmfug8qQYF7",
+        "rec6ZZXoWvqRelrHZ",
+        "rec76ji1VNeujOvLs",
+        "rec7GUScoxYMZg5EA",
+        "rec7RTgLj6z703rrU",
+        "rec7bIrfGkrYXg1fv",
+        "rec7mCHcTx31pESfF",
+        "rec7ywFiJgOgTeiuM",
+        "rec8DxnvvAj4rEK5t",
+        "rec8JbBj92bDo61YD",
+        "rec8arlkupBBaRABf",
+        "rec9Yju6rFVfCnIBi",
+        "rec9uiMyCidhWjWEY",
+        "rec9zfpKhD8s6JsGr",
+        "recAKtRESmZrShwk5",
+        "recBiO7fIhLvFaMIg",
+        "recC0X8NMllf2Eau7",
+        "recCDeIaIyXfIQYxb",
+        "recCFrnyrcQemv2kR",
+        "recCZeVly018cI09g",
+        "recCkhX2dY2NYIdRz",
+        "recD52NkSGqQHIUZa",
+        "recDIk6uonfwv4HtG",
+        "recDNoIAbUE71wIlR",
+        "recEVq3ia2y9F2FUq",
+        "recEgPn6bWEFZC1i3",
+        "recElaQwJAQmlpQCe",
+        "recEnOYbaeIShM6LG",
+        "recF9J8o8ix2Wb4J1",
+        "recFBz4298Qp7xJ9d",
+        "recFGteXRvIyz6tlN",
+        "recFny8PElC3NSAIk",
+        "recG2AlQrVFGpaRKG",
+        "recGQ9wXQ1TGN2YXo",
+        "recGdxs12nmZzQPKr",
+        "recGe6ylVzI9RhwUO",
+        "recHAxwIMpO35cS2g",
+        "recHOE2tzixZuceEN",
+        "recHvUJwhMRABoAR0",
+        "recI17EMuHLHwgMGK",
+        "recIGJecITa9KJkgK",
+        "recINXYGDG21fq4XB",
+        "recINdcHOO3q9WXFE",
+        "recIRRTmHBsn5PYRy",
+        "recIoKx6tfDjMoQYM",
+        "recIqSvi4UasnN9Kv",
+        "recJ7Nbb8qbOd6hzo",
+        "recJCORep2ywkObpd",
+        "recJJdHY8TOVevGu9",
+        "recJicWdurUREBBmY",
+        "recJsPpBXqRa3pZqe",
+        "recK2K2UcNN7jitBq",
+        "recKa7MmQdxBNl66e",
+        "recLhIexjzKVRg1oF",
+        "recLqp0V5OJvyLPZy",
+        "recLqyDP60ZYhcL0s",
+        "recLwd09Tm9m3HXSA",
+        "recM79ejlXDFAz6Vf",
+        "recMCNEIRZdJc81ou",
+        "recMSgJ2JsXx82kU7",
+        "recMynUqJryTf3oCJ",
+        "recNBdThFE1lWp8aO",
+        "recOLisBRgYqNzaT9",
+        "recOwJHoqF7vtO3ZA",
+        "recPUwtvc1bIutReL",
+        "recQ2gENcicgBLELN",
+        "recQOYbribwSFN978",
+        "recQcbDuOQXseFgqn",
+        "recQi88OKaauLHsj8",
+        "recQlxiz4w9OEk6c3",
+        "recRmflV5pWfpfSlb",
+        "recSPcE1H5cbWKZu1",
+        "recStnnka7kIXcpLR",
+        "recT1rlQ6O7Cgbn9o",
+        "recTelz3x1npR8zoe",
+        "recTxDcS81m2zlqIP",
+        "recTyOAHmHx2gG3Yf",
+        "recU5BQCXjaq1qXUU",
+        "recUycz7rZiXmFjWy",
+        "recV5WEpmQiaFH84O",
+        "recVat9U1FbuGqwb2",
+        "recW0mEIynNUOBPCT",
+        "recWOsfJ8ShraMjDl",
+        "recX2EylJ8stF9luR",
+        "recX7z9GEDzTHW2O0",
+        "recXCsBSNRXz0NKoX",
+        "recXMcesUF0rtWHcO",
+        "recXSgT2lyhpUy4gN",
+        "recXcMniFdh7SLBNt",
+        "recXcpl43A6BxmMJI",
+        "recXjuHpVlnnNjlvm",
+        "recY0W75pzBfE6CpV",
+        "recYBtFM02Ge81nvJ",
+        "recYluGUJLpHTtY3N",
+        "recZdWyMlsmMzTOEJ",
+        "recZoOXX4KmQ1ILWr",
+        "recaR1XWTnGVWZWI7",
+        "recbGY9Ffn38Cmq85",
+        "recbWudtO4kxpWDnK",
+        "recbr9N72LXJ9635I",
+        "recc6RkUa6rYhCr6x",
+        "recdDEmC4J7Ky9VRW",
+        "recdKgAYmKPTk8WZV",
+        "recdQByiML3eOPePc",
+        "recdbTy0eVrQSleey",
+        "rece0BwoOapsSI14u",
+        "receNuc7BFBEd1NOq",
+        "receQJ1AAa1NUpfVZ",
+        "recfbuCXcjJ1BSRHb",
+        "recg45se2OISBfzLY",
+        "rechlcwEoQs2fKGxE",
+        "reciDPZ8h2b1wHSk6",
+        "reciWJAJEKC5f65nE",
+        "recia2T87aRDWhGxG",
+        "recifpen5DGLSH9ep",
+        "recipEtRICpQui5bs",
+        "recj83M4KSTXyLrrD",
+        "reckDKP5qn5V9rEik",
+        "reckJMIoAUJjLR4av",
+        "reclMG0NS5SrcnkDM",
+        "recm7F9KnXOOgjpmd",
+        "recnlu56t7hUpKBT8",
+        "recp9QWUsaRt5Xh6U",
+        "recpLVfk8QJax96vq",
+        "recpaA2ybBeRJSgyp",
+        "recpohZWERRBs5CLG",
+        "recpvBGeK7k7pF4Uy",
+        "recqQyDB2DANZH7gV",
+        "recqVFrnHxEII30Bx",
+        "recr3tyTCgNvQUhTa",
+        "recr8BhwbaT0DdY4e",
+        "recrGTqQeFDNDhk0l",
+        "recrHoaEmMn44KiLm",
+        "recrfoAvVsiGYzAij",
+        "recsIpN9Mqqggd0OP",
+        "rect4Xtdvrighzjrn",
+        "rectCwcr81qJ7h7ws",
+        "rectJSrZ0ssDG43iy",
+        "rectOOsn7fY2Du5pV",
+        "recuBN7GcQcoLDRAY",
+        "recuv6Cn5WeBJlrw1",
+        "recvF4X9kfsfWYonU",
+        "recvOhg5OtrrjuStM",
+        "recvPlry87ND9IeRz",
+        "recvcaHgkSHHPA2dT",
+        "recvuULAU8DJlX6mj",
+        "recw2WHCDuunw871v",
+        "recwWnpk7Uozq73KJ",
+        "recx6xkH5e6NHcE1g",
+        "recxZzRSiV5rsoUyX",
+        "recygMhJrnR4YPE9A",
+        "recypTpkOJL3MqMwX",
+        "recyvEpjC16p6WrXZ",
+        "reczBlPOabrZfFA90",
+        "reczXHsyMol3ml44W",
+        "reczdH4THmUmYUXWn"
+    ];
+
+    let currentIndex = 0;
+    let currentData = null;
+    let currentLatex = '';
+
+    // Configuration
+    const BASE_ID = 'apph1PxO7uc4r7U6j';
+    const TABLE_NAME = 'tbllwZpPeh9yHJ3fM';
+    const API_KEY = 'patZrPVo6i4ZV7gO3.9cd5ece9e93c22c1506b024489305eb9b9e8cb57c17ca17228df10b05bd00068';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateUI();
+        document.getElementById('saveLatexButton').addEventListener('click', function() {
+            const newLatex = document.getElementById('latexEditor').value;
+            currentLatex = newLatex;
+            renderQuestionFromLatex(newLatex, currentData);
+        });
+        // Auto-load first record
+        loadCurrentRecord();
+    });
+
+    function updateUI() {
+        document.getElementById('currentIndex').textContent = currentIndex + 1;
+        document.getElementById('totalRecords').textContent = recordIds.length;
+        document.getElementById('currentRecordId').textContent = recordIds[currentIndex];
+        document.getElementById('prevButton').disabled = currentIndex === 0;
+        document.getElementById('nextButton').disabled = currentIndex === recordIds.length - 1;
+    }
+
+    function navigateRecord(direction) {
+        const newIndex = currentIndex + direction;
+        if (newIndex >= 0 && newIndex < recordIds.length) {
+            currentIndex = newIndex;
+            updateUI();
+            loadCurrentRecord();
+        }
+    }
+
+    async function loadCurrentRecord() {
+        const recordId = recordIds[currentIndex];
+        const resultContainer = document.getElementById('resultContainer');
+        const spinner = document.getElementById('spinner');
+        const latexEditor = document.getElementById('latexEditor');
+
+        spinner.style.display = 'block';
+        resultContainer.innerHTML = '';
+        latexEditor.value = '';
+
+        try {
+            const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&recordId=${encodeURIComponent(recordId)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            currentData = data;
+            // Prefer LatexMarkdown, fallback to katex
+            const latex = data.LatexMarkdown || data.katex || '';
+            currentLatex = latex;
+            latexEditor.value = latex;
+            renderQuestionFromLatex(latex, data);
+            spinner.style.display = 'none';
+        } catch (error) {
+            console.error('Error:', error);
+            spinner.style.display = 'none';
+            resultContainer.innerHTML = `<p>Error loading record: ${error.message}</p>`;
+        }
+    }
+
+    function renderQuestionFromLatex(latex, data) {
+        const resultContainer = document.getElementById('resultContainer');
+        resultContainer.innerHTML = '';
+        const questionSection = document.createElement('div');
+        questionSection.className = 'section';
+        
+        // Only use Diagrams field for images
+        if (data && data.Diagrams) {
+            let diagrams = data.Diagrams;
+            if (typeof diagrams === 'string') diagrams = [diagrams];
+            if (Array.isArray(diagrams)) {
+                diagrams.forEach(diagram => {
+                    // If it's an object (Airtable attachment), use .url
+                    const diagramUrl = (typeof diagram === 'object' && diagram.url) ? diagram.url : diagram;
+                    if (typeof diagramUrl === 'string' && diagramUrl.trim() && (
+                        diagramUrl.startsWith('http') || diagramUrl.startsWith('/') ||
+                        diagramUrl.startsWith('./') || diagramUrl.startsWith('data:')
+                    )) {
+                        const diagramImg = document.createElement('img');
+                        diagramImg.src = diagramUrl.trim();
+                        diagramImg.alt = 'Question Diagram';
+                        diagramImg.style.display = 'block';
+                        diagramImg.style.margin = '0 auto 20px auto';
+                        diagramImg.style.maxWidth = '100%';
+                        diagramImg.style.height = 'auto';
+                        diagramImg.style.borderRadius = '4px';
+                        diagramImg.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+                        diagramImg.onerror = function() {
+                            console.error('Failed to load diagram:', diagramUrl);
+                            this.style.display = 'none';
+                        };
+                        diagramImg.onload = function() {
+                            console.log('Diagram loaded successfully:', diagramUrl);
+                        };
+                        questionSection.appendChild(diagramImg);
+                    }
+                });
+            }
+        }
+        
+        const katexDiv = document.createElement('div');
+        katexDiv.className = 'katex-content';
+        katexDiv.textContent = latex;
+        questionSection.appendChild(katexDiv);
+        resultContainer.appendChild(questionSection);
+        
+        renderMathInElement(questionSection, {
+            delimiters: [
+                {left: "\\[", right: "\\]", display: true},
+                {left: "\\(", right: "\\)", display: false},
+                {left: "$", right: "$", display: false},
+                {left: "$$", right: "$$", display: true},
+                {left: "\\begin{array}", right: "\\end{array}", display: true},
+                {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+            ],
+            throwOnError: false,
+            output: 'html'
+        });
+    }
+    </script>
+</body>
+</html> 
