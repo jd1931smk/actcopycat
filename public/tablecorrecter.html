@@ -420,9 +420,47 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         updateUI();
-        document.getElementById('saveLatexButton').addEventListener('click', function() {
+        document.getElementById('saveLatexButton').addEventListener('click', async function() {
             const newLatex = document.getElementById('latexEditor').value;
             currentLatex = newLatex;
+            
+            // Save to Airtable
+            try {
+                const recordId = recordIds[currentIndex];
+                const updateResponse = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}/${recordId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        fields: {
+                            'LatexMarkdown': newLatex
+                        }
+                    })
+                });
+                
+                if (!updateResponse.ok) {
+                    throw new Error(`Failed to save: ${updateResponse.status}`);
+                }
+                
+                console.log('Record updated successfully');
+                // Update the button text temporarily to show success
+                const button = document.getElementById('saveLatexButton');
+                const originalText = button.textContent;
+                button.textContent = 'Saved!';
+                button.style.backgroundColor = '#28a745';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.backgroundColor = '#6557ed';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Error saving record:', error);
+                alert('Error saving record: ' + error.message);
+            }
+            
+            // Re-render the question with new content
             renderQuestionFromLatex(newLatex, currentData);
         });
         // Auto-load first record
@@ -457,7 +495,27 @@
         latexEditor.value = '';
 
         try {
-            const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&recordId=${encodeURIComponent(recordId)}`);
+            // First, get the record using direct Airtable API to get testNumber and questionNumber
+            const directResponse = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}/${recordId}`, {
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`
+                }
+            });
+            
+            if (!directResponse.ok) {
+                throw new Error(`HTTP error! status: ${directResponse.status}`);
+            }
+            
+            const recordData = await directResponse.json();
+            const testNumber = recordData.fields['Test Number'];
+            const questionNumber = recordData.fields['Question Number'];
+            
+            if (!testNumber || !questionNumber) {
+                throw new Error('Missing Test Number or Question Number in record');
+            }
+            
+            // Now use the existing Netlify function with testNumber and questionNumber
+            const response = await fetch(`/.netlify/functions/airtable?action=getQuestionDetails&testNumber=${encodeURIComponent(testNumber)}&questionNumber=${encodeURIComponent(questionNumber)}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
