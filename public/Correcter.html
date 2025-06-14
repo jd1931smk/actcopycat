@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-    ACT Math Question Viewer - CopyCat ACT Application
+    ACT Math Question Viewer - CopyCat ACT Application (*)
     
     This page provides an interactive viewer for ACT Math questions with the following features:
     
@@ -473,8 +473,13 @@
             let diagrams = data.Diagrams;
             if (typeof diagrams === 'string') diagrams = [diagrams];
             if (Array.isArray(diagrams)) {
-                diagrams.forEach(diagramUrl => {
-                    if (typeof diagramUrl === 'string' && diagramUrl.trim() && (diagramUrl.startsWith('http') || diagramUrl.startsWith('/') || diagramUrl.startsWith('./') || diagramUrl.startsWith('data:'))) {
+                diagrams.forEach(diagram => {
+                    // If it's an object (Airtable attachment), use .url
+                    const diagramUrl = (typeof diagram === 'object' && diagram.url) ? diagram.url : diagram;
+                    if (typeof diagramUrl === 'string' && diagramUrl.trim() && (
+                        diagramUrl.startsWith('http') || diagramUrl.startsWith('/') ||
+                        diagramUrl.startsWith('./') || diagramUrl.startsWith('data:')
+                    )) {
                         const diagramImg = document.createElement('img');
                         diagramImg.src = diagramUrl.trim();
                         diagramImg.alt = 'Question Diagram';
