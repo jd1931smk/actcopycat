@@ -44,8 +44,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
-    <!-- SVG-Edit integration -->
-    <script src="https://cdn.jsdelivr.net/gh/SVG-Edit/svgedit@stable/editor/embedapi.js"></script>
+    <!-- Method Draw integration - simpler and more reliable -->
     <style>
         /* Base Styles */
         body {
@@ -377,11 +376,12 @@
             <div class="svg-edit-header">
                 <h3>SVG Diagram Editor</h3>
                 <div>
+                    <button id="showOriginalSvg" class="svg-edit-close" style="margin-right: 10px;">Show Original SVG</button>
                     <button id="saveSvgBtn" class="svg-edit-close" style="margin-right: 10px;">Save Changes</button>
                     <button id="closeSvgEditor" class="svg-edit-close">Close</button>
                 </div>
             </div>
-            <iframe id="svgEditFrame" class="svg-edit-frame" src="https://cdn.jsdelivr.net/gh/SVG-Edit/svgedit@stable/editor/svg-editor.html"></iframe>
+            <iframe id="svgEditFrame" class="svg-edit-frame" src="https://editor.method.ac/"></iframe>
         </div>
     </div>
 
@@ -695,42 +695,30 @@
         let svgEditor = null;
 
         function openSvgEditor(svgContent) {
-            console.log('Opening SVG editor with content:', svgContent);
+            console.log('Opening Method Draw with SVG content');
             
-            // Store reference to the current SVG container
+            // Store reference to the current SVG container and SVG content
             currentSvgContainer = event.target.closest('.clickable-svg');
+            window.currentSvgContent = svgContent;
             
             // Show the modal
             document.getElementById('svgEditModal').style.display = 'block';
             
-            // Wait for iframe to load and then set the SVG content
+            // Method Draw will load fresh each time
             const iframe = document.getElementById('svgEditFrame');
-            iframe.onload = function() {
-                // Give SVG-Edit time to fully initialize
-                setTimeout(() => {
-                    try {
-                        // Access the SVG-Edit API
-                        const svgCanvas = iframe.contentWindow.svgCanvas;
-                        if (svgCanvas && svgCanvas.setSvgString) {
-                            // Clear the canvas and load the SVG
-                            svgCanvas.setSvgString(svgContent);
-                            console.log('SVG loaded into editor');
-                        } else {
-                            console.log('SVG-Edit still loading, will try manual approach');
-                            // Fallback: try to find and use the embed API
-                            if (iframe.contentWindow.svgEditor) {
-                                iframe.contentWindow.svgEditor.loadFromString(svgContent);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Error loading SVG into editor:', error);
-                        alert('SVG Editor is loading. Please try clicking the SVG again in a moment.');
-                    }
-                }, 2000); // Wait 2 seconds for SVG-Edit to initialize
-            };
+            iframe.src = 'https://editor.method.ac/';
             
-            // Reload the iframe to ensure it's fresh
-            iframe.src = iframe.src;
+            // Show instructions to the user
+            setTimeout(() => {
+                alert('Method Draw is now open!\n\n1. Click "File" → "Open SVG..." in the editor\n2. Copy the SVG code that has been copied to your clipboard\n3. Paste it in the text area and click "Import"\n4. Edit as needed\n5. When done, click "Save Changes" button');
+                
+                // Copy SVG content to clipboard for easy pasting
+                navigator.clipboard.writeText(svgContent).then(() => {
+                    console.log('SVG content copied to clipboard');
+                }).catch(() => {
+                    console.log('Could not copy to clipboard, user will need to copy manually');
+                });
+            }, 1000);
         }
 
         function closeSvgEditor() {
@@ -739,31 +727,27 @@
         }
 
         function saveSvgChanges() {
-            if (!currentSvgContainer) return;
+            if (!currentSvgContainer) {
+                alert('No SVG selected for editing.');
+                return;
+            }
             
-            try {
-                const iframe = document.getElementById('svgEditFrame');
-                let editedSvg = null;
-                
-                // Try multiple methods to get the SVG content
-                if (iframe.contentWindow.svgCanvas && iframe.contentWindow.svgCanvas.getSvgString) {
-                    editedSvg = iframe.contentWindow.svgCanvas.getSvgString();
-                } else if (iframe.contentWindow.svgEditor && iframe.contentWindow.svgEditor.canvas) {
-                    editedSvg = iframe.contentWindow.svgEditor.canvas.getSvgString();
-                } else {
-                    // Fallback: try to get SVG from the document
-                    const svgElement = iframe.contentDocument.querySelector('svg');
-                    if (svgElement) {
-                        editedSvg = new XMLSerializer().serializeToString(svgElement);
+            // Prompt user to paste the edited SVG code
+            const editedSvg = prompt('Please paste your edited SVG code from Method Draw here:\n\n(In Method Draw: File → Export → Copy the SVG code and paste it below)', '');
+            
+            if (editedSvg && editedSvg.trim()) {
+                try {
+                    // Validate it's actually SVG
+                    if (!editedSvg.toLowerCase().includes('<svg')) {
+                        alert('This doesn\'t appear to be SVG code. Please make sure you copied the SVG export from Method Draw.');
+                        return;
                     }
-                }
-                
-                if (editedSvg) {
+                    
                     console.log('Saving edited SVG:', editedSvg);
                     
                     // Update the display
-                    currentSvgContainer.innerHTML = editedSvg;
-                    currentSvgContainer.setAttribute('data-svg', editedSvg);
+                    currentSvgContainer.innerHTML = editedSvg.trim();
+                    currentSvgContainer.setAttribute('data-svg', editedSvg.trim());
                     
                     // Ensure the SVG remains responsive
                     const svg = currentSvgContainer.querySelector('svg');
@@ -776,19 +760,27 @@
                     closeSvgEditor();
                     
                     alert('SVG diagram updated successfully!');
-                } else {
-                    console.error('Could not retrieve edited SVG content');
-                    alert('Error: Could not save changes. Please try again.');
+                } catch (error) {
+                    console.error('Error saving SVG changes:', error);
+                    alert('Error updating SVG: ' + error.message);
                 }
-            } catch (error) {
-                console.error('Error saving SVG changes:', error);
-                alert('Error saving changes: ' + error.message);
+            } else if (editedSvg === '') {
+                // User clicked OK but provided empty string
+                alert('No SVG code provided. Please copy the SVG code from Method Draw.');
             }
+            // If editedSvg is null, user clicked Cancel, so do nothing
         }
 
         // Event listeners for SVG editor
         document.getElementById('closeSvgEditor').addEventListener('click', closeSvgEditor);
         document.getElementById('saveSvgBtn').addEventListener('click', saveSvgChanges);
+        document.getElementById('showOriginalSvg').addEventListener('click', function() {
+            if (window.currentSvgContent) {
+                alert('Original SVG code (you can copy this):\n\n' + window.currentSvgContent);
+            } else {
+                alert('No original SVG content available.');
+            }
+        });
         
         // Close modal when clicking outside
         document.getElementById('svgEditModal').addEventListener('click', function(e) {
