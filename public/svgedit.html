@@ -45,7 +45,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
     <!-- SVG-Edit integration -->
-    <script src="https://unpkg.com/svgedit@7.4.1/dist/editor/embedapi.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/SVG-Edit/svgedit@stable/editor/embedapi.js"></script>
     <style>
         /* Base Styles */
         body {
@@ -381,7 +381,7 @@
                     <button id="closeSvgEditor" class="svg-edit-close">Close</button>
                 </div>
             </div>
-            <iframe id="svgEditFrame" class="svg-edit-frame" src="https://unpkg.com/svgedit@7.4.1/dist/editor/svg-editor.html"></iframe>
+            <iframe id="svgEditFrame" class="svg-edit-frame" src="https://cdn.jsdelivr.net/gh/SVG-Edit/svgedit@stable/editor/svg-editor.html"></iframe>
         </div>
     </div>
 
@@ -706,19 +706,27 @@
             // Wait for iframe to load and then set the SVG content
             const iframe = document.getElementById('svgEditFrame');
             iframe.onload = function() {
-                try {
-                    // Access the SVG-Edit API
-                    const svgCanvas = iframe.contentWindow.svgCanvas;
-                    if (svgCanvas) {
-                        // Clear the canvas and load the SVG
-                        svgCanvas.setSvgString(svgContent);
-                        console.log('SVG loaded into editor');
-                    } else {
-                        console.error('SVG-Edit canvas not available');
+                // Give SVG-Edit time to fully initialize
+                setTimeout(() => {
+                    try {
+                        // Access the SVG-Edit API
+                        const svgCanvas = iframe.contentWindow.svgCanvas;
+                        if (svgCanvas && svgCanvas.setSvgString) {
+                            // Clear the canvas and load the SVG
+                            svgCanvas.setSvgString(svgContent);
+                            console.log('SVG loaded into editor');
+                        } else {
+                            console.log('SVG-Edit still loading, will try manual approach');
+                            // Fallback: try to find and use the embed API
+                            if (iframe.contentWindow.svgEditor) {
+                                iframe.contentWindow.svgEditor.loadFromString(svgContent);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error loading SVG into editor:', error);
+                        alert('SVG Editor is loading. Please try clicking the SVG again in a moment.');
                     }
-                } catch (error) {
-                    console.error('Error loading SVG into editor:', error);
-                }
+                }, 2000); // Wait 2 seconds for SVG-Edit to initialize
             };
             
             // Reload the iframe to ensure it's fresh
@@ -735,10 +743,22 @@
             
             try {
                 const iframe = document.getElementById('svgEditFrame');
-                const svgCanvas = iframe.contentWindow.svgCanvas;
+                let editedSvg = null;
                 
-                if (svgCanvas) {
-                    const editedSvg = svgCanvas.getSvgString();
+                // Try multiple methods to get the SVG content
+                if (iframe.contentWindow.svgCanvas && iframe.contentWindow.svgCanvas.getSvgString) {
+                    editedSvg = iframe.contentWindow.svgCanvas.getSvgString();
+                } else if (iframe.contentWindow.svgEditor && iframe.contentWindow.svgEditor.canvas) {
+                    editedSvg = iframe.contentWindow.svgEditor.canvas.getSvgString();
+                } else {
+                    // Fallback: try to get SVG from the document
+                    const svgElement = iframe.contentDocument.querySelector('svg');
+                    if (svgElement) {
+                        editedSvg = new XMLSerializer().serializeToString(svgElement);
+                    }
+                }
+                
+                if (editedSvg) {
                     console.log('Saving edited SVG:', editedSvg);
                     
                     // Update the display
@@ -757,8 +777,8 @@
                     
                     alert('SVG diagram updated successfully!');
                 } else {
-                    console.error('SVG-Edit canvas not available for saving');
-                    alert('Error: Could not save changes. SVG editor not ready.');
+                    console.error('Could not retrieve edited SVG content');
+                    alert('Error: Could not save changes. Please try again.');
                 }
             } catch (error) {
                 console.error('Error saving SVG changes:', error);
