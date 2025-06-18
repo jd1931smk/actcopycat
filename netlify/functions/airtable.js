@@ -132,7 +132,7 @@ exports.handler = async (event) => {
                 const question = await base.table(questionsTableIdDetails)
                     .select({
                         filterByFormula: detailsFilterFormula,
-                        fields: ['Photo', 'PNG', 'Record ID', 'LatexMarkdown', 'Diagrams', 'Test Number', 'Question Number']
+                        fields: ['Photo', 'PNG', 'Record ID', 'LatexMarkdown', 'Diagrams', 'svg_diagram', 'Test Number', 'Question Number']
                     })
                     .firstPage()
                     .then(records => {
@@ -203,7 +203,8 @@ exports.handler = async (event) => {
                             png: records[0].get('PNG'),
                             imageUrl: imageUrl, // This will be PNG if available, otherwise Photo
                             katex: katexContent,
-                            Diagrams: diagramUrl
+                            Diagrams: diagramUrl,
+                            svg_diagram: records[0].get('svg_diagram')
                         };
                         if (process.env.NODE_ENV !== 'production') {
                             console.log('Sending response:', response);
