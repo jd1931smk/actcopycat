@@ -456,8 +456,30 @@
                     const questionSection = document.createElement('div');
                     questionSection.className = 'section';
 
-                    // Only use Diagrams field for images
-                    if (data.Diagrams) {
+                    // Handle SVG diagrams first (preferred over regular images)
+                    if (data.svg_diagram && data.svg_diagram.trim()) {
+                        console.log('SVG diagram found:', data.svg_diagram);
+                        const svgContainer = document.createElement('div');
+                        svgContainer.style.display = 'block';
+                        svgContainer.style.margin = '0 auto 20px auto';
+                        svgContainer.style.textAlign = 'center';
+                        svgContainer.style.borderRadius = '4px';
+                        svgContainer.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+                        svgContainer.style.backgroundColor = '#fff';
+                        svgContainer.style.padding = '10px';
+                        svgContainer.innerHTML = data.svg_diagram.trim();
+                        
+                        // Ensure SVG is responsive
+                        const svg = svgContainer.querySelector('svg');
+                        if (svg) {
+                            svg.style.maxWidth = '100%';
+                            svg.style.height = 'auto';
+                        }
+                        
+                        questionSection.appendChild(svgContainer);
+                    }
+                    // Fall back to regular images if no SVG diagram
+                    else if (data.Diagrams) {
                         let diagrams = data.Diagrams;
                         // If Diagrams is a string, make it an array
                         if (typeof diagrams === 'string') {
