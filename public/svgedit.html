@@ -376,12 +376,17 @@
             <div class="svg-edit-header">
                 <h3>SVG Diagram Editor</h3>
                 <div>
-                    <button id="showOriginalSvg" class="svg-edit-close" style="margin-right: 10px;">Show Original SVG</button>
+                    <button id="showSvgTextArea" class="svg-edit-close" style="margin-right: 10px;">Show SVG Code</button>
                     <button id="saveSvgBtn" class="svg-edit-close" style="margin-right: 10px;">Save Changes</button>
                     <button id="closeSvgEditor" class="svg-edit-close">Close</button>
                 </div>
             </div>
             <iframe id="svgEditFrame" class="svg-edit-frame" src="https://editor.method.ac/"></iframe>
+            <div id="svgCodeArea" style="display: none; background: #2d2d2d; padding: 20px; margin-top: 10px;">
+                <h4 style="color: white; margin: 0 0 10px 0;">SVG Code (select all and copy):</h4>
+                <textarea id="svgCodeTextArea" style="width: 100%; height: 150px; background: #1e1e1e; color: #f0f0f0; border: 1px solid #444; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px;" readonly></textarea>
+                <button onclick="document.getElementById('svgCodeArea').style.display='none'" style="margin-top: 10px; background: #6557ed; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Hide</button>
+            </div>
         </div>
     </div>
 
@@ -708,17 +713,27 @@
             const iframe = document.getElementById('svgEditFrame');
             iframe.src = 'https://editor.method.ac/';
             
-            // Show instructions to the user
-            setTimeout(() => {
-                alert('Method Draw is now open!\n\n1. Click "File" → "Open SVG..." in the editor\n2. Copy the SVG code that has been copied to your clipboard\n3. Paste it in the text area and click "Import"\n4. Edit as needed\n5. When done, click "Save Changes" button');
-                
-                // Copy SVG content to clipboard for easy pasting
-                navigator.clipboard.writeText(svgContent).then(() => {
-                    console.log('SVG content copied to clipboard');
-                }).catch(() => {
-                    console.log('Could not copy to clipboard, user will need to copy manually');
-                });
-            }, 1000);
+            // Try to automatically load the SVG when Method Draw is ready
+            iframe.onload = function() {
+                setTimeout(() => {
+                    try {
+                        // Try to use postMessage to communicate with Method Draw
+                        iframe.contentWindow.postMessage({
+                            type: 'loadSVG',
+                            svg: svgContent
+                        }, 'https://editor.method.ac');
+                        
+                        console.log('Attempted to send SVG to Method Draw via postMessage');
+                    } catch (error) {
+                        console.log('PostMessage failed, will show manual instructions');
+                    }
+                    
+                    // Show instructions
+                    setTimeout(() => {
+                        alert('Method Draw is loaded!\n\nTo import your SVG:\n1. Click "Show SVG Code" button below\n2. Copy the selected text\n3. In Method Draw: File → Open SVG...\n4. Paste the code and click "Import"\n5. Edit as needed\n6. When done: File → Export → Copy SVG code\n7. Click "Save Changes" and paste');
+                    }, 1000);
+                }, 2000);
+            };
         }
 
         function closeSvgEditor() {
@@ -774,11 +789,19 @@
         // Event listeners for SVG editor
         document.getElementById('closeSvgEditor').addEventListener('click', closeSvgEditor);
         document.getElementById('saveSvgBtn').addEventListener('click', saveSvgChanges);
-        document.getElementById('showOriginalSvg').addEventListener('click', function() {
+        document.getElementById('showSvgTextArea').addEventListener('click', function() {
             if (window.currentSvgContent) {
-                alert('Original SVG code (you can copy this):\n\n' + window.currentSvgContent);
+                const textarea = document.getElementById('svgCodeTextArea');
+                const codeArea = document.getElementById('svgCodeArea');
+                textarea.value = window.currentSvgContent;
+                codeArea.style.display = 'block';
+                // Auto-select the text for easy copying
+                setTimeout(() => {
+                    textarea.select();
+                    textarea.focus();
+                }, 100);
             } else {
-                alert('No original SVG content available.');
+                alert('No SVG content available.');
             }
         });
         
