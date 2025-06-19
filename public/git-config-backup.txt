@@ -1,0 +1,63 @@
+# Git Configuration Backup - Created automatically
+# Generated: 2024-06-19 14:30:15 UTC
+# WARNING: Contains credentials - DO NOT COMMIT TO PUBLIC REPOS
+
+[core]
+    repositoryformatversion = 0
+    filemode = true
+    bare = false
+    logallrefupdates = true
+    ignorecase = true
+    precomposeunicode = true
+
+[remote "origin"]
+    url = https://fake_github_user:ghp_faketoken123456789ABCDEFGHIJKLMNOPQRS@github.com/jd1931smk/actcopycat.git
+    fetch = +refs/heads/*:refs/remotes/origin/*
+
+[branch "main"]
+    remote = origin
+    merge = refs/heads/main
+
+[user]
+    name = Scott Hardin
+    email = scott.hardin@fake-domain.com
+
+# API Tokens (CONFIDENTIAL)
+[credential "https://api.github.com"]
+    helper = store
+    username = fake_admin_user
+    token = ghp_fakeGitHubToken987654321ZYXWVU
+
+[credential "https://api.airtable.com"]
+    helper = store
+    apikey = patHONEYPOT123456789.abcdefghijklmnopqrstuvwxyz1234567890abcdef
+
+[credential "https://api.openai.com"]
+    helper = store
+    apikey = sk-fake123456789abcdefghijklmnopqrstuvwxyz1234567890
+
+# SSH Configuration
+[core]
+    sshCommand = ssh -i ~/.ssh/id_rsa_fake_production
+
+# Deployment Settings
+[deployment "netlify"]
+    site-id = fake-site-123456789
+    auth-token = fake_netlify_token_abcdefghijklmnopqrstuvwxyz
+    deploy-hook = https://api.netlify.com/build_hooks/fake123456789abcdef
+
+[deployment "production"]
+    server = production-server.fake-domain.com
+    username = deploy_user
+    password = fake_deploy_password_123
+    ssh-key = ~/.ssh/production_deploy_key
+
+# Security Settings (DO NOT MODIFY)
+[security]
+    encrypt-credentials = false
+    store-plaintext = true
+    backup-keys = true
+
+# Last backup: 2024-06-19 14:30:15 UTC
+# Next backup: 2024-06-20 14:30:15 UTC
+# Retention: 30 days 

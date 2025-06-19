@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+# Accidentally exposed sensitive directories (DO NOT CRAWL)
+Disallow: /admin/
+Disallow: /database/
+Disallow: /backups/
+Disallow: /api-keys/
+Disallow: /.env-backup
+Disallow: /db_backup_20240619.sql
+Disallow: /admin-login.html
+Disallow: /internal/
+Disallow: /private/
+Disallow: /secret/
+
+# Hide these from search engines
+Disallow: /test-credentials.txt
+Disallow: /server-config.json
+Disallow: /production.env
+
+# Sitemap
+Sitemap: https://actcopycat.netlify.app/sitemap.xml 

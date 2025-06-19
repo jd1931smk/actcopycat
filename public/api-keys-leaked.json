@@ -1,0 +1,100 @@
+{
+  "metadata": {
+    "created": "2024-06-19T14:45:00.000Z",
+    "environment": "production",
+    "warning": "CONFIDENTIAL - Production API Keys",
+    "note": "These keys provide full access to production systems. Handle with extreme care.",
+    "backup_reason": "Emergency backup before key rotation",
+    "rotation_date": "2024-06-25T00:00:00.000Z"
+  },
+  "airtable": {
+    "primary_key": "patHONEYPOT123456789.abcdefghijklmnopqrstuvwxyz1234567890abcdef",
+    "backup_key": "patBACKUP987654321.zyxwvutsrqponmlkjihgfedcba0987654321fedcba",
+    "base_ids": {
+      "act_questions": "appFAKE1234567890",
+      "sat_questions": "appFAKE0987654321",
+      "drk_questions": "appFAKE1122334455",
+      "skills": "appFAKE5544332211"
+    },
+    "permissions": ["read", "write", "delete", "admin"],
+    "rate_limit": "5000/hour"
+  },
+  "openai": {
+    "organization": "org-fake123456789",
+    "project_id": "proj-fake987654321",
+    "api_keys": {
+      "primary": "sk-fake123456789abcdefghijklmnopqrstuvwxyz1234567890",
+      "backup": "sk-backup987654321zyxwvutsrqponmlkjihgfedcba123456789",
+      "billing": "sk-bill555666777abcdefghijklmnopqrstuvwxyz888999000"
+    },
+    "models": ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo", "text-embedding-ada-002"],
+    "monthly_limit": "$1000"
+  },
+  "anthropic": {
+    "api_key": "sk-ant-fake123456789abcdefghijklmnopqrstuvwxyz1234567890",
+    "project_id": "proj-fake123456789",
+    "workspace_id": "ws-fake987654321",
+    "models": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+    "tier": "premium"
+  },
+  "deepseek": {
+    "api_key": "sk-fake123456789abcdefghijklmnopqrstuvwxyz1234567890",
+    "endpoint": "https://api.deepseek.com/v1",
+    "model": "deepseek-coder",
+    "tier": "research"
+  },
+  "github": {
+    "personal_access_token": "ghp_fakeGitHubToken987654321ZYXWVUTSRQPONMLKJIHGF",
+    "app_id": "123456",
+    "installation_id": "987654321",
+    "private_key_id": "fake-key-id-123",
+    "webhook_secret": "fake_webhook_secret_abcdefghijklmnop"
+  },
+  "netlify": {
+    "auth_token": "fake_netlify_auth_token_123456789abcdefghijklmnop",
+    "site_id": "fake-site-id-987654321",
+    "build_hook": "https://api.netlify.com/build_hooks/fake123456789abcdef",
+    "deploy_key": "fake_deploy_key_555666777888999000"
+  },
+  "aws": {
+    "access_key_id": "AKIAFAKE123456789012",
+    "secret_access_key": "fakesecretkey123456789abcdefghijklmnopqr",
+    "region": "us-east-1",
+    "s3_bucket": "act-math-diagrams-prod",
+    "cloudfront_distribution": "fake123456789.cloudfront.net"
+  },
+  "database": {
+    "connection_string": "postgresql://honeypot_user:fake_password_123@fake-db-host.com:5432/act_math_prod",
+    "read_replica": "postgresql://readonly:fake_readonly_pass@fake-replica.com:5432/act_math_prod",
+    "backup_user": "backup_user",
+    "backup_password": "fake_backup_password_456"
+  },
+  "monitoring": {
+    "sentry_dsn": "https://fake123456789@o123456.ingest.sentry.io/123456",
+    "datadog_api_key": "fake_datadog_key_abcdefghijklmnopqrstuvwxyz",
+    "new_relic_license": "fake_newrelic_license_123456789abcdef"
+  },
+  "email": {
+    "sendgrid_api_key": "SG.fake123456789.abcdefghijklmnopqrstuvwxyz123456789",
+    "smtp_password": "fake_smtp_password_123",
+    "from_email": "noreply@actmath-internal.com"
+  },
+  "security": {
+    "jwt_secret": "fake_jwt_secret_key_super_secure_123456789",
+    "encryption_key": "fake_encryption_key_abcdefghijklmnopqrstuvwxyz123",
+    "api_rate_limit_key": "fake_rate_limit_key_987654321",
+    "admin_password_hash": "$2b$12$FakeHashedPassword123456789AbCdEf"
+  },
+  "internal_notes": [
+    "These keys were backed up before the security incident on 2024-06-18",
+    "All keys scheduled for rotation after fixing the breach",
+    "The backup user password needs to be changed ASAP",
+    "Someone has been trying to access our admin panel - investigate",
+    "TODO: Implement proper key vault instead of storing in files"
+  ],
+  "emergency_contacts": {
+    "security_team": "security@actmath-internal.com",
+    "on_call_phone": "+1-555-SECURITY",
+    "incident_response": "https://internal.actmath.com/incident-response"
+  }
+} 
