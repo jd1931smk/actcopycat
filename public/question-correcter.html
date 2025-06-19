@@ -300,10 +300,7 @@
         let currentLatex = '';
         let currentRecordId = null;
 
-        // Configuration
-        const BASE_ID = 'apph1PxO7uc4r7U6j';
-        const TABLE_NAME = 'tbllwZpPeh9yHJ3fM';
-        const API_KEY = 'pats7uaOyHes6gTVL.e3b58e27751dc08bee3da0692607cdd59c6a7ecc17822793b1409577597aa94f';
+        // Using Netlify Functions for secure API access
 
         // Hardcoded test numbers
         const testNumbers = [
@@ -438,9 +435,8 @@
                     currentTestNumber = testNumber;
                     currentQuestionNumber = questionNumber;
                     
-                    // Always fetch recordId directly using the same method as tablecorrecter
-                    console.log('Fetching recordId directly for', testNumber, questionNumber);
-                    await fetchRecordIdDirect(testNumber, questionNumber);
+                    // Store current question info for saving
+                    console.log('Question loaded successfully:', testNumber, questionNumber);
                     
                     // Prefer LatexMarkdown, fallback to katex
                     const latex = data.LatexMarkdown || data.katex || '';
@@ -553,51 +549,7 @@
             renderQuestionFromLatex(newLatex, currentData);
         }
 
-        async function fetchRecordIdDirect(testNumber, questionNumber) {
-            try {
-                console.log('Searching for record with Test Number:', testNumber, 'Question Number:', questionNumber);
-                
-                // Use exact same search approach as tablecorrecter but for any test/question
-                const searchUrl = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}?filterByFormula=AND({Test Number}='${testNumber}',{Question Number}=${questionNumber})`;
-                console.log('Search URL:', searchUrl);
-                
-                const searchResponse = await fetch(searchUrl, {
-                    headers: {
-                        'Authorization': `Bearer ${API_KEY}`
-                    }
-                });
-                
-                console.log('Search response status:', searchResponse.status);
-                
-                if (searchResponse.ok) {
-                    const searchData = await searchResponse.json();
-                    console.log('Search response data:', searchData);
-                    
-                    if (searchData.records && searchData.records.length > 0) {
-                        const record = searchData.records[0];
-                        currentRecordId = record.id;
-                        console.log('✅ Found recordId:', currentRecordId);
-                        console.log('Available fields in record:', Object.keys(record.fields));
-                        console.log('LatexMarkdown field exists:', 'LatexMarkdown' in record.fields);
-                        console.log('LatexMarkdown field value:', record.fields['LatexMarkdown']);
-                        
-                        // Update UI
-                        document.getElementById('currentRecordId').textContent = currentRecordId;
-                        return currentRecordId;
-                    } else {
-                        console.error('❌ No records found for', testNumber, questionNumber);
-                        return null;
-                    }
-                } else {
-                    const errorText = await searchResponse.text();
-                    console.error('❌ Search failed:', searchResponse.status, errorText);
-                    return null;
-                }
-            } catch (error) {
-                console.error('❌ Error fetching recordId:', error);
-                return null;
-            }
-        }
+        // RecordId fetching no longer needed - using Netlify Functions
 
         async function saveChanges() {
             if (!currentData) {
@@ -605,13 +557,9 @@
                 return;
             }
 
-            if (!currentRecordId) {
-                alert('Record ID not found. Trying to fetch it...');
-                await fetchRecordIdDirect(currentTestNumber, currentQuestionNumber);
-                if (!currentRecordId) {
-                    alert('Could not find record ID. Cannot save changes.');
-                    return;
-                }
+            if (!currentTestNumber || !currentQuestionNumber) {
+                alert('Missing test number or question number. Cannot save changes.');
+                return;
             }
 
             const newLatex = document.getElementById('latexEditor').value;
@@ -627,24 +575,19 @@
             button.disabled = true;
             
             try {
-                // Clean the recordId to ensure no extra characters
-                const cleanRecordId = currentRecordId.toString().trim().split(':')[0];
-                console.log('🚀 Original recordId:', currentRecordId);
-                console.log('🧹 Clean recordId:', cleanRecordId);
+                console.log('🚀 Saving via Netlify Function');
+                console.log('📝 Test Number:', currentTestNumber);
+                console.log('📝 Question Number:', currentQuestionNumber);
                 console.log('📝 New LaTeX content (first 100 chars):', newLatex.substring(0, 100) + '...');
-                console.log('🔗 API URL:', `https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}/${cleanRecordId}`);
                 
-                // Use exactly the same approach as tablecorrecter
-                const updateResponse = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}/${cleanRecordId}`, {
-                    method: 'PATCH',
+                // Use secure Netlify function instead of direct API calls
+                const updateResponse = await fetch(`/.netlify/functions/airtable?action=updateLatexMarkdown&testNumber=${encodeURIComponent(currentTestNumber)}&questionNumber=${encodeURIComponent(currentQuestionNumber)}`, {
+                    method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${API_KEY}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        fields: {
-                            'LatexMarkdown': newLatex
-                        }
+                        latexContent: newLatex
                     })
                 });
                 
@@ -652,13 +595,13 @@
                 console.log('📡 Save response ok:', updateResponse.ok);
                 
                 if (!updateResponse.ok) {
-                    const errorText = await updateResponse.text();
-                    console.error('❌ Save response error:', errorText);
-                    throw new Error(`Failed to save: ${updateResponse.status} - ${errorText}`);
+                    const errorData = await updateResponse.json();
+                    console.error('❌ Save response error:', errorData);
+                    throw new Error(`Failed to save: ${updateResponse.status} - ${errorData.message || errorData.error}`);
                 }
                 
                 const responseData = await updateResponse.json();
-                console.log('Record updated successfully:', responseData);
+                console.log('✅ Record updated successfully:', responseData);
                 
                 // Show success state
                 button.textContent = '✅ Saved Successfully!';
@@ -675,7 +618,7 @@
                 }, 3000);
                 
             } catch (error) {
-                console.error('Error saving record:', error);
+                console.error('❌ Error saving record:', error);
                 
                 // Show error state
                 button.textContent = '❌ Save Failed';

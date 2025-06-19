@@ -905,6 +905,70 @@ exports.handler = async (event) => {
                     return formatResponse(500, { message: 'Failed to update SVG diagram' });
                 }
 
+            case 'updateLatexMarkdown':
+                if (!testNumber || !questionNumber) {
+                    return formatResponse(400, { error: 'Missing testNumber or questionNumber' });
+                }
+                
+                try {
+                    // Get the new LaTeX content from request body
+                    let requestBody;
+                    try {
+                        requestBody = JSON.parse(event.body);
+                    } catch (parseError) {
+                        return formatResponse(400, { error: 'Invalid JSON in request body' });
+                    }
+                    
+                    const newLatexContent = requestBody.latexContent;
+                    if (newLatexContent === undefined || newLatexContent === null) {
+                        return formatResponse(400, { error: 'Missing latexContent in request body' });
+                    }
+                    
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Updating LaTeX for Test: ${testNumber}, Question: ${questionNumber}`);
+                        console.log(`New content preview: ${newLatexContent.substring(0, 100)}...`);
+                    }
+                    
+                    const questionsTableIdUpdate = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
+                    if (!questionsTableIdUpdate) {
+                        console.error('[updateLatexMarkdown Error]: Questions table ID is not defined for database:', database);
+                        return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
+                    }
+                    
+                    // First, find the record
+                    const updateFilterFormula = `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`;
+                    const records = await base.table(questionsTableIdUpdate)
+                        .select({
+                            filterByFormula: updateFilterFormula,
+                            fields: ['LatexMarkdown', 'Test Number', 'Question Number']
+                        })
+                        .firstPage();
+                    
+                    if (!records || records.length === 0) {
+                        return formatResponse(404, { error: 'Question not found' });
+                    }
+                    
+                    const record = records[0];
+                    
+                    // Update the record
+                    await base.table(questionsTableIdUpdate).update(record.id, {
+                        'LatexMarkdown': newLatexContent
+                    });
+                    
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log('LaTeX content updated successfully');
+                    }
+                    
+                    return formatResponse(200, { 
+                        message: 'LaTeX content updated successfully',
+                        recordId: record.id
+                    });
+                    
+                } catch (error) {
+                    console.error('[updateLatexMarkdown Error]:', error);
+                    return formatResponse(500, { message: 'Failed to update LaTeX content', error: error.message });
+                }
+
             default:
                 if (process.env.NODE_ENV !== 'production') {
                     console.log("Invalid action:", action);
