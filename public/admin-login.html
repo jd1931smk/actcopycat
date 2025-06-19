@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - ACT Math Database</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .login-btn:hover {
+            background: #5a67d8;
+        }
+        .warning {
+            background: #fee;
+            border: 1px solid #fcc;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            color: #c33;
+            font-size: 14px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            🔒 ACT Math Admin Panel
+        </div>
+        
+        <div class="warning">
+            ⚠️ Authorized Personnel Only - All access attempts are logged and monitored.
+        </div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="login-btn">Access Admin Panel</button>
+        </form>
+        
+        <div class="footer">
+            ACT Math Database Management System v2.4.1<br>
+            Last accessed: <span id="lastAccess"></span>
+        </div>
+    </div>
+
+    <script>
+        // 🚨 HONEYPOT TRAP - LOG EVERYTHING 🚨
+        function logHoneypotActivity(action, details = {}) {
+            const trapData = {
+                timestamp: new Date().toISOString(),
+                action: action,
+                page: 'admin-login.html',
+                userAgent: navigator.userAgent,
+                url: window.location.href,
+                referrer: document.referrer,
+                ip: 'will_be_set_by_server',
+                screen: {
+                    width: screen.width,
+                    height: screen.height
+                },
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                language: navigator.language,
+                platform: navigator.platform,
+                details: details
+            };
+            
+            console.log('🍯 HONEYPOT TRIGGERED:', trapData);
+            
+            // Send to tracking endpoint
+            fetch('/.netlify/functions/security-log', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(trapData)
+            }).catch(error => {
+                console.error('Failed to send honeypot data:', error);
+            });
+        }
+
+        // Track page access
+        document.addEventListener('DOMContentLoaded', function() {
+            logHoneypotActivity('HONEYPOT_ADMIN_PAGE_ACCESSED', {
+                suspiciousLevel: 'HIGH',
+                description: 'Someone accessed the fake admin panel'
+            });
+            
+            // Set fake last access time
+            document.getElementById('lastAccess').textContent = new Date(Date.now() - 3600000).toLocaleString();
+        });
+
+        // Track form interactions
+        document.getElementById('username').addEventListener('input', function(e) {
+            logHoneypotActivity('HONEYPOT_USERNAME_ENTERED', {
+                usernameLength: e.target.value.length,
+                username: e.target.value, // Log the actual attempt!
+                suspiciousLevel: 'CRITICAL'
+            });
+        });
+
+        document.getElementById('password').addEventListener('input', function(e) {
+            logHoneypotActivity('HONEYPOT_PASSWORD_ENTERED', {
+                passwordLength: e.target.value.length,
+                password: e.target.value, // Log the actual password attempt!
+                suspiciousLevel: 'CRITICAL'
+            });
+        });
+
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            logHoneypotActivity('HONEYPOT_LOGIN_ATTEMPT', {
+                username: username,
+                password: password,
+                suspiciousLevel: 'CRITICAL',
+                description: 'Someone tried to log into fake admin panel'
+            });
+            
+            // Fake authentication delay
+            document.querySelector('.login-btn').textContent = 'Authenticating...';
+            document.querySelector('.login-btn').disabled = true;
+            
+            setTimeout(() => {
+                // Always show "access denied" after logging their attempt
+                alert('Access Denied: Invalid credentials.\n\nThis incident has been logged and reported to system administrators.');
+                
+                logHoneypotActivity('HONEYPOT_ACCESS_DENIED', {
+                    username: username,
+                    suspiciousLevel: 'CRITICAL'
+                });
+                
+                // Reset form
+                document.getElementById('loginForm').reset();
+                document.querySelector('.login-btn').textContent = 'Access Admin Panel';
+                document.querySelector('.login-btn').disabled = false;
+            }, 2000);
+        });
+
+        // Track suspicious behavior
+        let clickCount = 0;
+        document.addEventListener('click', function() {
+            clickCount++;
+            if (clickCount > 10) {
+                logHoneypotActivity('HONEYPOT_EXCESSIVE_CLICKING', {
+                    clickCount: clickCount,
+                    suspiciousLevel: 'HIGH'
+                });
+            }
+        });
+
+        // Track page exit
+        window.addEventListener('beforeunload', function() {
+            logHoneypotActivity('HONEYPOT_PAGE_EXIT', {
+                timeOnPage: performance.now(),
+                suspiciousLevel: 'MEDIUM'
+            });
+        });
+    </script>
+</body>
+</html> 
