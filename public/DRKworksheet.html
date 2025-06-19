@@ -171,7 +171,7 @@
                 worksheet.innerHTML = allQuestions.map((question, index) => {
                     console.log(`Processing question ${index}:`, question);
                     // LaTeX block
-                    const latexBlock = `<div class="question-text"><div class="latex-content">${renderMathMarkdown(question.latex)}</div></div>`;
+                    const latexBlock = `<div class="question-text"><div class="latex-content">${renderMathMarkdown(question.LatexMarkdown || question.latex)}</div></div>`;
                     // Photo block
                     let photoBlock = '';
                     if (question.photo && Array.isArray(question.photo) && question.photo.length > 0) {
@@ -256,7 +256,7 @@
 
                     const latexBlock = `
                         <div class=\"question-text\">
-                            <div class=\"latex-content\">${renderMathMarkdown(q.latex)}</div>
+                            <div class=\"latex-content\">${renderMathMarkdown(q.LatexMarkdown || q.latex)}</div>
                         </div>`;
 
                     let photoBlock = '';

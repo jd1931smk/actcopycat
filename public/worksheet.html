@@ -576,7 +576,7 @@
                 console.log('All questions data:', allQuestions);
                 console.log('Filtered questions after all filters:', filteredQuestions);
                 if (allQuestions.length > 0) {
-                    console.log('First question LaTeX content:', allQuestions[0].latex);
+                    console.log('First question LaTeX content:', allQuestions[0].LatexMarkdown || allQuestions[0].latex);
                     console.log('First question fields:', Object.keys(allQuestions[0]));
                 }
 
@@ -631,7 +631,7 @@
                             </p>
                             <div class="question-content">
                                 <div class="question-text">
-                                    <div class="latex-content">${renderMathMarkdown(q.latex)}</div>
+                                    <div class="latex-content">${renderMathMarkdown(q.LatexMarkdown || q.latex)}</div>
                                 </div>
                                 <div class="photo-column">
                                     ${q.photo && q.photo.length > 0 ? 
@@ -725,7 +725,7 @@
 
                     const latexBlock = `
                         <div class="question-text">
-                            <div class="latex-content">${renderMathMarkdown(q.latex)}</div>
+                            <div class="latex-content">${renderMathMarkdown(q.LatexMarkdown || q.latex)}</div>
                         </div>`;
 
                     const photoBlock = `
