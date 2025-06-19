@@ -426,8 +426,18 @@
         function renderMathMarkdown(content) {
             if (!content) return '<em style="color: #888;">No content available</em>';
             
-            // First, convert Markdown to HTML
-            let html = marked.parse(content);
+            // Check if content contains LaTeX tables or complex LaTeX structures
+            const hasLatexTables = /\\begin\{array\}|\\begin\{tabular\}|\\begin\{matrix\}|\\begin\{bmatrix\}|\\begin\{pmatrix\}/i.test(content);
+            
+            let html;
+            if (hasLatexTables) {
+                // For content with LaTeX tables, skip Markdown processing to avoid corruption
+                // Just preserve the content as-is for KaTeX to handle
+                html = content.replace(/\n/g, '<br>');
+            } else {
+                // For regular content, process with Markdown
+                html = marked.parse(content);
+            }
             
             // Create a temporary container
             const temp = document.createElement('div');
@@ -441,7 +451,10 @@
                     {left: "$", right: "$", display: false},
                     {left: "$$", right: "$$", display: true},
                     {left: "\\begin{array}", right: "\\end{array}", display: true},
-                    {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+                    {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true},
+                    {left: "\\begin{pmatrix}", right: "\\end{pmatrix}", display: true},
+                    {left: "\\begin{tabular}", right: "\\end{tabular}", display: true},
+                    {left: "\\begin{matrix}", right: "\\end{matrix}", display: true}
                 ],
                 throwOnError: false,
                 output: 'html'

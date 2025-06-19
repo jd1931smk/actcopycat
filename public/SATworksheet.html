@@ -76,9 +76,19 @@
             console.log('Rendering content:', content);
             if (!content) return '';
             
-            // First parse the markdown
-            const htmlContent = marked.parse(content);
-            console.log('Parsed markdown:', htmlContent);
+            // Check if content contains LaTeX tables or complex LaTeX structures
+            const hasLatexTables = /\\begin\{array\}|\\begin\{tabular\}|\\begin\{matrix\}|\\begin\{bmatrix\}|\\begin\{pmatrix\}/i.test(content);
+            
+            let htmlContent;
+            if (hasLatexTables) {
+                // For content with LaTeX tables, skip Markdown processing to avoid corruption
+                htmlContent = content.replace(/\n/g, '<br>');
+                console.log('Skipped markdown for LaTeX tables, using raw content');
+            } else {
+                // For regular content, process with Markdown
+                htmlContent = marked.parse(content);
+                console.log('Parsed markdown:', htmlContent);
+            }
             
             // Create a temporary div to hold the content
             const tempDiv = document.createElement('div');
@@ -92,7 +102,10 @@
                     {left: "$", right: "$", display: false},
                     {left: "$$", right: "$$", display: true},
                     {left: "\\begin{array}", right: "\\end{array}", display: true},
-                    {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
+                    {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true},
+                    {left: "\\begin{pmatrix}", right: "\\end{pmatrix}", display: true},
+                    {left: "\\begin{tabular}", right: "\\end{tabular}", display: true},
+                    {left: "\\begin{matrix}", right: "\\end{matrix}", display: true}
                 ],
                 throwOnError: false,
                 output: 'html'
