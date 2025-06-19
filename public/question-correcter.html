@@ -627,12 +627,15 @@
             button.disabled = true;
             
             try {
-                console.log('🚀 Attempting to save to recordId:', currentRecordId);
+                // Clean the recordId to ensure no extra characters
+                const cleanRecordId = currentRecordId.toString().trim().split(':')[0];
+                console.log('🚀 Original recordId:', currentRecordId);
+                console.log('🧹 Clean recordId:', cleanRecordId);
                 console.log('📝 New LaTeX content (first 100 chars):', newLatex.substring(0, 100) + '...');
-                console.log('🔗 API URL:', `https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}/${currentRecordId}`);
+                console.log('🔗 API URL:', `https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}/${cleanRecordId}`);
                 
                 // Use exactly the same approach as tablecorrecter
-                const updateResponse = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}/${currentRecordId}`, {
+                const updateResponse = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}/${cleanRecordId}`, {
                     method: 'PATCH',
                     headers: {
                         'Authorization': `Bearer ${API_KEY}`,
