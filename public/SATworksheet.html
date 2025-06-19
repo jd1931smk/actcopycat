@@ -87,10 +87,15 @@
             // Render the math
             renderMathInElement(tempDiv, {
                 delimiters: [
+                    {left: "\\[", right: "\\]", display: true},
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "$", right: "$", display: false},
                     {left: "$$", right: "$$", display: true},
-                    {left: "$", right: "$", display: false}
+                    {left: "\\begin{array}", right: "\\end{array}", display: true},
+                    {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                 ],
-                throwOnError: false
+                throwOnError: false,
+                output: 'html'
             });
             
             console.log('Final rendered content:', tempDiv.innerHTML);
@@ -195,10 +200,15 @@
                     console.log('Rendering math in worksheet');
                     renderMathInElement(worksheet, {
                         delimiters: [
+                            {left: "\\[", right: "\\]", display: true},
+                            {left: "\\(", right: "\\)", display: false},
+                            {left: "$", right: "$", display: false},
                             {left: "$$", right: "$$", display: true},
-                            {left: "$", right: "$", display: false}
+                            {left: "\\begin{array}", right: "\\end{array}", display: true},
+                            {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                         ],
-                        throwOnError: false
+                        throwOnError: false,
+                        output: 'html'
                     });
                 }
             } catch (error) {

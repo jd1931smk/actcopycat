@@ -436,10 +436,15 @@
             // Render KaTeX in the temporary container
             renderMathInElement(temp, {
                 delimiters: [
-                    {left: '$$', right: '$$', display: true},
-                    {left: '$', right: '$', display: false}
+                    {left: "\\[", right: "\\]", display: true},
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "$", right: "$", display: false},
+                    {left: "$$", right: "$$", display: true},
+                    {left: "\\begin{array}", right: "\\end{array}", display: true},
+                    {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true}
                 ],
-                throwOnError: false
+                throwOnError: false,
+                output: 'html'
             });
             
             return temp.innerHTML;
