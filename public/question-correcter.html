@@ -316,7 +316,25 @@
             "Z08", "Z13", "Z15"
         ].filter(test => test !== null).sort();
 
+        // Password protection
+        function checkPassword() {
+            const correctPassword = "ACTcorrecter2024"; // You can change this password
+            const enteredPassword = prompt("Enter password to access the Question Correcter:");
+            
+            if (enteredPassword !== correctPassword) {
+                alert("Incorrect password. Access denied.");
+                document.body.innerHTML = '<div style="text-align: center; padding: 50px; color: #f0f0f0; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">Access Denied</div>';
+                return false;
+            }
+            return true;
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            // Check password before allowing access
+            if (!checkPassword()) {
+                return;
+            }
+            
             initializeEventListeners();
             populateTestNumbers();
         });
