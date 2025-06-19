@@ -307,6 +307,39 @@
 
         // Using Netlify Functions for secure API access
 
+        // Security logging functions
+        function logAccess(action, details = {}) {
+            const logData = {
+                timestamp: new Date().toISOString(),
+                action: action,
+                userAgent: navigator.userAgent,
+                url: window.location.href,
+                referrer: document.referrer,
+                ip: 'will_be_set_by_server',
+                details: details
+            };
+            
+            console.log('🔍 Security Log:', logData);
+            
+            // Send to logging endpoint
+            fetch('/.netlify/functions/security-log', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(logData)
+            }).catch(error => {
+                console.error('Failed to send security log:', error);
+            });
+        }
+
+        function logSuspiciousActivity(activity, data = {}) {
+            logAccess('SUSPICIOUS_ACTIVITY', {
+                activity: activity,
+                ...data
+            });
+        }
+
         // Hardcoded test numbers
         const testNumbers = [
             "1MC", "2MC", "3MC", "4MC", "5MC", "16MC2", "52C", "54D", "55C", "56A", "56B",
@@ -325,13 +358,25 @@
         const correctPassword = "ACTcorrecter2024"; // You can change this password
 
         function checkPassword() {
+            // Log page access attempt
+            logAccess('PAGE_ACCESS_ATTEMPT');
+            
             const enteredPassword = prompt("Enter password to access the Question Correcter:");
             
             if (enteredPassword !== correctPassword) {
+                // Log failed password attempt
+                logSuspiciousActivity('FAILED_PASSWORD', {
+                    attemptedPassword: enteredPassword,
+                    expectedLength: correctPassword.length
+                });
+                
                 alert("Incorrect password. Access denied.");
                 document.body.innerHTML = '<div style="text-align: center; padding: 50px; color: #f0f0f0; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">Access Denied</div>';
                 return false;
             }
+            
+            // Log successful access
+            logAccess('SUCCESSFUL_LOGIN');
             return true;
         }
 
@@ -341,9 +386,99 @@
                 return;
             }
             
+            // Set up security monitoring
+            setupSecurityTraps();
+            
             initializeEventListeners();
             populateTestNumbers();
         });
+
+        function setupSecurityTraps() {
+            // Detect developer tools opening
+            let devtools = {open: false, orientation: null};
+            const threshold = 160;
+            let lastCheck = Date.now();
+            
+            function detectDevTools() {
+                if (window.outerHeight - window.innerHeight > threshold || 
+                    window.outerWidth - window.innerWidth > threshold) {
+                    if (!devtools.open) {
+                        devtools.open = true;
+                        logSuspiciousActivity('DEV_TOOLS_OPENED', {
+                            outerHeight: window.outerHeight,
+                            innerHeight: window.innerHeight,
+                            outerWidth: window.outerWidth,
+                            innerWidth: window.innerWidth
+                        });
+                    }
+                } else {
+                    devtools.open = false;
+                }
+            }
+            
+            // Check for dev tools periodically
+            setInterval(detectDevTools, 500);
+            
+            // Detect right-click context menu
+            document.addEventListener('contextmenu', function(e) {
+                logSuspiciousActivity('RIGHT_CLICK_MENU', {
+                    target: e.target.tagName,
+                    x: e.clientX,
+                    y: e.clientY
+                });
+            });
+            
+            // Detect common developer shortcuts
+            document.addEventListener('keydown', function(e) {
+                // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+                if (e.key === 'F12' || 
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+                    (e.ctrlKey && e.key === 'u')) {
+                    logSuspiciousActivity('DEVELOPER_SHORTCUT', {
+                        key: e.key,
+                        ctrl: e.ctrlKey,
+                        shift: e.shiftKey,
+                        alt: e.altKey
+                    });
+                }
+            });
+            
+            // Detect source viewing attempts
+            window.addEventListener('beforeunload', function() {
+                logAccess('PAGE_EXIT');
+            });
+            
+            // Detect excessive rapid clicking (possible bot behavior)
+            let clickCount = 0;
+            let clickTimer = null;
+            document.addEventListener('click', function(e) {
+                clickCount++;
+                if (clickTimer) clearTimeout(clickTimer);
+                clickTimer = setTimeout(() => {
+                    if (clickCount > 10) {
+                        logSuspiciousActivity('RAPID_CLICKING', {
+                            clickCount: clickCount,
+                            timeWindow: '5seconds'
+                        });
+                    }
+                    clickCount = 0;
+                }, 5000);
+            });
+            
+            // Log initial page load info
+            logAccess('PAGE_LOADED', {
+                screen: {
+                    width: screen.width,
+                    height: screen.height
+                },
+                window: {
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                },
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                language: navigator.language
+            });
+        }
 
         function initializeEventListeners() {
             // Test number input with autocomplete
@@ -437,6 +572,12 @@
                 alert('Please select both a test number and question number.');
                 return;
             }
+
+            // Log question access
+            logAccess('QUESTION_ACCESSED', {
+                testNumber: testNumber,
+                questionNumber: questionNumber
+            });
 
             spinner.style.display = 'block';
             resultContainer.innerHTML = '';
@@ -652,6 +793,14 @@
 
             const newLatex = document.getElementById('latexEditor').value;
             currentLatex = newLatex;
+            
+            // Log save attempt
+            logAccess('SAVE_ATTEMPT', {
+                testNumber: currentTestNumber,
+                questionNumber: currentQuestionNumber,
+                contentLength: newLatex.length,
+                contentPreview: newLatex.substring(0, 100)
+            });
             
             const button = document.getElementById('saveLatexButton');
             const originalText = button.textContent;
