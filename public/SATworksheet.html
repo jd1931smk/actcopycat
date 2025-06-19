@@ -78,7 +78,12 @@
             
             // Simple approach: treat everything as KaTeX text content like the table corrector
             const tempDiv = document.createElement('div');
-            tempDiv.textContent = content;
+            
+            // Format answer choices to appear on separate lines
+            let formattedContent = content.replace(/([A-K]\.)\s*/g, '\n$1 ');
+            formattedContent = formattedContent.replace(/\n\n+/g, '\n').trim();
+            
+            tempDiv.textContent = formattedContent;
             
             // Render the math
             renderMathInElement(tempDiv, {

@@ -179,6 +179,7 @@
         }
         .latex-content {
             line-height: 1.6;
+            white-space: pre-wrap; /* Preserve line breaks and wrap text */
         }
         .latex-content p {
             margin: 0.5em 0;
@@ -429,7 +430,14 @@
             // Simple approach: treat everything as KaTeX text content like the table corrector
             // Create a temporary container and set textContent to preserve KaTeX syntax exactly
             const temp = document.createElement('div');
-            temp.textContent = content;
+            
+            // Format answer choices to appear on separate lines
+            // Look for patterns like "A. something B. something" and add line breaks
+            let formattedContent = content.replace(/([A-K]\.)\s*/g, '\n$1 ');
+            // Clean up any double newlines and trim
+            formattedContent = formattedContent.replace(/\n\n+/g, '\n').trim();
+            
+            temp.textContent = formattedContent;
             
             // Render KaTeX in the temporary container
             renderMathInElement(temp, {
