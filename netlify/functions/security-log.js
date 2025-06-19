@@ -17,10 +17,26 @@ function checkForHoneypotContent(data) {
 }
 
 exports.handler = async (event, context) => {
+    // 🚨 SECURITY LOGGING FUNCTION ACCESS 🚨
+    const clientIP = event.headers['x-forwarded-for'] || event.headers['x-real-ip'] || 'unknown';
+    const userAgent = event.headers['user-agent'] || 'unknown';
+    
+    console.log('🚨🛡️ SECURITY LOGGING FUNCTION ACCESSED 🛡️🚨');
+    console.log('⚠️  This is private security code and your activity is being monitored ⚠️');
+    console.log('IP:', clientIP);
+    console.log('User Agent:', userAgent);
+    console.log('Method:', event.httpMethod);
+    console.log('🔒 SECURITY FUNCTION ACCESS LOGGED 🔒');
+
     // Only accept POST requests
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
+            headers: {
+                'X-Security-Warning': 'This is private code and your activity is being monitored',
+                'X-Function': 'security-log',
+                'X-Access-Logged': 'true'
+            },
             body: JSON.stringify({ error: 'Method not allowed' })
         };
     }
@@ -87,12 +103,17 @@ exports.handler = async (event, context) => {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'X-Security-Warning': 'This is private code and your activity is being monitored',
+                'X-Function': 'security-log',
+                'X-Access-Logged': 'true',
+                'X-IP-Tracked': clientIP
             },
             body: JSON.stringify({ 
                 success: true, 
                 logged: true,
-                timestamp: enhancedLog.serverTimestamp
+                timestamp: enhancedLog.serverTimestamp,
+                warning: "This is private code and your activity is being monitored"
             })
         };
 

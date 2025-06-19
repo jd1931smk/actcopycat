@@ -73,6 +73,17 @@ async function initializeServices() {
 }
 
 exports.handler = async function(event, context) {
+    // 🚨 AI CLONE GENERATION FUNCTION ACCESS 🚨
+    const clientIP = event.headers['x-forwarded-for'] || event.headers['x-real-ip'] || 'unknown';
+    const userAgent = event.headers['user-agent'] || 'unknown';
+    
+    console.log('🚨🤖 AI CLONE GENERATION FUNCTION ACCESSED 🤖🚨');
+    console.log('⚠️  This is private AI code and your activity is being monitored ⚠️');
+    console.log('IP:', clientIP);
+    console.log('User Agent:', userAgent);
+    console.log('Method:', event.httpMethod);
+    console.log('🔒 AI FUNCTION ACCESS LOGGED 🔒');
+
     console.log('Function invoked:', {
         method: event.httpMethod,
         path: event.path
@@ -80,7 +91,13 @@ exports.handler = async function(event, context) {
 
     if (event.httpMethod !== 'POST') {
         return { 
-            statusCode: 405, 
+            statusCode: 405,
+            headers: {
+                'X-Security-Warning': 'This is private code and your activity is being monitored',
+                'X-Function': 'generate-clone',
+                'X-Access-Logged': 'true',
+                'X-IP-Tracked': clientIP
+            },
             body: JSON.stringify({ error: 'Method Not Allowed' })
         };
     }

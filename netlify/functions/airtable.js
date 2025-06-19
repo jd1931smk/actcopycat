@@ -22,6 +22,18 @@ const satBase = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(proc
 const drkBase = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.DRK_BASE_ID);
 
 exports.handler = async (event) => {
+    // 🚨 FUNCTION ACCESS MONITORING 🚨
+    const clientIP = event.headers['x-forwarded-for'] || event.headers['x-real-ip'] || 'unknown';
+    const userAgent = event.headers['user-agent'] || 'unknown';
+    
+    console.log('🚨🔧 AIRTABLE FUNCTION ACCESS DETECTED 🔧🚨');
+    console.log('⚠️  This is private code and your activity is being monitored ⚠️');
+    console.log('IP:', clientIP);
+    console.log('User Agent:', userAgent);
+    console.log('Method:', event.httpMethod);
+    console.log('Action:', event.queryStringParameters?.action || 'none');
+    console.log('🔒 ALL DATABASE ACCESS LOGGED AND RECORDED 🔒');
+
     if (process.env.NODE_ENV !== 'production') {
         console.log("Received request:", {
             method: event.httpMethod,
@@ -64,7 +76,10 @@ exports.handler = async (event) => {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'X-Security-Warning': 'This is private code and your activity is being monitored',
+                'X-Access-Logged': 'true',
+                'X-IP-Tracked': clientIP
             }
         };
     };
