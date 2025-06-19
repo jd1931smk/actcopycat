@@ -438,14 +438,9 @@
                     currentTestNumber = testNumber;
                     currentQuestionNumber = questionNumber;
                     
-                    // Try to get recordId from multiple possible sources
-                    currentRecordId = data.recordId || data.id || data.record_id || null;
-                    
-                    // If we still don't have a recordId, try to fetch it directly
-                    if (!currentRecordId) {
-                        console.warn('No recordId found in response, attempting to fetch directly...');
-                        await fetchRecordId(testNumber, questionNumber);
-                    }
+                    // Always fetch recordId directly using the same method as tablecorrecter
+                    console.log('Fetching recordId directly for', testNumber, questionNumber);
+                    await fetchRecordIdDirect(testNumber, questionNumber);
                     
                     // Prefer LatexMarkdown, fallback to katex
                     const latex = data.LatexMarkdown || data.katex || '';
@@ -558,29 +553,48 @@
             renderQuestionFromLatex(newLatex, currentData);
         }
 
-        async function fetchRecordId(testNumber, questionNumber) {
+        async function fetchRecordIdDirect(testNumber, questionNumber) {
             try {
-                // Search for the record by Test Number and Question Number
+                console.log('Searching for record with Test Number:', testNumber, 'Question Number:', questionNumber);
+                
+                // Use exact same search approach as tablecorrecter but for any test/question
                 const searchUrl = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}?filterByFormula=AND({Test Number}='${testNumber}',{Question Number}=${questionNumber})`;
+                console.log('Search URL:', searchUrl);
+                
                 const searchResponse = await fetch(searchUrl, {
                     headers: {
                         'Authorization': `Bearer ${API_KEY}`
                     }
                 });
                 
+                console.log('Search response status:', searchResponse.status);
+                
                 if (searchResponse.ok) {
                     const searchData = await searchResponse.json();
+                    console.log('Search response data:', searchData);
+                    
                     if (searchData.records && searchData.records.length > 0) {
-                        currentRecordId = searchData.records[0].id;
-                        console.log('Found recordId:', currentRecordId);
+                        const record = searchData.records[0];
+                        currentRecordId = record.id;
+                        console.log('✅ Found recordId:', currentRecordId);
+                        console.log('Available fields in record:', Object.keys(record.fields));
+                        console.log('LatexMarkdown field exists:', 'LatexMarkdown' in record.fields);
+                        console.log('LatexMarkdown field value:', record.fields['LatexMarkdown']);
+                        
+                        // Update UI
                         document.getElementById('currentRecordId').textContent = currentRecordId;
                         return currentRecordId;
+                    } else {
+                        console.error('❌ No records found for', testNumber, questionNumber);
+                        return null;
                     }
+                } else {
+                    const errorText = await searchResponse.text();
+                    console.error('❌ Search failed:', searchResponse.status, errorText);
+                    return null;
                 }
-                console.error('Could not find record for', testNumber, questionNumber);
-                return null;
             } catch (error) {
-                console.error('Error fetching recordId:', error);
+                console.error('❌ Error fetching recordId:', error);
                 return null;
             }
         }
@@ -593,7 +607,7 @@
 
             if (!currentRecordId) {
                 alert('Record ID not found. Trying to fetch it...');
-                await fetchRecordId(currentTestNumber, currentQuestionNumber);
+                await fetchRecordIdDirect(currentTestNumber, currentQuestionNumber);
                 if (!currentRecordId) {
                     alert('Could not find record ID. Cannot save changes.');
                     return;
@@ -613,10 +627,11 @@
             button.disabled = true;
             
             try {
-                console.log('Attempting to save to recordId:', currentRecordId);
-                console.log('New LaTeX content:', newLatex.substring(0, 100) + '...');
+                console.log('🚀 Attempting to save to recordId:', currentRecordId);
+                console.log('📝 New LaTeX content (first 100 chars):', newLatex.substring(0, 100) + '...');
+                console.log('🔗 API URL:', `https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}/${currentRecordId}`);
                 
-                // Save to Airtable using direct API
+                // Use exactly the same approach as tablecorrecter
                 const updateResponse = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}/${currentRecordId}`, {
                     method: 'PATCH',
                     headers: {
@@ -630,9 +645,12 @@
                     })
                 });
                 
+                console.log('📡 Save response status:', updateResponse.status);
+                console.log('📡 Save response ok:', updateResponse.ok);
+                
                 if (!updateResponse.ok) {
                     const errorText = await updateResponse.text();
-                    console.error('Save response error:', errorText);
+                    console.error('❌ Save response error:', errorText);
                     throw new Error(`Failed to save: ${updateResponse.status} - ${errorText}`);
                 }
                 
