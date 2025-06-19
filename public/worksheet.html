@@ -406,6 +406,81 @@
     <div id="worksheet" class="worksheet"></div>
 
     <script>
+        // 🚨 WORKSHEET TRACKING SYSTEM 🚨
+        function trackWorksheetActivity(action, details = {}) {
+            const trackingData = {
+                timestamp: new Date().toISOString(),
+                action: action,
+                page: 'worksheet.html',
+                userAgent: navigator.userAgent,
+                url: window.location.href,
+                referrer: document.referrer,
+                ip: 'will_be_set_by_server',
+                screen: {
+                    width: screen.width,
+                    height: screen.height,
+                    colorDepth: screen.colorDepth
+                },
+                window: {
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                },
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                language: navigator.language,
+                platform: navigator.platform,
+                cookieEnabled: navigator.cookieEnabled,
+                details: details
+            };
+            
+            console.log('🔍 WORKSHEET TRACKING:', trackingData);
+            
+            // Send to tracking endpoint
+            fetch('/.netlify/functions/security-log', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(trackingData)
+            }).catch(error => {
+                console.error('Failed to send tracking data:', error);
+            });
+        }
+
+        // Setup comprehensive worksheet tracking
+        document.addEventListener('DOMContentLoaded', function() {
+            trackWorksheetActivity('WORKSHEET_PAGE_LOADED', {
+                loadTime: performance.now()
+            });
+            
+            // Track all form interactions
+            document.addEventListener('change', function(e) {
+                trackWorksheetActivity('WORKSHEET_FORM_CHANGE', {
+                    elementId: e.target.id,
+                    elementType: e.target.type,
+                    value: e.target.value,
+                    checked: e.target.checked
+                });
+            });
+            
+            // Track button clicks
+            document.addEventListener('click', function(e) {
+                if (e.target.tagName === 'BUTTON') {
+                    trackWorksheetActivity('WORKSHEET_BUTTON_CLICK', {
+                        buttonId: e.target.id,
+                        buttonText: e.target.textContent,
+                        onclick: e.target.onclick ? e.target.onclick.toString() : null
+                    });
+                }
+            });
+            
+            // Track page exit
+            window.addEventListener('beforeunload', function() {
+                trackWorksheetActivity('WORKSHEET_PAGE_EXIT', {
+                    timeOnPage: performance.now()
+                });
+            });
+        });
+
         let allQuestions = [];
         let filteredQuestions = [];
         let skillName = '';
@@ -541,7 +616,15 @@
             const generatePdfButton = document.getElementById('generatePdf');
             const selectionControls = document.getElementById('selectionControls');
 
+            // 🚨 TRACK WORKSHEET GENERATION ATTEMPT
+            trackWorksheetActivity('WORKSHEET_GENERATION_ATTEMPT', {
+                skillId: skillId,
+                skillType: skillType,
+                attemptTime: new Date().toISOString()
+            });
+
             if (!skillId) {
+                trackWorksheetActivity('WORKSHEET_NO_SKILL_SELECTED');
                 alert('Please select a skill');
                 return;
             }

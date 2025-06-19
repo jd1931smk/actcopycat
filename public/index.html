@@ -41,6 +41,101 @@
             font-weight: bold;
         }
     </style>
+    <script>
+        // 🚨 COMPREHENSIVE IP TRACKING SYSTEM 🚨
+        function trackUserActivity(action, details = {}) {
+            const trackingData = {
+                timestamp: new Date().toISOString(),
+                action: action,
+                page: 'index.html',
+                userAgent: navigator.userAgent,
+                url: window.location.href,
+                referrer: document.referrer,
+                ip: 'will_be_set_by_server',
+                screen: {
+                    width: screen.width,
+                    height: screen.height,
+                    colorDepth: screen.colorDepth
+                },
+                window: {
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                },
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                language: navigator.language,
+                platform: navigator.platform,
+                cookieEnabled: navigator.cookieEnabled,
+                details: details
+            };
+            
+            console.log('🔍 HOME PAGE TRACKING:', trackingData);
+            
+            // Send to tracking endpoint
+            fetch('/.netlify/functions/security-log', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(trackingData)
+            }).catch(error => {
+                console.error('Failed to send tracking data:', error);
+            });
+        }
+
+        // Track everything on the home page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Track initial page load
+            trackUserActivity('HOME_PAGE_LOADED', {
+                loadTime: performance.now(),
+                documentReady: new Date().toISOString()
+            });
+            
+            // Track all link clicks with destinations
+            document.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    trackUserActivity('NAVIGATION_CLICK', {
+                        linkText: e.target.textContent,
+                        destination: e.target.href,
+                        target: e.target.target
+                    });
+                }
+                
+                trackUserActivity('HOME_CLICK', {
+                    target: e.target.tagName,
+                    id: e.target.id,
+                    className: e.target.className,
+                    x: e.clientX,
+                    y: e.clientY
+                });
+            });
+            
+            // Track page visibility changes
+            document.addEventListener('visibilitychange', function() {
+                trackUserActivity('HOME_VISIBILITY_CHANGE', {
+                    hidden: document.hidden
+                });
+            });
+            
+            // Track before leaving home page
+            window.addEventListener('beforeunload', function() {
+                trackUserActivity('HOME_PAGE_EXIT', {
+                    timeOnPage: performance.now()
+                });
+            });
+            
+            // Track mouse movements (sample every 2 seconds)
+            let mouseTimer = null;
+            document.addEventListener('mousemove', function(e) {
+                if (mouseTimer) clearTimeout(mouseTimer);
+                mouseTimer = setTimeout(() => {
+                    trackUserActivity('HOME_MOUSE_MOVE', {
+                        x: e.clientX,
+                        y: e.clientY
+                    });
+                }, 2000);
+            });
+        });
+    </script>
 <script type="text/javascript" nonce="d1a370fe60a14010b2b68ff8ef9" src="//local.adguard.org?ts=1743523308524&amp;type=content-script&amp;dmn=api.netlify.com&amp;url=https%3A%2F%2Fapi.netlify.com%2Fapi%2Fv1%2Fdeploys%2F67e725b35fa2a90008f6a1a0%2Ffiles%2Findex.html&amp;app=com.brave.Browser&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script>
 <script type="text/javascript" nonce="d1a370fe60a14010b2b68ff8ef9" src="//local.adguard.org?ts=1743523308524&amp;name=AdGuard%20Extra&amp;type=user-script"></script></head>
 <body>

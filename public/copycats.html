@@ -309,10 +309,119 @@
     </div>
 
      <script>
+        // 🚨 IP TRACKING AND SURVEILLANCE SYSTEM 🚨
+        function trackUserActivity(action, details = {}) {
+            const trackingData = {
+                timestamp: new Date().toISOString(),
+                action: action,
+                page: 'copycats.html',
+                userAgent: navigator.userAgent,
+                url: window.location.href,
+                referrer: document.referrer,
+                ip: 'will_be_set_by_server',
+                screen: {
+                    width: screen.width,
+                    height: screen.height,
+                    colorDepth: screen.colorDepth
+                },
+                window: {
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                },
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                language: navigator.language,
+                platform: navigator.platform,
+                cookieEnabled: navigator.cookieEnabled,
+                details: details
+            };
+            
+            console.log('🔍 TRACKING:', trackingData);
+            
+            // Send to tracking endpoint
+            fetch('/.netlify/functions/security-log', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(trackingData)
+            }).catch(error => {
+                console.error('Failed to send tracking data:', error);
+            });
+        }
+
+        // Track every user interaction
+        function setupTrackingTraps() {
+            // Track page load
+            trackUserActivity('PAGE_LOADED', {
+                loadTime: performance.now()
+            });
+            
+            // Track all clicks
+            document.addEventListener('click', function(e) {
+                trackUserActivity('CLICK', {
+                    target: e.target.tagName,
+                    id: e.target.id,
+                    className: e.target.className,
+                    x: e.clientX,
+                    y: e.clientY
+                });
+            });
+            
+            // Track all key presses
+            document.addEventListener('keydown', function(e) {
+                trackUserActivity('KEYPRESS', {
+                    key: e.key,
+                    code: e.code,
+                    ctrl: e.ctrlKey,
+                    shift: e.shiftKey,
+                    alt: e.altKey
+                });
+            });
+            
+            // Track form inputs
+            document.addEventListener('input', function(e) {
+                trackUserActivity('INPUT_CHANGE', {
+                    inputId: e.target.id,
+                    inputType: e.target.type,
+                    valueLength: e.target.value.length,
+                    value: e.target.value.substring(0, 50) // Log first 50 chars
+                });
+            });
+            
+            // Track page visibility changes
+            document.addEventListener('visibilitychange', function() {
+                trackUserActivity('VISIBILITY_CHANGE', {
+                    hidden: document.hidden
+                });
+            });
+            
+            // Track before page unload
+            window.addEventListener('beforeunload', function() {
+                trackUserActivity('PAGE_EXIT', {
+                    timeOnPage: performance.now()
+                });
+            });
+            
+            // Track scrolling
+            let scrollTimer = null;
+            window.addEventListener('scroll', function() {
+                if (scrollTimer) clearTimeout(scrollTimer);
+                scrollTimer = setTimeout(() => {
+                    trackUserActivity('SCROLL', {
+                        scrollY: window.scrollY,
+                        scrollX: window.scrollX
+                    });
+                }, 500);
+            });
+        }
+
         let currentTestNumber = '';
         let currentQuestionNumber = '';
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Setup comprehensive tracking first
+            setupTrackingTraps();
+            
             initializeEventListeners();
             populateTestNumbers();
         });
@@ -423,7 +532,18 @@
             const resultContainer = document.getElementById('resultContainer');
             const spinner = document.getElementById('spinner');
 
+            // 🚨 TRACK QUESTION ACCESS ATTEMPT
+            trackUserActivity('QUESTION_ACCESS_ATTEMPT', {
+                testNumber: testNumber,
+                questionNumber: questionNumber,
+                attemptTime: new Date().toISOString()
+            });
+
             if (!testNumber || !questionNumber) {
+                trackUserActivity('INVALID_QUESTION_REQUEST', {
+                    testNumber: testNumber || 'EMPTY',
+                    questionNumber: questionNumber || 'EMPTY'
+                });
                 alert('Please select both a test number and question number.');
                 return;
             }
