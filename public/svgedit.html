@@ -340,6 +340,27 @@
             height: calc(100% - 60px);
             border: none;
         }
+
+        .floating-save-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #6557ed;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .floating-save-btn:hover {
+            background: #7466ff;
+        }
     </style>
 </head>
 <body>
@@ -369,6 +390,11 @@
         <div id="spinner"></div>
         <div id="resultContainer"></div>
     </div>
+
+    <!-- Floating Save Button -->
+    <button id="floatingSaveBtn" class="floating-save-btn" onclick="window.saveSvgChanges()">
+        💾 Save SVG Changes
+    </button>
 
     <!-- SVG Editor Modal -->
     <div id="svgEditModal" class="svg-edit-modal">
@@ -561,6 +587,29 @@
                             openSvgEditor(data.svg_diagram.trim());
                         });
                         
+                        // Add a small "Edit" button overlay
+                        const editButton = document.createElement('button');
+                        editButton.textContent = 'Edit SVG';
+                        editButton.style.position = 'absolute';
+                        editButton.style.top = '10px';
+                        editButton.style.right = '10px';
+                        editButton.style.background = '#6557ed';
+                        editButton.style.color = 'white';
+                        editButton.style.border = 'none';
+                        editButton.style.padding = '5px 10px';
+                        editButton.style.borderRadius = '4px';
+                        editButton.style.fontSize = '12px';
+                        editButton.style.cursor = 'pointer';
+                        editButton.style.zIndex = '10';
+                        editButton.onclick = function(e) {
+                            e.stopPropagation();
+                            openSvgEditor(data.svg_diagram.trim());
+                        };
+                        
+                        // Make the container relative for absolute positioning
+                        svgContainer.style.position = 'relative';
+                        svgContainer.appendChild(editButton);
+                        
                         // Ensure SVG is responsive
                         const svg = svgContainer.querySelector('svg');
                         if (svg) {
@@ -700,43 +749,38 @@
         let svgEditor = null;
 
         function openSvgEditor(svgContent) {
-            console.log('Opening Method Draw with SVG content');
+            console.log('Opening Method Draw in new tab with SVG content');
             
             // Store reference to the current SVG container and SVG content
             currentSvgContainer = event.target.closest('.clickable-svg');
             window.currentSvgContent = svgContent;
             
-            // Show the modal
-            document.getElementById('svgEditModal').style.display = 'block';
+            // Copy SVG to clipboard for easy import
+            navigator.clipboard.writeText(svgContent).then(() => {
+                console.log('SVG content copied to clipboard');
+            }).catch(() => {
+                console.log('Could not copy to clipboard');
+            });
             
-            // Set up event listeners for modal buttons (ensure they work)
-            setupModalEventListeners();
+            // Open Method Draw in a new tab
+            const methodDrawWindow = window.open('https://editor.method.ac/', '_blank');
             
-            // Method Draw will load fresh each time
-            const iframe = document.getElementById('svgEditFrame');
-            iframe.src = 'https://editor.method.ac/';
+            // Show the floating save button
+            document.getElementById('floatingSaveBtn').style.display = 'block';
             
-            // Try to automatically load the SVG when Method Draw is ready
-            iframe.onload = function() {
-                setTimeout(() => {
-                    try {
-                        // Try to use postMessage to communicate with Method Draw
-                        iframe.contentWindow.postMessage({
-                            type: 'loadSVG',
-                            svg: svgContent
-                        }, 'https://editor.method.ac');
-                        
-                        console.log('Attempted to send SVG to Method Draw via postMessage');
-                    } catch (error) {
-                        console.log('PostMessage failed, will show manual instructions');
-                    }
-                    
-                    // Show instructions
-                    setTimeout(() => {
-                        alert('Method Draw is loaded!\n\nTo import your SVG:\n1. Click "Show SVG Code" button below\n2. Copy the selected text\n3. In Method Draw: File → Open SVG...\n4. Paste the code and click "Import"\n5. Edit as needed\n6. When done: File → Export → Copy SVG code\n7. Click "Save Changes" and paste');
-                    }, 1000);
-                }, 2000);
-            };
+            // Show instructions
+            setTimeout(() => {
+                alert('Method Draw opened in new tab!\n\nYour SVG code has been copied to clipboard.\n\nTo import:\n1. In Method Draw tab: File → Open SVG...\n2. Paste (Ctrl+V/Cmd+V) the SVG code\n3. Click "Import"\n4. Edit as needed\n5. When done: File → Export → Copy SVG code\n6. Click the floating "💾 Save SVG Changes" button');
+            }, 500);
+            
+            // Show a simple save dialog instead of modal
+            setTimeout(() => {
+                const proceed = confirm('Ready to save your edited SVG?\n\nClick OK when you have:\n1. Finished editing in Method Draw\n2. Exported the SVG code (File → Export)\n3. Copied the new SVG code\n\nClick OK to paste your edited SVG, or Cancel to try again later.');
+                
+                if (proceed) {
+                    saveSvgChangesInternal();
+                }
+            }, 3000);
         }
 
         function closeSvgEditor() {
@@ -787,7 +831,17 @@
             }
         }
 
-        function saveSvgChanges() {
+        // Global function that can be called at any time
+        window.saveSvgChanges = function() {
+            if (!currentSvgContainer) {
+                alert('No SVG selected for editing. Please click on an SVG diagram first.');
+                return;
+            }
+            
+            saveSvgChangesInternal();
+        };
+
+        function saveSvgChangesInternal() {
             if (!currentSvgContainer) {
                 alert('No SVG selected for editing.');
                 return;
