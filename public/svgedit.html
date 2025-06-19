@@ -709,6 +709,9 @@
             // Show the modal
             document.getElementById('svgEditModal').style.display = 'block';
             
+            // Set up event listeners for modal buttons (ensure they work)
+            setupModalEventListeners();
+            
             // Method Draw will load fresh each time
             const iframe = document.getElementById('svgEditFrame');
             iframe.src = 'https://editor.method.ac/';
@@ -739,6 +742,49 @@
         function closeSvgEditor() {
             document.getElementById('svgEditModal').style.display = 'none';
             currentSvgContainer = null;
+        }
+
+        function setupModalEventListeners() {
+            // Remove any existing listeners first
+            const closeSvgBtn = document.getElementById('closeSvgEditor');
+            const saveSvgBtn = document.getElementById('saveSvgBtn');
+            const showSvgBtn = document.getElementById('showSvgTextArea');
+            
+            if (closeSvgBtn) {
+                // Remove old listener and add new one
+                closeSvgBtn.onclick = closeSvgEditor;
+            }
+            
+            if (saveSvgBtn) {
+                saveSvgBtn.onclick = saveSvgChanges;
+            }
+            
+            if (showSvgBtn) {
+                showSvgBtn.onclick = function() {
+                    console.log('Show SVG Code button clicked');
+                    if (window.currentSvgContent) {
+                        const textarea = document.getElementById('svgCodeTextArea');
+                        const codeArea = document.getElementById('svgCodeArea');
+                        if (textarea && codeArea) {
+                            textarea.value = window.currentSvgContent;
+                            codeArea.style.display = 'block';
+                            // Auto-select the text for easy copying
+                            setTimeout(() => {
+                                textarea.select();
+                                textarea.focus();
+                            }, 100);
+                            console.log('SVG code area shown');
+                        } else {
+                            console.error('Textarea or code area not found');
+                        }
+                    } else {
+                        alert('No SVG content available.');
+                    }
+                };
+                console.log('Show SVG Code button listener set up');
+            } else {
+                console.error('Show SVG button not found');
+            }
         }
 
         function saveSvgChanges() {
@@ -786,22 +832,42 @@
             // If editedSvg is null, user clicked Cancel, so do nothing
         }
 
-        // Event listeners for SVG editor
-        document.getElementById('closeSvgEditor').addEventListener('click', closeSvgEditor);
-        document.getElementById('saveSvgBtn').addEventListener('click', saveSvgChanges);
-        document.getElementById('showSvgTextArea').addEventListener('click', function() {
-            if (window.currentSvgContent) {
-                const textarea = document.getElementById('svgCodeTextArea');
-                const codeArea = document.getElementById('svgCodeArea');
-                textarea.value = window.currentSvgContent;
-                codeArea.style.display = 'block';
-                // Auto-select the text for easy copying
-                setTimeout(() => {
-                    textarea.select();
-                    textarea.focus();
-                }, 100);
-            } else {
-                alert('No SVG content available.');
+        // Event listeners for SVG editor - set up when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Make sure all elements exist before adding listeners
+            const closeSvgBtn = document.getElementById('closeSvgEditor');
+            const saveSvgBtn = document.getElementById('saveSvgBtn');
+            const showSvgBtn = document.getElementById('showSvgTextArea');
+            
+            if (closeSvgBtn) {
+                closeSvgBtn.addEventListener('click', closeSvgEditor);
+            }
+            
+            if (saveSvgBtn) {
+                saveSvgBtn.addEventListener('click', saveSvgChanges);
+            }
+            
+            if (showSvgBtn) {
+                showSvgBtn.addEventListener('click', function() {
+                    console.log('Show SVG Code button clicked');
+                    if (window.currentSvgContent) {
+                        const textarea = document.getElementById('svgCodeTextArea');
+                        const codeArea = document.getElementById('svgCodeArea');
+                        if (textarea && codeArea) {
+                            textarea.value = window.currentSvgContent;
+                            codeArea.style.display = 'block';
+                            // Auto-select the text for easy copying
+                            setTimeout(() => {
+                                textarea.select();
+                                textarea.focus();
+                            }, 100);
+                        } else {
+                            console.error('Textarea or code area not found');
+                        }
+                    } else {
+                        alert('No SVG content available.');
+                    }
+                });
             }
         });
         
