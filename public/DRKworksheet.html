@@ -72,28 +72,14 @@
         let allQuestions = [];
         let skillName = '';
 
-        // Function to render markdown with math
+        // Function to render markdown with math - simplified approach
         function renderMathMarkdown(content) {
             console.log('Rendering content:', content);
             if (!content) return '';
             
-            // Check if content contains LaTeX tables or complex LaTeX structures
-            const hasLatexTables = /\\begin\{array\}|\\begin\{tabular\}|\\begin\{matrix\}|\\begin\{bmatrix\}|\\begin\{pmatrix\}/i.test(content);
-            
-            let htmlContent;
-            if (hasLatexTables) {
-                // For content with LaTeX tables, skip Markdown processing to avoid corruption
-                htmlContent = content.replace(/\n/g, '<br>');
-                console.log('Skipped markdown for LaTeX tables, using raw content');
-            } else {
-                // For regular content, process with Markdown
-                htmlContent = marked.parse(content);
-                console.log('Parsed markdown:', htmlContent);
-            }
-            
-            // Create a temporary div to hold the content
+            // Simple approach: treat everything as KaTeX text content like the table corrector
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlContent;
+            tempDiv.textContent = content;
             
             // Render the math
             renderMathInElement(tempDiv, {
