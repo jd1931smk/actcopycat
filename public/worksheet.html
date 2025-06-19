@@ -386,6 +386,10 @@
                     <input type="checkbox" id="excludeH" style="margin-right: 5px;">
                     H
                 </label>
+                <label style="display: flex; align-items: center; font-weight: normal;">
+                    <input type="checkbox" id="excludeSHMM" checked style="margin-right: 5px;">
+                    SHMM
+                </label>
             </div>
         </div>
     </div>
@@ -508,6 +512,7 @@
             if (document.getElementById('excludeF').checked) prefixes.push('F');
             if (document.getElementById('excludeG').checked) prefixes.push('G');
             if (document.getElementById('excludeH').checked) prefixes.push('H');
+            if (document.getElementById('excludeSHMM').checked) prefixes.push('SHMM');
             return prefixes;
         }
 
@@ -698,6 +703,7 @@
             document.getElementById('excludeF').addEventListener('change', refreshQuestionDisplay);
             document.getElementById('excludeG').addEventListener('change', refreshQuestionDisplay);
             document.getElementById('excludeH').addEventListener('change', refreshQuestionDisplay);
+            document.getElementById('excludeSHMM').addEventListener('change', refreshQuestionDisplay);
         });
 
         async function generatePdf() {
