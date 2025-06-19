@@ -823,6 +823,88 @@ exports.handler = async (event) => {
                     return formatResponse(500, { message: 'Server Error. Please try again later.' });
                 }
 
+            case 'updateSvgDiagram':
+                if (!testNumber || !questionNumber) {
+                    return formatResponse(400, { error: 'Missing testNumber or questionNumber' });
+                }
+                
+                // Simple authentication - you can enhance this
+                const authPassword = event.queryStringParameters.password;
+                if (!authPassword || authPassword !== process.env.SVG_EDIT_PASSWORD) {
+                    return formatResponse(401, { error: 'Authentication required' });
+                }
+                
+                try {
+                    // Get the new SVG content from request body
+                    let requestBody;
+                    try {
+                        requestBody = JSON.parse(event.body);
+                    } catch (parseError) {
+                        return formatResponse(400, { error: 'Invalid JSON in request body' });
+                    }
+                    
+                    const newSvgContent = requestBody.svgContent;
+                    if (!newSvgContent) {
+                        return formatResponse(400, { error: 'Missing svgContent in request body' });
+                    }
+                    
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Updating SVG for Test: ${testNumber}, Question: ${questionNumber}`);
+                    }
+                    
+                    const questionsTableIdUpdate = database === 'SAT' ? process.env.SAT_QUESTIONS_TABLE_ID : process.env.QUESTIONS_TABLE_ID;
+                    if (!questionsTableIdUpdate) {
+                        console.error('[updateSvgDiagram Error]: Questions table ID is not defined for database:', database);
+                        return formatResponse(500, { message: 'Questions table ID not configured for this database.' });
+                    }
+                    
+                    // First, find the record
+                    const updateFilterFormula = `AND({Test Number} = '${testNumber}', {Question Number} = ${questionNumber})`;
+                    const records = await base.table(questionsTableIdUpdate)
+                        .select({
+                            filterByFormula: updateFilterFormula,
+                            fields: ['svg_diagram', 'svg_diagram_previous']
+                        })
+                        .firstPage();
+                    
+                    if (!records || records.length === 0) {
+                        return formatResponse(404, { error: 'Question not found' });
+                    }
+                    
+                    const record = records[0];
+                    const currentSvg = record.get('svg_diagram');
+                    
+                    // Prepare update data with revision logic
+                    const updateFields = {
+                        'svg_diagram': newSvgContent
+                    };
+                    
+                    // If there's an existing SVG, move it to previous
+                    if (currentSvg && currentSvg.trim()) {
+                        updateFields['svg_diagram_previous'] = currentSvg;
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.log('Moving current SVG to svg_diagram_previous');
+                        }
+                    }
+                    
+                    // Update the record
+                    await base.table(questionsTableIdUpdate).update(record.id, updateFields);
+                    
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log('SVG diagram updated successfully');
+                    }
+                    
+                    return formatResponse(200, { 
+                        message: 'SVG diagram updated successfully',
+                        recordId: record.id,
+                        hasBackup: !!currentSvg
+                    });
+                    
+                } catch (error) {
+                    console.error('[updateSvgDiagram Error]:', error);
+                    return formatResponse(500, { message: 'Failed to update SVG diagram' });
+                }
+
             default:
                 if (process.env.NODE_ENV !== 'production') {
                     console.log("Invalid action:", action);

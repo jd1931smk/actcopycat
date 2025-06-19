@@ -567,6 +567,39 @@
                     // Handle SVG diagrams first (preferred over regular images)
                     if (data.svg_diagram && data.svg_diagram.trim()) {
                         console.log('SVG diagram found:', data.svg_diagram);
+                        
+                        // Add original reference diagram if available
+                        if (data.Diagrams) {
+                            let diagrams = data.Diagrams;
+                            if (typeof diagrams === 'string') {
+                                diagrams = [diagrams];
+                            }
+                            if (Array.isArray(diagrams) && diagrams.length > 0) {
+                                const originalLabel = document.createElement('p');
+                                originalLabel.style.color = '#aaa';
+                                originalLabel.style.fontSize = '0.9em';
+                                originalLabel.style.marginTop = '10px';
+                                originalLabel.style.marginBottom = '5px';
+                                originalLabel.textContent = 'Original Reference Diagram:';
+                                questionSection.appendChild(originalLabel);
+                                
+                                const originalImg = document.createElement('img');
+                                originalImg.src = diagrams[0].trim();
+                                originalImg.alt = 'Original Diagram';
+                                originalImg.style.maxWidth = '100%';
+                                originalImg.style.border = '1px dashed #666';
+                                originalImg.style.padding = '4px';
+                                originalImg.style.display = 'block';
+                                originalImg.style.margin = '0 auto 15px auto';
+                                originalImg.onerror = function() {
+                                    console.error('Failed to load original diagram:', diagrams[0]);
+                                    this.style.display = 'none';
+                                    originalLabel.style.display = 'none';
+                                };
+                                questionSection.appendChild(originalImg);
+                            }
+                        }
+                        
                         const svgContainer = document.createElement('div');
                         svgContainer.style.display = 'block';
                         svgContainer.style.margin = '0 auto 20px auto';
