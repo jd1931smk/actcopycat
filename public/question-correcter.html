@@ -127,6 +127,14 @@
             background-color: #7466ff;
         }
         
+        #previewButton:hover:not(:disabled) {
+            background-color: #218838 !important;
+        }
+        
+        #saveLatexButton:hover:not(:disabled) {
+            background-color: #c82333 !important;
+        }
+        
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -279,8 +287,8 @@
             <div id="editColumn">
                 <label for="latexEditor" style="font-weight: bold; display: block; margin-bottom: 8px;">Edit LaTeX/Markdown:</label>
                 <textarea id="latexEditor" placeholder="LaTeX content will appear here..."></textarea>
-                <button id="saveLatexButton" style="width: 100%;">Save and Rerender</button>
-                <button id="previewButton" style="width: 100%; margin-top: 5px;" onclick="previewChanges()">Preview Changes (No Save)</button>
+                <button id="previewButton" style="width: 100%; margin-bottom: 10px; background-color: #28a745;" onclick="previewChanges()">Preview Changes (No Save)</button>
+                <button id="saveLatexButton" style="width: 100%; background-color: #dc3545; font-weight: bold;">💾 Save to Database</button>
             </div>
         </div>
     </div>
@@ -429,7 +437,15 @@
                     currentData = data;
                     currentTestNumber = testNumber;
                     currentQuestionNumber = questionNumber;
-                    currentRecordId = data.recordId || 'Unknown';
+                    
+                    // Try to get recordId from multiple possible sources
+                    currentRecordId = data.recordId || data.id || data.record_id || null;
+                    
+                    // If we still don't have a recordId, try to fetch it directly
+                    if (!currentRecordId) {
+                        console.warn('No recordId found in response, attempting to fetch directly...');
+                        await fetchRecordId(testNumber, questionNumber);
+                    }
                     
                     // Prefer LatexMarkdown, fallback to katex
                     const latex = data.LatexMarkdown || data.katex || '';
@@ -542,16 +558,64 @@
             renderQuestionFromLatex(newLatex, currentData);
         }
 
+        async function fetchRecordId(testNumber, questionNumber) {
+            try {
+                // Search for the record by Test Number and Question Number
+                const searchUrl = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}?filterByFormula=AND({Test Number}='${testNumber}',{Question Number}=${questionNumber})`;
+                const searchResponse = await fetch(searchUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`
+                    }
+                });
+                
+                if (searchResponse.ok) {
+                    const searchData = await searchResponse.json();
+                    if (searchData.records && searchData.records.length > 0) {
+                        currentRecordId = searchData.records[0].id;
+                        console.log('Found recordId:', currentRecordId);
+                        document.getElementById('currentRecordId').textContent = currentRecordId;
+                        return currentRecordId;
+                    }
+                }
+                console.error('Could not find record for', testNumber, questionNumber);
+                return null;
+            } catch (error) {
+                console.error('Error fetching recordId:', error);
+                return null;
+            }
+        }
+
         async function saveChanges() {
-            if (!currentRecordId || !currentData) {
+            if (!currentData) {
                 alert('No question loaded to save changes to.');
                 return;
+            }
+
+            if (!currentRecordId) {
+                alert('Record ID not found. Trying to fetch it...');
+                await fetchRecordId(currentTestNumber, currentQuestionNumber);
+                if (!currentRecordId) {
+                    alert('Could not find record ID. Cannot save changes.');
+                    return;
+                }
             }
 
             const newLatex = document.getElementById('latexEditor').value;
             currentLatex = newLatex;
             
+            const button = document.getElementById('saveLatexButton');
+            const originalText = button.textContent;
+            const originalColor = button.style.backgroundColor;
+            
+            // Show saving state
+            button.textContent = '💾 Saving...';
+            button.style.backgroundColor = '#ffc107';
+            button.disabled = true;
+            
             try {
+                console.log('Attempting to save to recordId:', currentRecordId);
+                console.log('New LaTeX content:', newLatex.substring(0, 100) + '...');
+                
                 // Save to Airtable using direct API
                 const updateResponse = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${TABLE_NAME}/${currentRecordId}`, {
                     method: 'PATCH',
@@ -567,27 +631,43 @@
                 });
                 
                 if (!updateResponse.ok) {
-                    throw new Error(`Failed to save: ${updateResponse.status}`);
+                    const errorText = await updateResponse.text();
+                    console.error('Save response error:', errorText);
+                    throw new Error(`Failed to save: ${updateResponse.status} - ${errorText}`);
                 }
                 
-                console.log('Record updated successfully');
+                const responseData = await updateResponse.json();
+                console.log('Record updated successfully:', responseData);
                 
-                // Update the button text temporarily to show success
-                const button = document.getElementById('saveLatexButton');
-                const originalText = button.textContent;
-                button.textContent = '✓ Saved!';
+                // Show success state
+                button.textContent = '✅ Saved Successfully!';
                 button.style.backgroundColor = '#28a745';
-                setTimeout(() => {
-                    button.textContent = originalText;
-                    button.style.backgroundColor = '#6557ed';
-                }, 2000);
                 
                 // Re-render the question with new content
                 renderQuestionFromLatex(newLatex, currentData);
                 
+                // Reset button after 3 seconds
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.backgroundColor = originalColor;
+                    button.disabled = false;
+                }, 3000);
+                
             } catch (error) {
                 console.error('Error saving record:', error);
-                alert('Error saving record: ' + error.message);
+                
+                // Show error state
+                button.textContent = '❌ Save Failed';
+                button.style.backgroundColor = '#dc3545';
+                
+                // Reset button after 3 seconds
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.backgroundColor = originalColor;
+                    button.disabled = false;
+                }, 3000);
+                
+                alert('Error saving record: ' + error.message + '\n\nCheck console for more details.');
             }
         }
     </script>
