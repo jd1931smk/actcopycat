@@ -280,6 +280,11 @@
             <div>Record ID: <span id="currentRecordId"></span></div>
         </div>
 
+        <div id="targetPhotoContainer" style="display: none; background-color: #2d2d2d; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+            <h4 style="color: #fff; margin: 0 0 15px 0; text-align: center;">Target Question Photo (Goal for Correction)</h4>
+            <div id="targetPhotoDisplay" style="text-align: center;"></div>
+        </div>
+
         <div id="editorFlex" style="display: none;">
             <div id="questionColumn">
                 <div id="resultContainer"></div>
@@ -317,8 +322,9 @@
         ].filter(test => test !== null).sort();
 
         // Password protection
+        const correctPassword = "ACTcorrecter2024"; // You can change this password
+
         function checkPassword() {
-            const correctPassword = "ACTcorrecter2024"; // You can change this password
             const enteredPassword = prompt("Enter password to access the Question Correcter:");
             
             if (enteredPassword !== correctPassword) {
@@ -414,6 +420,7 @@
             document.getElementById('resultContainer').innerHTML = '';
             document.getElementById('editorFlex').style.display = 'none';
             document.getElementById('currentQuestionInfo').style.display = 'none';
+            document.getElementById('targetPhotoContainer').style.display = 'none';
             currentData = null;
             currentLatex = '';
             currentRecordId = null;
@@ -436,6 +443,7 @@
             latexEditor.value = '';
             document.getElementById('editorFlex').style.display = 'none';
             document.getElementById('currentQuestionInfo').style.display = 'none';
+            document.getElementById('targetPhotoContainer').style.display = 'none';
 
             try {
                 // Fetch question data using the existing Netlify function
@@ -466,6 +474,10 @@
                     document.getElementById('currentQuestionNumber').textContent = questionNumber;
                     document.getElementById('currentRecordId').textContent = currentRecordId;
                     document.getElementById('currentQuestionInfo').style.display = 'block';
+                    
+                    // Show target photo if available
+                    displayTargetPhoto(data);
+                    
                     document.getElementById('editorFlex').style.display = 'flex';
                     
                     // Render the question
@@ -480,6 +492,64 @@
                 console.error('Error:', error);
                 spinner.style.display = 'none';
                 resultContainer.innerHTML = `<p>Error loading question: ${error.message}</p>`;
+            }
+        }
+
+        function displayTargetPhoto(data) {
+            const targetPhotoContainer = document.getElementById('targetPhotoContainer');
+            const targetPhotoDisplay = document.getElementById('targetPhotoDisplay');
+            
+            // Clear previous content
+            targetPhotoDisplay.innerHTML = '';
+            
+            // Check for Photo field - PNG takes priority, then Photo
+            let photoUrl = null;
+            
+            // Check PNG field first (from Airtable attachments)
+            if (data.PNG && Array.isArray(data.PNG) && data.PNG.length > 0) {
+                photoUrl = data.PNG[0].url || data.PNG[0];
+                console.log('Using PNG field for target photo:', photoUrl);
+            }
+            // Fall back to Photo field
+            else if (data.Photo && Array.isArray(data.Photo) && data.Photo.length > 0) {
+                photoUrl = data.Photo[0].url || data.Photo[0];
+                console.log('Using Photo field for target photo:', photoUrl);
+            }
+            // Handle case where fields might be strings instead of arrays
+            else if (data.PNG && typeof data.PNG === 'string') {
+                photoUrl = data.PNG;
+                console.log('Using PNG string field for target photo:', photoUrl);
+            }
+            else if (data.Photo && typeof data.Photo === 'string') {
+                photoUrl = data.Photo;
+                console.log('Using Photo string field for target photo:', photoUrl);
+            }
+            
+            if (photoUrl && photoUrl.trim()) {
+                const photoImg = document.createElement('img');
+                photoImg.src = photoUrl.trim();
+                photoImg.alt = 'Target Question Photo';
+                photoImg.style.maxWidth = '100%';
+                photoImg.style.maxHeight = '400px';
+                photoImg.style.borderRadius = '4px';
+                photoImg.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+                photoImg.style.backgroundColor = '#fff';
+                photoImg.style.padding = '10px';
+                
+                photoImg.onload = function() {
+                    console.log('Target photo loaded successfully:', photoUrl);
+                    targetPhotoContainer.style.display = 'block';
+                };
+                
+                photoImg.onerror = function() {
+                    console.error('Failed to load target photo:', photoUrl);
+                    targetPhotoContainer.style.display = 'none';
+                };
+                
+                targetPhotoDisplay.appendChild(photoImg);
+            } else {
+                console.log('No target photo found in Photo or PNG fields');
+                targetPhotoContainer.style.display = 'none';
             }
         }
 
