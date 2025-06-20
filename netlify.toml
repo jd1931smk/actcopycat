@@ -1,19 +1,28 @@
 [build]
-publish = "public"
-functions = "netlify/functions"
+  # No build command needed - this is a static site
+  command = ""
+  # Publish the public directory where our HTML files are
+  publish = "public"
 
-[dev]
-command = "npm run dev:vite"
-port = 8888
-targetPort = 5173
-publish = "src"
-functions = "netlify/functions"
-functionsPort = 9999
+[build.environment]
+  # Node version for Netlify Functions
+  NODE_VERSION = "18"
 
-[[redirects]]
-from = "/*"
-to = "/index.html"
-status = 200
-
+# Netlify Functions configuration
 [functions]
-node_bundler = "esbuild"
+  directory = "netlify/functions"
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Redirect any requests to missing files to index.html for SPA behavior
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 404
